@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Phoenix is an automated, dashboard-driven solution for optimizing process metrics collection in New Relic Infrastructure monitoring. The platform reduces telemetry costs by 50-80% while maintaining 100% visibility for critical processes through intelligent OpenTelemetry pipelines with pre-validated configurations, A/B testing capabilities, and visual pipeline building.
 
+**Current Status**: Early development (25% complete) - Documentation complete, implementation in progress
+
 ## Architecture
 
 ### Core Components
@@ -31,18 +33,22 @@ Phoenix is an automated, dashboard-driven solution for optimizing process metric
 
 ### Prerequisites Setup
 ```bash
+# Navigate to the Phoenix platform directory (project is in subdirectory)
+cd phoenix-platform/
+
 # Install development dependencies
 make install-deps
 
-# Setup pre-commit hooks
+# Setup pre-commit hooks (when implemented)
 make setup-hooks
 
-# Quick development setup (installs deps, creates .env, starts services)
-./scripts/setup-dev.sh
+# Quick development setup
+./scripts/setup-dev.sh  # Note: Creates .env, starts PostgreSQL/Redis
 ```
 
 ### Build Commands
 ```bash
+# From phoenix-platform/ directory
 # Build all components
 make build
 
@@ -60,6 +66,9 @@ make generate
 
 ### Testing
 ```bash
+# NOTE: Tests are not yet implemented (0% coverage)
+# These commands will work once test framework is added:
+
 # Run all tests
 make test
 
@@ -129,28 +138,37 @@ phoenix loadsim start --profile <realistic|high-cardinality|high-churn> --target
 phoenix loadsim stop --target-host <host>
 ```
 
-## Project Structure
+## Project Structure & Implementation Status
 
-The codebase recently underwent a restructuring. The main implementation is now in the `phoenix-platform/` subdirectory with the following structure:
+The codebase recently underwent a restructuring. The main implementation is now in the `phoenix-platform/` subdirectory.
+
+**Implementation Status**: 
+- API Service: 30% complete (basic structure, needs gRPC/REST implementation)
+- Dashboard: 25% complete (React setup done, needs pipeline builder)
+- Controller: 5% complete (stub only)
+- Generator: 0% complete (stub only)
+- Operators: 10% complete (CRDs defined, controller logic needed)
+- Tests: 0% coverage
 
 ```
 phoenix-platform/
 ├── cmd/                    # Service entry points
-│   ├── api/               # API server
-│   ├── simulator/         # Process simulator
-│   └── generator/         # Config generator
-├── internal/              # Internal packages
+│   ├── api/               # API server (partially implemented)
+│   ├── controller/        # Experiment controller (stub only)
+│   ├── generator/         # Config generator (stub only)
+│   └── simulator/         # Process simulator (basic structure)
+├── internal/              # Internal packages (mostly empty)
 ├── pkg/                   # Public packages
-│   ├── api/              # API service logic
-│   └── generator/        # Config generation
+│   ├── api/              # API service logic (basic structure)
+│   └── generator/        # Config generation (empty)
 ├── operators/             # Kubernetes operators
-│   ├── pipeline/         # Pipeline controller
-│   └── loadsim/          # Load simulation controller
-├── dashboard/             # React web UI
-├── helm/                  # Helm charts
+│   ├── pipeline/         # Pipeline controller (CRDs defined)
+│   └── loadsim/          # Load simulation controller (basic)
+├── dashboard/             # React web UI (basic setup)
+├── helm/                  # Helm charts (incomplete)
 │   └── phoenix/          # Main Phoenix chart
 ├── k8s/                   # Kubernetes manifests
-│   ├── crds/             # Custom Resource Definitions
+│   ├── crds/             # Custom Resource Definitions (complete)
 │   ├── base/             # Base configurations
 │   └── overlays/         # Environment-specific configs
 ├── pipelines/            # Pipeline catalog
@@ -168,11 +186,11 @@ Pre-validated process metric pipelines in `/pipelines/templates/`:
 - `process-adaptive-filter-v1.yaml`: Dynamic filtering based on load
 
 ### Critical Files to Understand
-- `pkg/api/experiment_service.go`: Core business logic for experiments
-- `operators/pipeline/controllers/pipeline_controller.go`: How collectors are deployed
-- `pkg/generator/service.go`: Config generation from visual pipelines
-- `dashboard/src/components/ExperimentBuilder/PipelineCanvas.tsx`: Visual pipeline editor
-- `cmd/simulator/main.go`: Process simulation logic
+- `pkg/api/experiment_service.go`: Core business logic for experiments (basic structure only)
+- `operators/pipeline/controllers/pipeline_controller.go`: How collectors are deployed (needs implementation)
+- `pkg/generator/service.go`: Config generation from visual pipelines (not yet created)
+- `dashboard/src/components/ExperimentBuilder/PipelineCanvas.tsx`: Visual pipeline editor (basic component)
+- `cmd/simulator/main.go`: Process simulation logic (stub only)
 
 ## Service Communication Flow
 
@@ -221,17 +239,17 @@ Required for development (from `.env` or K8s secrets):
 - `GIT_TOKEN`: For creating configuration PRs
 - `PROMETHEUS_REMOTE_WRITE_ENDPOINT`: For metrics storage
 
-## Testing Strategy
+## Testing Strategy (To Be Implemented)
 
 ### Acceptance Tests
-Key acceptance tests for MVP (AT-P01 to AT-P10):
+Key acceptance tests for MVP (AT-P01 to AT-P10) - not yet implemented:
 - Pipeline deployment verification
 - Critical process retention (100%)
 - Cardinality reduction (≥50%)
 - A/B experiment functionality
 - Collector overhead (<5% CPU)
 
-### Load Profiles
+### Load Profiles (Planned)
 - **realistic**: 50-200 processes with normal churn
 - **high-cardinality**: 1000-2000 mostly idle processes
 - **high-churn**: 20-30 processes/sec creation rate
@@ -249,6 +267,38 @@ Key acceptance tests for MVP (AT-P01 to AT-P10):
 - Nodes per experiment: 1000+
 - Processes per node: 500+
 - Unique time series: 3.5M+
+
+## Current Implementation Gaps
+
+### Critical Missing Components
+1. **Experiment Controller**: State machine and business logic not implemented
+2. **Config Generator**: No template engine or pipeline optimization
+3. **Pipeline Operator**: Reconciliation logic incomplete
+4. **Testing**: 0% test coverage, no test framework
+5. **CI/CD**: No automated build/test/deploy pipeline
+
+### Key Integration Points Needed
+1. API Service → Controller communication
+2. Controller → Generator triggering
+3. Dashboard → API authentication
+4. Service → Database connections
+5. Operators → Kubernetes API interactions
+
+## Important Documentation
+
+### For Understanding the Vision
+- `docs/PRODUCT_REQUIREMENTS.md`: Complete PRD with acceptance criteria
+- `docs/architecture.md`: System design and data flow
+- `docs/TECHNICAL_SPEC_*.md`: Detailed specifications for each component
+
+### For Implementation Status
+- `PROJECT_STATUS.md`: Real-time tracking of what's built vs planned
+- `IMPLEMENTATION_ROADMAP.md`: 12-week plan to complete the platform
+- `QUICK_START_GUIDE.md`: Fast onboarding for new developers
+
+### For Code Quality
+- `docs/STATIC_ANALYSIS_RULES.md`: Coding standards and enforcement
+- `docs/MONO_REPO_GOVERNANCE.md`: Development workflows and practices
 
 ## Integration Points
 - **New Relic**: OTLP endpoint for process metrics export
