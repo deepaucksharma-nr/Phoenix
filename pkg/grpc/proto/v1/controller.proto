@@ -6,7 +6,7 @@ option go_package = "github.com/phoenix-platform/api/proto/v1/controller;control
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
-import "api/proto/v1/common.proto";
+import "v1/common.proto";
 
 // Control signal for pipeline management
 message ControlSignal {

@@ -5,7 +5,7 @@ package phoenix.generator.v1;
 option go_package = "github.com/phoenix-platform/api/proto/v1/generator;generatorv1";
 
 import "google/protobuf/timestamp.proto";
-import "api/proto/v1/common.proto";
+import "v1/common.proto";
 
 // Template represents a reusable pipeline configuration template
 message Template {

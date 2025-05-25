@@ -68,4 +68,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/phoenix/platform/pkg => ../../pkg
+replace (
+	github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+	github.com/phoenix/platform/packages/contracts => ../../packages/contracts
+)

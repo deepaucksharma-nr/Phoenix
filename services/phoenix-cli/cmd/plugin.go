@@ -353,6 +353,7 @@ echo "Plugin executed successfully!"
 	}
 }
 
+/*
 func getReadmeTemplate(name, description, language string) string {
 	return fmt.Sprintf(`# %s
 
@@ -397,4 +398,24 @@ To interact with the Phoenix API from your plugin, you can:
 Example API call:
 ` + "```bash\n# Get auth token from phoenix config\nAPI_TOKEN=$(phoenix config get auth_token)\nAPI_URL=$(phoenix config get api_url)\n\n# Make API request\ncurl -H \"Authorization: Bearer $API_TOKEN\" \\\n     \"$API_URL/api/v1/experiments\"\n```" + `
 `, name, description, name, language, getExecutableName(language))
+}
+*/To interact with the Phoenix API from your plugin, you can:
+
+1. Use the phoenix CLI commands as subprocesses
+2. Make direct HTTP requests to the API
+3. Use the Phoenix API token from the user's configuration
+
+Example API call:
+` + "```bash" + `
+# Get auth token from phoenix config
+API_TOKEN=$(phoenix config get auth_token)
+API_URL=$(phoenix config get api_url)
+
+# Make API request
+curl -H "Authorization: Bearer $API_TOKEN" \
+     "$API_URL/api/v1/experiments"
+` + "```" + `
+`
+	
+	return fmt.Sprintf(template, name, description, name, language, executableName)
 }
