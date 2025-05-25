@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/phoenix/platform/services/phoenix-cli/cmd"
+	"github.com/phoenix/platform/cmd/phoenix-cli/cmd"
 )
 
 func main() {

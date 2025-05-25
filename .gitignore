@@ -111,3 +111,4 @@ yarn-error.log*
 backup/
 # Migration state files
 .migration/
+OLD_IMPLEMENTATION/

@@ -1,1 +1,0 @@
-Favicon placeholder created as SVG. Convert to .ico using online tools or imagemagick.

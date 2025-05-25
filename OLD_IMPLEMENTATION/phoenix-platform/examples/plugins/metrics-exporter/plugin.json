@@ -1,8 +1,0 @@
-{
-  "name": "metrics-exporter",
-  "version": "1.0.0",
-  "description": "Export experiment metrics to various formats and destinations",
-  "author": "Phoenix Team",
-  "commands": ["metrics-exporter"],
-  "executable": "main.sh"
-}

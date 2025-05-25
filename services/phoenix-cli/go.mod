@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/phoenix-cli
+module github.com/phoenix-vnext/platform/services/phoenix-cli
 
 go 1.21
 

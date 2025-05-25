@@ -47,14 +47,16 @@ mkdir -p "$ARCHIVE_DIR"
 # Create archive
 echo ""
 echo -e "${YELLOW}Creating archive...${NC}"
-tar -czf "$ARCHIVE_DIR/$ARCHIVE_NAME" OLD_IMPLEMENTATION/ \
-    --exclude='OLD_IMPLEMENTATION/.git' \
-    --exclude='OLD_IMPLEMENTATION/node_modules' \
-    --exclude='OLD_IMPLEMENTATION/vendor' \
-    --exclude='OLD_IMPLEMENTATION/dist' \
-    --exclude='OLD_IMPLEMENTATION/build' \
+ARCHIVE_PATH="$ARCHIVE_DIR/$ARCHIVE_NAME"
+tar -czf "$ARCHIVE_PATH" \
+    --exclude='.git' \
+    --exclude='node_modules' \
+    --exclude='vendor' \
+    --exclude='dist' \
+    --exclude='build' \
     --exclude='*.log' \
-    --exclude='*.tmp'
+    --exclude='*.tmp' \
+    OLD_IMPLEMENTATION/
 
 # Verify archive
 if [[ -f "$ARCHIVE_DIR/$ARCHIVE_NAME" ]]; then

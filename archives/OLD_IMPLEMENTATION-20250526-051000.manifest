@@ -1,0 +1,22 @@
+Archive Manifest
+================
+Date: Mon May 26 05:10:04 IST 2025
+Original Size: 4.5M
+Archive Size: 952K
+Files Archived: 545
+Directories: 198
+
+Excluded:
+- .git directories
+- node_modules
+- vendor directories
+- dist/build directories
+- Log files
+- Temporary files
+
+Checksum:
+2e6cada8102cdbe6d2c2e5608760aeaa169b7a04073da29dbaf1517385616d79  archives/OLD_IMPLEMENTATION-20250526-051000.tar.gz
+
+Notes:
+This archive contains the pre-migration Phoenix Platform implementation.
+The code has been successfully migrated to the new monorepo structure.
