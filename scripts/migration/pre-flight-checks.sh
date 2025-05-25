@@ -123,7 +123,12 @@ fi
 
 # Check 4: Disk Space
 echo -e "\n${YELLOW}Checking disk space...${NC}"
-AVAILABLE_SPACE=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+# Different df syntax for macOS vs Linux
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    AVAILABLE_SPACE=$(df -g . | awk 'NR==2 {print $4}')
+else
+    AVAILABLE_SPACE=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+fi
 REQUIRED_SPACE=10
 
 if (( AVAILABLE_SPACE >= REQUIRED_SPACE )); then
