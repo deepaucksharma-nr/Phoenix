@@ -3,9 +3,10 @@ package analysis
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
-	"github.com/deepaucksharma/phoenix/phoenix-platform/pkg/models"
+	"github.com/phoenix/platform/pkg/models"
 )
 
 // ExperimentAnalyzer integrates statistical analysis with the experiment system

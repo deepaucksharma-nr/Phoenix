@@ -1,7 +1,6 @@
 package analysis
 
 import (
-	"fmt"
 	"math"
 	"sort"
 )
