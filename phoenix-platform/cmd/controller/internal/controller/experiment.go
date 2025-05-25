@@ -67,6 +67,7 @@ type ExperimentStatus struct {
 	EndTime        *time.Time             `json:"end_time,omitempty"`
 	Results        *ExperimentResults     `json:"results,omitempty"`
 	Conditions     []ExperimentCondition  `json:"conditions"`
+	AnalysisReport string                 `json:"analysis_report,omitempty"`
 }
 
 // ExperimentResults contains the results of a completed experiment
@@ -78,6 +79,7 @@ type ExperimentResults struct {
 	MemoryOverhead       float64      `json:"memory_overhead"`
 	ProcessCoverage      float64      `json:"process_coverage"`
 	Recommendation       string       `json:"recommendation"`
+	StatisticalAnalysis  interface{} `json:"statistical_analysis,omitempty"`
 }
 
 // MetricsSnapshot represents metrics at a point in time
