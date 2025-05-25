@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/output"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/plugin"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/output"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/plugin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

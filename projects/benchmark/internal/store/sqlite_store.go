@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/phoenix/platform/packages/go-common/database/sqlite"
+	"github.com/phoenix-vnext/platform/packages/go-common/database/sqlite"
 )
 
 // SQLiteStore provides persistent storage for benchmark results

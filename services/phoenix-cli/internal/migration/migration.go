@@ -123,6 +123,85 @@ func (m *Manager) Migrate() error {
 	return nil
 }
 
+// CheckMigrationNeeded checks if migration is needed
+func (m *Manager) CheckMigrationNeeded() (bool, error) {
+	currentVersion, err := m.GetCurrentVersion()
+	if err != nil {
+		return false, err
+	}
+	
+	// Check if version is older than current
+	// For now, simple check - in real implementation would compare semantic versions
+	return currentVersion != "1.0.0", nil
+}
+
+// ValidateConfig validates the configuration file
+func (m *Manager) ValidateConfig() error {
+	data, err := os.ReadFile(m.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+	
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config file: %w", err)
+	}
+	
+	// Basic validation - check required fields
+	requiredFields := []string{"api", "auth"}
+	for _, field := range requiredFields {
+		if _, ok := config[field]; !ok {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+	
+	return nil
+}
+
+// Rollback rolls back to a previous configuration version
+func (m *Manager) Rollback(version string) error {
+	backupDir := filepath.Join(filepath.Dir(m.configPath), "backups")
+	
+	// Find backup file
+	files, err := os.ReadDir(backupDir)
+	if err != nil {
+		return fmt.Errorf("failed to read backup directory: %w", err)
+	}
+	
+	var latestBackup string
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".yaml" {
+			latestBackup = file.Name()
+		}
+	}
+	
+	if latestBackup == "" {
+		return fmt.Errorf("no backup found to rollback to")
+	}
+	
+	backupPath := filepath.Join(backupDir, latestBackup)
+	
+	// Copy backup to config
+	src, err := os.Open(backupPath)
+	if err != nil {
+		return fmt.Errorf("failed to open backup file: %w", err)
+	}
+	defer src.Close()
+	
+	dst, err := os.Create(m.configPath)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %w", err)
+	}
+	defer dst.Close()
+	
+	if _, err := io.Copy(dst, src); err != nil {
+		return fmt.Errorf("failed to copy backup file: %w", err)
+	}
+	
+	fmt.Printf("Configuration rolled back from: %s\n", backupPath)
+	return nil
+}
+
 // History returns migration history
 func (m *Manager) History() ([]Version, error) {
 	// For now, return a simple history

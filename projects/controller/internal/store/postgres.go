@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/phoenix/platform/packages/go-common/database/postgres"
-	"github.com/phoenix/platform/projects/controller/internal/controller"
+	"github.com/phoenix-vnext/platform/packages/go-common/database/postgres"
+	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
 	"go.uber.org/zap"
 )
 

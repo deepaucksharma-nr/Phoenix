@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
-	github.com/phoenix/platform/packages/go-common v0.0.0
+	github.com/phoenix-vnext/platform/packages/go-common v0.0.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.26.0
 	google.golang.org/grpc v1.64.0
@@ -14,7 +14,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
-replace github.com/phoenix/platform/pkg => ../../pkg
+replace github.com/phoenix-vnext/platform/pkg => ../../pkg
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -62,6 +62,6 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
 
-replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts
+replace github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts

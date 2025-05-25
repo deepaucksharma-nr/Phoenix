@@ -22,4 +22,4 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 )
 
-replace github.com/phoenix/platform/pkg => ../../pkg
+replace github.com/phoenix-vnext/platform/pkg => ../../pkg

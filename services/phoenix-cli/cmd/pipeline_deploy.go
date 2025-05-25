@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/client"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/config"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/output"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/config"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

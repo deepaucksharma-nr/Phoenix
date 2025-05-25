@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	"github.com/phoenix/platform/projects/controller/internal/clients"
-	"github.com/phoenix/platform/packages/go-common/analysis"
+	"github.com/phoenix-vnext/platform/projects/controller/internal/clients"
+	"github.com/phoenix-vnext/platform/packages/go-common/analysis"
 )
 
 // StateMachine manages experiment state transitions

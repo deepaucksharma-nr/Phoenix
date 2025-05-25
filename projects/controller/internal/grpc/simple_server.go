@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/phoenix/platform/projects/controller/internal/controller"
-	pb "github.com/phoenix/platform/packages/contracts/proto/v1"
+	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
+	pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
 )
 
 // SimpleExperimentServer implements a basic experiment service

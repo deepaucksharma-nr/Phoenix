@@ -1,21 +1,52 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
 import { User } from '@types/auth';
+import axios from 'axios';
 
 interface AuthState {
   user: User | null;
   token: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  loading: boolean;
   error: string | null;
 }
+
+// Async thunks
+export const login = createAsyncThunk(
+  'auth/login',
+  async (credentials: { email: string; password: string }) => {
+    const response = await axios.post('/api/auth/login', credentials);
+    return response.data;
+  }
+);
+
+export const register = createAsyncThunk(
+  'auth/register',
+  async (data: { name: string; email: string; password: string }) => {
+    const response = await axios.post('/api/auth/register', data);
+    return response.data;
+  }
+);
+
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
+  async () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No token');
+    
+    const response = await axios.get('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+  }
+);
 
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('token'),
   refreshToken: localStorage.getItem('refreshToken'),
   isAuthenticated: false,
-  isLoading: true,
+  loading: true,
   error: null,
 };
 
@@ -36,7 +67,7 @@ const authSlice = createSlice({
       state.token = token;
       state.refreshToken = refreshToken;
       state.isAuthenticated = true;
-      state.isLoading = false;
+      state.loading = false;
       state.error = null;
       
       // Persist tokens
@@ -47,18 +78,18 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
+      state.loading = action.payload;
     },
     setError: (state, action: PayloadAction<string | null>) => {
       state.error = action.payload;
-      state.isLoading = false;
+      state.loading = false;
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.refreshToken = null;
       state.isAuthenticated = false;
-      state.isLoading = false;
+      state.loading = false;
       state.error = null;
       
       // Clear persisted tokens
@@ -69,6 +100,63 @@ const authSlice = createSlice({
       state.token = action.payload;
       localStorage.setItem('token', action.payload);
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      // Login cases
+      .addCase(login.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(login.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.refreshToken = action.payload.refreshToken;
+        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      })
+      .addCase(login.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Login failed';
+      })
+      // Register cases
+      .addCase(register.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(register.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+        state.token = action.payload.token;
+        state.refreshToken = action.payload.refreshToken;
+        localStorage.setItem('token', action.payload.token);
+        localStorage.setItem('refreshToken', action.payload.refreshToken);
+      })
+      .addCase(register.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Registration failed';
+      })
+      // Check auth cases
+      .addCase(checkAuth.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(checkAuth.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+      })
+      .addCase(checkAuth.rejected, (state) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.token = null;
+        state.refreshToken = null;
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+      });
   },
 });
 

@@ -1,17 +1,9 @@
-import { useAuthStore } from '../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from './redux'
+import { login, logout, register, checkAuth } from '@store/slices/authSlice'
 
 export const useAuth = () => {
-  const {
-    user,
-    token,
-    isAuthenticated,
-    isLoading,
-    error,
-    login,
-    logout,
-    register,
-    checkAuth,
-  } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const { user, token, isAuthenticated, loading: isLoading, error } = useAppSelector(state => state.auth)
 
   return {
     user,
@@ -19,9 +11,9 @@ export const useAuth = () => {
     isAuthenticated,
     isLoading,
     error,
-    login,
-    logout,
-    register,
-    checkAuth,
+    login: (credentials: any) => dispatch(login(credentials)),
+    logout: () => dispatch(logout()),
+    register: (data: any) => dispatch(register(data)),
+    checkAuth: () => dispatch(checkAuth()),
   }
 }

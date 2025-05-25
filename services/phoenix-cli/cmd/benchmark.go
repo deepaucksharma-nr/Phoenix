@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/client"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/config"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/output"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/config"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -453,7 +453,7 @@ finish:
 func makeRequest(apiClient *client.APIClient, endpoint, method string) error {
 	switch endpoint {
 	case "/api/v1/experiments":
-		_, err := apiClient.ListExperiments("", "")
+		_, err := apiClient.ListExperiments(client.ListExperimentsRequest{})
 		return err
 	case "/api/v1/pipeline-deployments":
 		// This would require implementing the pipeline deployment client methods

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/auth"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/config"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/auth"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 

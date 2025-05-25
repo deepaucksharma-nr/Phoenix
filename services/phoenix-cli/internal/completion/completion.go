@@ -3,8 +3,8 @@ package completion
 import (
 	"strings"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/client"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/config"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

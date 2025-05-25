@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/client"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

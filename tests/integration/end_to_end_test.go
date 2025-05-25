@@ -16,9 +16,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/phoenix/platform/cmd/controller/internal/controller"
-	"github.com/phoenix/platform/cmd/controller/internal/store"
-	"github.com/phoenix/platform/pkg/generator"
+	"github.com/phoenix-vnext/platform/cmd/controller/internal/controller"
+	"github.com/phoenix-vnext/platform/cmd/controller/internal/store"
+	"github.com/phoenix-vnext/platform/pkg/generator"
 )
 
 // TestEndToEndWorkflow tests the complete experiment workflow

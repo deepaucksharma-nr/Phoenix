@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc/status"
 	"github.com/google/uuid"
 
-	pb "github.com/phoenix/platform/packages/contracts/proto/v1"
-	"github.com/phoenix/platform/packages/go-common/models"
-	"github.com/phoenix/platform/packages/go-common/store"
+	pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
+	"github.com/phoenix-vnext/platform/packages/go-common/models"
+	"github.com/phoenix-vnext/platform/packages/go-common/store"
 )
 
 // ExperimentService handles experiment-related operations

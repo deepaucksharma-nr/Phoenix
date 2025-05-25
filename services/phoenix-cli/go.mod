@@ -36,4 +36,4 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common

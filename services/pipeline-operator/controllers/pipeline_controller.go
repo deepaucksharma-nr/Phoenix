@@ -18,7 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	phoenixv1alpha1 "github.com/phoenix/platform/operators/pipeline/api/v1alpha1"
+	phoenixv1alpha1 "github.com/phoenix-vnext/platform/operators/pipeline/api/v1alpha1"
 )
 
 const (

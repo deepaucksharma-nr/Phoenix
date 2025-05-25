@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"text/tabwriter"
 
-	"github.com/phoenix/platform/services/phoenix-cli/internal/migration"
-	"github.com/phoenix/platform/services/phoenix-cli/internal/output"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/migration"
+	"github.com/phoenix-vnext/platform/services/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -135,7 +135,11 @@ func runMigrateUp(cmd *cobra.Command, args []string) error {
 
 	// Perform migration
 	fmt.Printf("Migrating configuration from version %s to latest\n", currentVersion)
-	return mm.Migrate(dryRun)
+	if dryRun {
+		fmt.Println("Dry run mode - no changes will be made")
+		return nil
+	}
+	return mm.Migrate()
 }
 
 func runMigrateStatus(cmd *cobra.Command, args []string) error {

@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	phoenixv1alpha1 "github.com/phoenix/platform/operators/pipeline/api/v1alpha1"
-	"github.com/phoenix/platform/operators/pipeline/controllers"
+	phoenixv1alpha1 "github.com/phoenix-vnext/platform/operators/pipeline/api/v1alpha1"
+	"github.com/phoenix-vnext/platform/operators/pipeline/controllers"
 	//+kubebuilder:scaffold:imports
 )
 

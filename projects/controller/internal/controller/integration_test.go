@@ -14,9 +14,9 @@ import (
 	"go.uber.org/zap"
 	_ "github.com/lib/pq" // PostgreSQL driver
 	
-	"github.com/phoenix/platform/projects/controller/internal/controller"
-	"github.com/phoenix/platform/projects/controller/internal/store"
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
+	"github.com/phoenix-vnext/platform/projects/controller/internal/store"
+	"github.com/phoenix-vnext/platform/packages/go-common/models"
 )
 
 var (

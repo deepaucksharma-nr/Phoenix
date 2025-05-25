@@ -17,9 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	"github.com/phoenix/platform/cmd/api-gateway/internal/handlers"
-	"github.com/phoenix/platform/cmd/api-gateway/internal/middleware"
-	"github.com/phoenix/platform/pkg/auth"
+	"github.com/phoenix-vnext/platform/cmd/api-gateway/internal/handlers"
+	"github.com/phoenix-vnext/platform/cmd/api-gateway/internal/middleware"
+	"github.com/phoenix-vnext/platform/pkg/auth"
 )
 
 // TestAPIGatewayIntegration tests the API Gateway integration

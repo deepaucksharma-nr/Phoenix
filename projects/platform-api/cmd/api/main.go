@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"go.uber.org/zap"
-	"github.com/phoenix/platform/packages/go-common/telemetry/logging"
+	"github.com/phoenix-vnext/platform/packages/go-common/telemetry/logging"
 )
 
 func main() {

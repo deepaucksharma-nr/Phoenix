@@ -13,6 +13,6 @@ require (
 )
 
 replace (
-	github.com/phoenix/platform/packages/go-common => ../../packages/go-common
-	github.com/phoenix/platform/packages/contracts => ../../packages/contracts
+	github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
+	github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts
 )

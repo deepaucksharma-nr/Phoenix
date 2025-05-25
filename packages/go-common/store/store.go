@@ -8,7 +8,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix-vnext/platform/packages/go-common/models"
 )
 
 // Store interface defines data access methods
