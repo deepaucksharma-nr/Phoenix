@@ -91,18 +91,21 @@ kubectl get ingress -n phoenix-system phoenix-dashboard -o jsonpath='{.spec.rule
 
 ### Getting Started
 - [Architecture Overview](docs/architecture.md)
-- [User Guide](docs/user-guide.md)
+- [Overview & Concepts](docs/OVERVIEW_QUICK_START.md)
+- [Developer Quick Start](docs/DEVELOPER_QUICK_START.md)
 - [Development Guide](docs/DEVELOPMENT.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 
 ### Reference
-- [API Reference](docs/api-reference.md)
+- [API Reference](docs/API_REFERENCE.md)
 - [Pipeline Configuration Guide](docs/pipeline-guide.md)
+- [Process Simulator Reference](docs/PROCESS_SIMULATOR_REFERENCE.md)
 - [Troubleshooting](docs/troubleshooting.md)
 
 ### Technical Specifications
 - [Product Requirements](docs/PRODUCT_REQUIREMENTS.md)
 - [Technical Architecture](docs/TECHNICAL_SPEC_MASTER.md)
+- [Implementation Status](docs/IMPLEMENTATION_STATUS.md)
 
 ## 🛠️ Development
 

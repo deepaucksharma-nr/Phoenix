@@ -17,6 +17,7 @@ import {
   ListItemIcon,
   ListItemButton,
   Divider,
+  Fab,
 } from '@mui/material'
 import {
   TrendingDown,
@@ -30,15 +31,20 @@ import {
   Speed,
   AttachMoney,
   Settings,
+  Add as AddIcon,
 } from '@mui/icons-material'
 import { MetricCard } from '../components/Metrics/MetricCard'
 import { MetricsChart } from '../components/Metrics/MetricsChart'
+import { ExperimentWizard } from '../components/ExperimentWizard'
+import { WelcomeGuide } from '../components/Onboarding'
 import { useExperimentStore } from '../store/useExperimentStore'
 import { formatDistanceToNow } from 'date-fns'
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate()
   const { experiments, fetchExperiments, loading } = useExperimentStore()
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [systemMetrics, setSystemMetrics] = useState({
     totalHosts: 1247,
     activeExperiments: 3,
@@ -48,7 +54,21 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchExperiments()
+    
+    // Check if user should see onboarding
+    const hasCompletedOnboarding = localStorage.getItem('phoenix_onboarding_completed')
+    const hasExperiments = experiments.length > 0
+    if (!hasCompletedOnboarding && !hasExperiments) {
+      setWelcomeOpen(true)
+    }
   }, [fetchExperiments])
+  
+  useEffect(() => {
+    // Listen for experiment wizard event from onboarding
+    const handleOpenWizard = () => setWizardOpen(true)
+    window.addEventListener('openExperimentWizard', handleOpenWizard)
+    return () => window.removeEventListener('openExperimentWizard', handleOpenWizard)
+  }, [])
 
   const recentExperiments = experiments
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -66,18 +86,28 @@ export const Dashboard: React.FC = () => {
   }
 
   const handleCreateExperiment = () => {
-    navigate('/pipeline-builder')
+    setWizardOpen(true)
   }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Monitor your process metrics optimization performance
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Dashboard
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Monitor your process metrics optimization performance
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleCreateExperiment}
+          size="large"
+        >
+          Create Experiment
+        </Button>
       </Box>
 
       {loading && <LinearProgress sx={{ mb: 3 }} />}
@@ -307,6 +337,32 @@ export const Dashboard: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Floating Action Button */}
+      <Fab
+        color="primary"
+        aria-label="create experiment"
+        onClick={handleCreateExperiment}
+        sx={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+        }}
+      >
+        <AddIcon />
+      </Fab>
+      
+      {/* Experiment Creation Wizard */}
+      <ExperimentWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+      />
+      
+      {/* Welcome Guide for New Users */}
+      <WelcomeGuide
+        open={welcomeOpen}
+        onClose={() => setWelcomeOpen(false)}
+      />
     </Container>
   )
 }

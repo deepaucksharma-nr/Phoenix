@@ -16,9 +16,10 @@ interface NotificationContextType {
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => void
   removeNotification: (id: string) => void
   clearNotifications: () => void
+  showNotification: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+export const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext)
@@ -64,6 +65,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     setActiveNotification(null)
   }, [])
 
+  const showNotification = useCallback((message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    addNotification({
+      title: message,
+      type,
+    })
+  }, [addNotification])
+
   const handleClose = () => {
     if (activeNotification) {
       removeNotification(activeNotification.id)
@@ -80,7 +88,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   return (
     <NotificationContext.Provider
-      value={{ notifications, addNotification, removeNotification, clearNotifications }}
+      value={{ notifications, addNotification, removeNotification, clearNotifications, showNotification }}
     >
       {children}
       {activeNotification && (

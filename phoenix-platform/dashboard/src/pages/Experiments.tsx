@@ -35,6 +35,7 @@ import {
   Assessment,
 } from '@mui/icons-material'
 import { useExperimentStore } from '../store/useExperimentStore'
+import { ExperimentWizard } from '../components/ExperimentWizard'
 import { formatDistanceToNow } from 'date-fns'
 
 const STATUS_COLORS = {
@@ -68,13 +69,14 @@ export const Experiments: React.FC = () => {
   const [page, setPage] = useState(0)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showFilters, setShowFilters] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   useEffect(() => {
     fetchExperiments()
   }, [fetchExperiments])
 
   const handleCreateExperiment = () => {
-    navigate('/pipeline-builder')
+    setWizardOpen(true)
   }
 
   const handleViewExperiment = (id: string) => {
@@ -346,6 +348,12 @@ export const Experiments: React.FC = () => {
         rowsPerPage={rowsPerPage}
         onRowsPerPageChange={handleChangeRowsPerPage}
         sx={{ mt: 3 }}
+      />
+      
+      {/* Experiment Creation Wizard */}
+      <ExperimentWizard
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
       />
     </Container>
   )

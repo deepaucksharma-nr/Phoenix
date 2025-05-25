@@ -37,10 +37,12 @@ import {
   Error,
   Warning,
   CloudUpload,
+  Visibility,
 } from '@mui/icons-material'
 import { useExperimentStore } from '../store/useExperimentStore'
 import { format, formatDistanceToNow } from 'date-fns'
 import { PipelineViewer } from '../components/PipelineBuilder/PipelineViewer'
+import { ExperimentMonitor } from '../components/ExperimentMonitor'
 import { useExperimentUpdates } from '../hooks/useExperimentUpdates'
 
 interface TabPanelProps {
@@ -81,6 +83,7 @@ export const ExperimentDetails: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState(0)
   const [promotingVariant, setPromotingVariant] = useState<string | null>(null)
+  const [monitorOpen, setMonitorOpen] = useState(false)
 
   // Subscribe to real-time updates for this experiment
   useExperimentUpdates(id)
@@ -229,15 +232,24 @@ export const ExperimentDetails: React.FC = () => {
               </Button>
             )}
             {experiment.status === 'running' && (
-              <Button
-                variant="contained"
-                color="warning"
-                startIcon={<Stop />}
-                onClick={handleStop}
-                disabled={loading}
-              >
-                Stop
-              </Button>
+              <>
+                <Button
+                  variant="contained"
+                  startIcon={<Visibility />}
+                  onClick={() => setMonitorOpen(true)}
+                >
+                  Monitor Live
+                </Button>
+                <Button
+                  variant="contained"
+                  color="warning"
+                  startIcon={<Stop />}
+                  onClick={handleStop}
+                  disabled={loading}
+                >
+                  Stop
+                </Button>
+              </>
             )}
             {['completed', 'failed'].includes(experiment.status) && (
               <Button
@@ -271,6 +283,7 @@ export const ExperimentDetails: React.FC = () => {
               <Tab label="Pipeline Configuration" />
               <Tab label="Target Hosts" />
               <Tab label="Events" />
+              {experiment.status === 'running' && <Tab label="Real-time Monitor" />}
             </Tabs>
             <Divider />
             
@@ -420,6 +433,14 @@ export const ExperimentDetails: React.FC = () => {
                 </List>
               </Box>
             </TabPanel>
+            
+            {experiment.status === 'running' && (
+              <TabPanel value={activeTab} index={4}>
+                <Box sx={{ p: 3 }}>
+                  <ExperimentMonitor experimentId={id!} embedded />
+                </Box>
+              </TabPanel>
+            )}
           </Paper>
         </Grid>
 
@@ -521,6 +542,14 @@ export const ExperimentDetails: React.FC = () => {
           </Card>
         </Grid>
       </Grid>
+      
+      {/* Real-time Monitor Dialog */}
+      {monitorOpen && (
+        <ExperimentMonitor
+          experimentId={id!}
+          onClose={() => setMonitorOpen(false)}
+        />
+      )}
     </Container>
   )
 }

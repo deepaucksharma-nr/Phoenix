@@ -1,63 +1,87 @@
 # Phoenix Platform Development Guide
 
-This guide covers the development workflow, standards, and best practices for contributing to the Phoenix platform.
+This guide covers the complete development workflow, from setting up your local environment to contributing code following best practices.
 
 ## Table of Contents
 
-1. [Development Environment Setup](#development-environment-setup)
-2. [Project Structure](#project-structure)
-3. [Development Workflow](#development-workflow)
-4. [Coding Standards](#coding-standards)
-5. [Testing Guidelines](#testing-guidelines)
-6. [Debugging Tips](#debugging-tips)
-7. [Contributing](#contributing)
+1. [Prerequisites](#prerequisites)
+2. [Quick Start](#quick-start)
+3. [Architecture Overview](#architecture-overview)
+4. [Project Structure](#project-structure)
+5. [Development Workflow](#development-workflow)
+6. [Services](#services)
+7. [API Examples](#api-examples)
+8. [Coding Standards](#coding-standards)
+9. [Testing Guidelines](#testing-guidelines)
+10. [Debugging](#debugging)
+11. [Troubleshooting](#troubleshooting)
+12. [Contributing](#contributing)
 
-## Development Environment Setup
+## Prerequisites
 
-### Prerequisites
-
+- Docker and Docker Compose (v2.0+)
 - Go 1.21+
 - Node.js 18+ and npm
-- Docker and Docker Compose
-- Kubernetes 1.28+ (kind or minikube for local development)
-- PostgreSQL 15+ (or use Docker)
+- Make
 - Git
+- Kubernetes 1.28+ (kind or minikube for local development) - optional
 
-### Initial Setup
+## Quick Start
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/phoenix/platform.git
-   cd platform/phoenix-platform
+   git clone https://github.com/phoenix-platform/phoenix.git
+   cd phoenix/phoenix-platform
    ```
 
-2. **Install dependencies**
-   ```bash
-   make deps
-   ```
-
-3. **Set up environment variables**
+2. **Set up environment variables**
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
-4. **Start development services**
+3. **Start the development environment**
    ```bash
-   docker-compose up -d postgres prometheus grafana
+   ./scripts/dev-environment.sh up
    ```
 
-5. **Run database migrations**
+4. **Run database migrations**
    ```bash
-   make migrate
+   ./scripts/dev-environment.sh migrate
    ```
+
+5. **Access the services**
+   - API Gateway: http://localhost:8080
+   - Dashboard: http://localhost:5173
+   - Prometheus: http://localhost:9090
+   - Grafana: http://localhost:3000 (admin/admin)
+
+## Architecture Overview
+
+The local development environment runs all Phoenix Platform services in Docker containers:
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Dashboard     │────▶│  API Gateway    │────▶│    Services     │
+│  (React/Vite)   │     │  (REST/gRPC)    │     │   (gRPC APIs)   │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                │                         │
+                                │                         ▼
+                                │                ┌─────────────────┐
+                                │                │   PostgreSQL    │
+                                │                │     Redis       │
+                                │                │   Prometheus    │
+                                └───────────────▶│    Grafana      │
+                                                 └─────────────────┘
+```
 
 ## Project Structure
 
 ```
 phoenix-platform/
 ├── cmd/                    # Application entry points
-│   ├── api/               # API server
+│   ├── api-gateway/       # API Gateway server
+│   ├── control-service/   # Control service
 │   ├── controller/        # Experiment controller
 │   ├── generator/         # Config generator
 │   └── simulator/         # Process simulator
@@ -65,6 +89,7 @@ phoenix-platform/
 │   ├── api/              # API business logic
 │   ├── auth/             # Authentication
 │   ├── generator/        # Config generation
+│   ├── interfaces/       # Service interfaces
 │   └── models/           # Data models
 ├── internal/              # Private packages
 ├── operators/             # Kubernetes operators
@@ -74,37 +99,65 @@ phoenix-platform/
 ├── pipelines/            # Pipeline templates
 ├── k8s/                  # Kubernetes manifests
 ├── helm/                 # Helm charts
+├── migrations/           # Database migrations
+├── scripts/              # Development scripts
 └── docs/                 # Documentation
 ```
 
 ## Development Workflow
 
-### Running Services Locally
+### Running Services
 
-1. **API Server**
-   ```bash
-   go run cmd/api/main.go
-   ```
+```bash
+# Start all services
+./scripts/dev-environment.sh up
 
-2. **Dashboard Development**
-   ```bash
-   cd dashboard
-   npm run dev
-   ```
+# Stop all services
+./scripts/dev-environment.sh down
 
-3. **Running Tests**
-   ```bash
-   # All tests
-   make test
+# View logs
+./scripts/dev-environment.sh logs
 
-   # Specific package
-   go test ./pkg/api/...
+# Follow logs
+./scripts/dev-environment.sh logs-f
 
-   # With coverage
-   go test -cover ./...
-   ```
+# Restart a specific service
+./scripts/dev-environment.sh restart experiment-controller
+```
 
-### Working with Kubernetes
+### Building and Testing
+
+```bash
+# Build all services
+make build
+
+# Run unit tests
+make test
+
+# Run integration tests
+./scripts/dev-environment.sh test
+
+# Validate code structure
+make validate
+
+# Generate proto code
+make generate-proto
+```
+
+### Database Management
+
+```bash
+# Run migrations
+./scripts/dev-environment.sh migrate
+
+# Connect to PostgreSQL
+docker-compose -f docker-compose.dev.yml exec postgres psql -U phoenix
+
+# View experiment data
+SELECT * FROM experiments;
+```
+
+### Working with Kubernetes (Optional)
 
 1. **Local Kubernetes Cluster**
    ```bash
@@ -125,26 +178,92 @@ phoenix-platform/
    kubectl port-forward svc/phoenix-dashboard 3000:80
    ```
 
-### Building and Packaging
+## Services
 
-1. **Build Binaries**
-   ```bash
-   make build
-   ```
+### Core Services
 
-2. **Build Docker Images**
-   ```bash
-   make docker
-   ```
+1. **API Gateway** (Port 8080)
+   - REST API endpoints
+   - Routes to gRPC services
+   - Authentication/authorization
+   - Request logging and metrics
 
-3. **Generate Code**
-   ```bash
-   # Generate CRDs
-   make generate
+2. **Experiment Controller** (Port 50051)
+   - Manages experiment lifecycle
+   - State machine implementation
+   - Database persistence
 
-   # Generate protobuf
-   make proto
-   ```
+3. **Config Generator** (Port 50052)
+   - Generates OTel configurations
+   - Template management
+   - GitOps integration
+
+4. **Control Service** (Port 50053)
+   - Traffic management
+   - Drift detection
+   - Control signals
+
+### Supporting Services
+
+- **PostgreSQL**: Primary database
+- **Redis**: Caching and session storage
+- **Prometheus**: Metrics collection
+- **Grafana**: Metrics visualization
+- **NATS**: Event bus (future use)
+
+## API Examples
+
+### Create an Experiment
+
+```bash
+curl -X POST http://localhost:8080/api/v1/experiments \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cost Optimization Test",
+    "description": "Test 30% cost reduction",
+    "baseline_pipeline_id": "baseline-v1",
+    "candidate_pipeline_id": "optimized-v1",
+    "traffic_percentage": 10,
+    "target_services": ["service-a", "service-b"]
+  }'
+```
+
+### Generate Configuration
+
+```bash
+curl -X POST http://localhost:8080/api/v1/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pipeline_id": "current-pipeline",
+    "goals": [{
+      "type": 1,
+      "target_value": 0.3,
+      "priority": 10
+    }],
+    "constraints": [{
+      "type": 1,
+      "metric": "minimum_retention",
+      "min_value": 0.95
+    }]
+  }'
+```
+
+### Execute Control Signal
+
+```bash
+curl -X POST http://localhost:8080/api/v1/control/signals \
+  -H "Content-Type: application/json" \
+  -d '{
+    "experiment_id": "exp-123",
+    "type": "traffic_split",
+    "action": {
+      "baseline_pipeline_id": "baseline-v1",
+      "candidate_pipeline_id": "candidate-v1",
+      "candidate_percentage": 25
+    },
+    "reason": "Increase traffic to candidate"
+  }'
+```
 
 ## Coding Standards
 
@@ -206,53 +325,44 @@ docs: update pipeline configuration guide
 chore: upgrade dependencies
 ```
 
-## Testing Guidelines
+## Testing
 
-### Unit Tests
+For comprehensive testing guidance including unit tests, integration tests, E2E tests, and dashboard testing, see [TESTING.md](TESTING.md).
 
-1. **Go Tests**
-   ```go
-   func TestExperimentService_Create(t *testing.T) {
-       // Arrange
-       service := NewExperimentService(mockStore, logger)
-       
-       // Act
-       exp, err := service.Create(ctx, request)
-       
-       // Assert
-       require.NoError(t, err)
-       assert.Equal(t, "test-exp", exp.Name)
-   }
-   ```
-
-2. **React Tests**
-   ```typescript
-   describe('ExperimentCard', () => {
-       it('should display experiment name', () => {
-           render(<ExperimentCard experiment={mockExp} />);
-           expect(screen.getByText('Test Experiment')).toBeInTheDocument();
-       });
-   });
-   ```
-
-### Integration Tests
-
+Quick reference:
 ```bash
-# Run integration tests
+# Run all tests
+make test
+
+# Run specific test types
+make test-unit
 make test-integration
+make test-e2e
+make test-dashboard
 
-# Run specific integration test
-go test -tags=integration ./test/integration/api_test.go
+# Generate coverage report
+make coverage
 ```
 
-### E2E Tests
+## Debugging
+
+### Service Health Checks
+
+All services expose health endpoints:
 
 ```bash
-# Run E2E tests
-make test-e2e
-```
+# API Gateway
+curl http://localhost:8080/health
 
-## Debugging Tips
+# Experiment Controller
+curl http://localhost:8081/health
+
+# Config Generator
+curl http://localhost:8082/health
+
+# Control Service
+curl http://localhost:8083/health
+```
 
 ### API Debugging
 
@@ -268,8 +378,18 @@ make test-e2e
 
 3. **Inspect gRPC Calls**
    ```bash
-   grpcurl -plaintext localhost:5050 list
+   grpcurl -plaintext localhost:50051 list
    ```
+
+### Accessing Service Shells
+
+```bash
+# Execute shell in a container
+./scripts/dev-environment.sh exec experiment-controller
+
+# Or using docker-compose directly
+docker-compose -f docker-compose.dev.yml exec experiment-controller /bin/sh
+```
 
 ### Kubernetes Debugging
 
@@ -298,6 +418,41 @@ make test-e2e
    - Monitor API calls
    - Check request/response payloads
 
+## Troubleshooting
+
+### Common Issues
+
+1. **Port conflicts**
+   - Check if ports are already in use: `lsof -i :8080`
+   - Stop conflicting services or change ports in docker-compose.dev.yml
+
+2. **Database connection errors**
+   - Ensure PostgreSQL is healthy: `docker-compose ps postgres`
+   - Check DATABASE_URL in .env matches container configuration
+
+3. **Service discovery issues**
+   - Services communicate using container names
+   - Ensure all services are on the same Docker network
+
+### Development Tips
+
+1. **Hot Reload**: The dashboard supports hot reload. Changes to React code are reflected immediately.
+
+2. **Proto Changes**: After modifying proto files:
+   ```bash
+   make generate-proto
+   make build
+   ./scripts/dev-environment.sh restart <affected-service>
+   ```
+
+3. **Database Schema Changes**:
+   - Add migration file to `migrations/`
+   - Run `./scripts/dev-environment.sh migrate`
+
+4. **Monitoring**: 
+   - View metrics in Prometheus: http://localhost:9090
+   - Import dashboards in Grafana from `configs/monitoring/grafana/dashboards/`
+
 ## Contributing
 
 ### Pre-commit Checks
@@ -315,6 +470,11 @@ make test-e2e
 3. **Run Tests**
    ```bash
    make test
+   ```
+
+4. **Validate Structure**
+   ```bash
+   make validate
    ```
 
 ### Pull Request Process
@@ -335,9 +495,19 @@ make test-e2e
 - [ ] Performance impact considered
 - [ ] Backwards compatibility maintained
 
-## Additional Resources
+## Cleanup
 
-- [Architecture Overview](architecture.md)
-- [API Reference](api-reference.md)
-- [Troubleshooting Guide](troubleshooting.md)
-- [Phoenix Slack Channel](#phoenix-dev)
+```bash
+# Stop services and keep data
+./scripts/dev-environment.sh down
+
+# Stop services and remove all data
+./scripts/dev-environment.sh clean
+```
+
+## Next Steps
+
+- Review the [API Documentation](./API_REFERENCE.md)
+- Check the [Architecture Guide](./architecture.md)
+- Read about [Testing](./TESTING.md)
+- See [Troubleshooting Guide](./troubleshooting.md)

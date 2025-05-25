@@ -5,8 +5,8 @@ This directory contains all documentation for the Phoenix Observability Platform
 ## Documentation Structure
 
 ### Getting Started
-- [Quick Start Guide](QUICK_START_GUIDE.md) - 5-minute developer onboarding
-- [User Guide](user-guide.md) - End-user guide for using Phoenix dashboard
+- [Overview & Concepts](OVERVIEW_QUICK_START.md) - Introduction to Phoenix platform
+- [Developer Quick Start](DEVELOPER_QUICK_START.md) - 5-minute developer onboarding
 - [Architecture Overview](architecture.md) - System architecture and design
 
 ### Development
@@ -18,8 +18,9 @@ This directory contains all documentation for the Phoenix Observability Platform
 - [Deployment Guide](DEPLOYMENT.md) - Production deployment procedures
 
 ### Reference Documentation
-- [API Reference](api-reference.md) - Complete API documentation
+- [API Reference](API_REFERENCE.md) - Complete API documentation
 - [Pipeline Configuration Guide](pipeline-guide.md) - OpenTelemetry pipeline configuration
+- [Process Simulator Reference](PROCESS_SIMULATOR_REFERENCE.md) - Process simulator documentation
 - [Troubleshooting](troubleshooting.md) - Common issues and solutions
 
 ### Technical Specifications
@@ -45,9 +46,10 @@ Review documents are in `reviews/` subdirectory:
 ## Documentation Standards
 
 ### File Naming Conventions
-- **User-facing guides**: lowercase with hyphens (e.g., `user-guide.md`, `api-reference.md`)
+- **User-facing guides**: lowercase with hyphens (e.g., `pipeline-guide.md`, `troubleshooting.md`)
+- **Technical documents**: UPPERCASE with underscores (e.g., `API_REFERENCE.md`, `DEVELOPER_QUICK_START.md`)
 - **Technical specifications**: UPPERCASE with underscores (e.g., `TECHNICAL_SPEC_MASTER.md`)
-- **Product documents**: Product name + type + version (e.g., `PHOENIX_PRD_v1.4.md`)
+- **Product documents**: Product name + type + version (e.g., `PRODUCT_REQUIREMENTS.md`)
 
 ### Document Structure
 Each document should include:
