@@ -3,7 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"github.com/phoenix/platform/cmd/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/cmd/phoenix-cli/internal/config"

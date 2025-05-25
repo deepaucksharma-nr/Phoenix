@@ -83,7 +83,6 @@ func init() {
 
 func runConfigGet(cmd *cobra.Command, args []string) error {
 	key := args[0]
-	cfg := config.New()
 	
 	value := viper.Get(key)
 	if value == nil {
@@ -132,7 +131,6 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 }
 
 func runConfigList(cmd *cobra.Command, args []string) error {
-	cfg := config.New()
 	settings := viper.AllSettings()
 	
 	switch outputFormat {

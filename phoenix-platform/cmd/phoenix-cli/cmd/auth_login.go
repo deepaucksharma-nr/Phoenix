@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"syscall"
 
 	"github.com/phoenix/platform/cmd/phoenix-cli/internal/auth"
