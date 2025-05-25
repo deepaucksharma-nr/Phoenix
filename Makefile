@@ -1,143 +1,260 @@
-# Phoenix Monorepo Build System
+# Phoenix Platform - Root Makefile
+SHELL := /bin/bash
+.SHELLFLAGS := -eu -o pipefail -c
 
-.PHONY: all install build test lint clean deploy help
+# Directories
+ROOT_DIR := $(shell pwd)
+BUILD_DIR := $(ROOT_DIR)/build
+PROJECTS_DIR := $(ROOT_DIR)/projects
+PKG_DIR := $(ROOT_DIR)/pkg
+TOOLS_DIR := $(ROOT_DIR)/tools
+
+# Version
+VERSION ?= $(shell cat VERSION 2>/dev/null || echo "0.0.0")
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_TAG := $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+BUILD_DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Docker
+DOCKER_REGISTRY ?= ghcr.io/phoenix
+DOCKER_BUILD_ARGS := \
+	--build-arg VERSION=$(VERSION) \
+	--build-arg GIT_COMMIT=$(GIT_COMMIT) \
+	--build-arg BUILD_DATE=$(BUILD_DATE)
 
 # Colors
-BLUE := \033[0;34m
+CYAN := \033[0;36m
 GREEN := \033[0;32m
-YELLOW := \033[0;33m
 RED := \033[0;31m
-NC := \033[0m
+YELLOW := \033[0;33m
+NC := \033[0m # No Color
+
+# Projects
+ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null)
+GO_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/go.mod \; -print 2>/dev/null | xargs -n1 basename)
+NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/package.json \; -print 2>/dev/null | xargs -n1 basename)
+
+# Include shared makefiles
+-include $(BUILD_DIR)/makefiles/*.mk
 
 # Default target
-all: install build
+.DEFAULT_GOAL := help
 
-## Install dependencies
-install:
-	@echo "$(BLUE)Installing dependencies...$(NC)"
-	npm install
-	@echo "$(GREEN)Dependencies installed!$(NC)"
+# Phony targets
+.PHONY: all help clean build test lint fmt security docker release
 
-## Build all projects
-build:
-	@echo "$(BLUE)Building all projects...$(NC)"
-	npm run build
-	@echo "$(GREEN)Build complete!$(NC)"
+## General Targets
 
-## Build Docker images
-build-docker:
-	@echo "$(BLUE)Building Docker images...$(NC)"
-	npm run build:docker
-	@echo "$(GREEN)Docker images built!$(NC)"
+all: validate build test ## Run validate, build, and test
 
-## Run tests
-test:
-	@echo "$(BLUE)Running tests...$(NC)"
-	npm run test
-
-## Run integration tests
-test-integration:
-	@echo "$(BLUE)Running integration tests...$(NC)"
-	npm run test:integration
-
-## Lint code
-lint:
-	@echo "$(BLUE)Linting code...$(NC)"
-	npm run lint
-
-## Clean build artifacts
-clean:
-	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	npm run clean
-	rm -rf node_modules
-	rm -rf packages/*/node_modules
-	rm -rf services/*/node_modules
-	rm -rf tools/*/node_modules
-	@echo "$(GREEN)Clean complete!$(NC)"
-
-## Deploy to development
-deploy-dev:
-	@echo "$(BLUE)Deploying to development...$(NC)"
-	npm run deploy:dev
-	@echo "$(GREEN)Development deployment complete!$(NC)"
-
-## Deploy to production
-deploy-prod:
-	@echo "$(YELLOW)Deploying to production...$(NC)"
-	@read -p "Are you sure you want to deploy to production? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		npm run deploy:prod; \
-		echo "$(GREEN)Production deployment complete!$(NC)"; \
-	else \
-		echo "$(RED)Production deployment cancelled.$(NC)"; \
-	fi
-
-## Show logs
-logs:
-	npm run logs
-
-## Health check
-health:
-	@echo "$(BLUE)Running health checks...$(NC)"
-	npm run health-check
-
-## Development mode
-dev:
-	@echo "$(BLUE)Starting development mode...$(NC)"
-	npm run dev
-
-# Service-specific targets
-collector-logs:
-	docker logs -f phoenix-collector
-
-observer-logs:
-	docker logs -f phoenix-observer
-
-actuator-logs:
-	docker logs -f phoenix-actuator
-
-generator-logs:
-	docker logs -f phoenix-generator-synthetic phoenix-generator-complex
-
-# Utility targets
-setup-env:
-	@echo "$(BLUE)Setting up environment...$(NC)"
-	./tools/scripts/initialize-environment.sh
-	@echo "$(GREEN)Environment setup complete!$(NC)"
-
-validate-config:
-	@echo "$(BLUE)Validating configurations...$(NC)"
-	@find config -name "*.yaml" -o -name "*.yml" | xargs yamllint
-	@echo "$(GREEN)Configuration validation complete!$(NC)"
-
-# Documentation
-docs-serve:
-	@echo "$(BLUE)Serving documentation...$(NC)"
-	cd docs && python -m http.server 8000
-
-# Performance monitoring
-monitor:
-	@echo "$(BLUE)Opening monitoring dashboards...$(NC)"
-	@echo "Grafana: http://localhost:3000 (admin/admin)"
-	@echo "Prometheus: http://localhost:9090"
-	@echo "Collector Metrics: http://localhost:8888/metrics"
-
-## Show help
-help:
-	@echo "$(BLUE)Phoenix Monorepo Commands$(NC)"
+help: ## Display this help message
+	@echo -e "$(CYAN)Phoenix Platform - Monorepo Makefile$(NC)"
+	@echo -e "$(CYAN)=====================================$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Main targets:$(NC)"
-	@grep -E '^## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}'
+	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make $(CYAN)<target>$(NC)\n\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(CYAN)%-15s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(YELLOW)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "$(YELLOW)Service logs:$(NC)"
-	@echo "  $(GREEN)collector-logs      $(NC) Show collector logs"
-	@echo "  $(GREEN)observer-logs       $(NC) Show observer logs"
-	@echo "  $(GREEN)actuator-logs       $(NC) Show actuator logs"
-	@echo "  $(GREEN)generator-logs      $(NC) Show generator logs"
+	@echo -e "$(GREEN)Project-specific targets:$(NC)"
+	@echo -e "  $(CYAN)build-<project>$(NC)  Build specific project"
+	@echo -e "  $(CYAN)test-<project>$(NC)   Test specific project"
+	@echo -e "  $(CYAN)lint-<project>$(NC)   Lint specific project"
 	@echo ""
-	@echo "$(YELLOW)Utilities:$(NC)"
-	@echo "  $(GREEN)setup-env           $(NC) Setup development environment"
-	@echo "  $(GREEN)validate-config     $(NC) Validate YAML configurations"
-	@echo "  $(GREEN)docs-serve          $(NC) Serve documentation locally"
-	@echo "  $(GREEN)monitor             $(NC) Open monitoring dashboards"
+	@echo -e "$(GREEN)Available projects:$(NC)"
+	@for project in $(ALL_PROJECTS); do echo "  - $$project"; done
+
+clean: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
+	@echo -e "$(GREEN)✓ All projects cleaned$(NC)"
+
+##@ Development
+
+setup: ## Setup development environment
+	@echo -e "$(CYAN)Setting up development environment...$(NC)"
+	@$(TOOLS_DIR)/dev-env/setup.sh
+	@echo -e "$(GREEN)✓ Development environment ready$(NC)"
+
+dev-up: ## Start development services
+	@echo -e "$(CYAN)Starting development services...$(NC)"
+	@docker-compose up -d
+	@echo -e "$(GREEN)✓ Services started$(NC)"
+	@echo -e "$(YELLOW)Services:$(NC)"
+	@echo "  - PostgreSQL: localhost:5432"
+	@echo "  - Redis: localhost:6379"
+	@echo "  - Prometheus: http://localhost:9090"
+	@echo "  - Grafana: http://localhost:3000"
+
+dev-down: ## Stop development services
+	@echo -e "$(CYAN)Stopping development services...$(NC)"
+	@docker-compose down
+	@echo -e "$(GREEN)✓ Services stopped$(NC)"
+
+dev-logs: ## Show development service logs
+	@docker-compose logs -f
+
+dev-reset: dev-down ## Reset development environment
+	@echo -e "$(YELLOW)Removing volumes...$(NC)"
+	@docker-compose down -v
+	@echo -e "$(GREEN)✓ Development environment reset$(NC)"
+
+##@ Building
+
+build: $(GO_PROJECTS:%=build-%) $(NODE_PROJECTS:%=build-node-%) ## Build all projects
+	@echo -e "$(GREEN)✓ All projects built$(NC)"
+
+build-%: ## Build specific project
+	@echo -e "$(CYAN)Building $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* build
+	@echo -e "$(GREEN)✓ $* built$(NC)"
+
+build-node-%: ## Build Node.js project
+	@echo -e "$(CYAN)Building $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* build
+	@echo -e "$(GREEN)✓ $* built$(NC)"
+
+build-changed: ## Build only changed projects
+	@echo -e "$(CYAN)Building changed projects...$(NC)"
+	@$(BUILD_DIR)/scripts/ci/build-changed.sh
+	@echo -e "$(GREEN)✓ Changed projects built$(NC)"
+
+##@ Testing
+
+test: $(ALL_PROJECTS:%=test-%) ## Run all tests
+	@echo -e "$(GREEN)✓ All tests passed$(NC)"
+
+test-%: ## Test specific project
+	@echo -e "$(CYAN)Testing $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* test
+	@echo -e "$(GREEN)✓ $* tests passed$(NC)"
+
+test-integration: ## Run integration tests
+	@echo -e "$(CYAN)Running integration tests...$(NC)"
+	@$(MAKE) -C $(ROOT_DIR)/tests/integration test
+	@echo -e "$(GREEN)✓ Integration tests passed$(NC)"
+
+test-e2e: ## Run end-to-end tests
+	@echo -e "$(CYAN)Running e2e tests...$(NC)"
+	@$(MAKE) -C $(ROOT_DIR)/tests/e2e test
+	@echo -e "$(GREEN)✓ E2E tests passed$(NC)"
+
+test-coverage: ## Generate test coverage report
+	@echo -e "$(CYAN)Generating coverage report...$(NC)"
+	@$(BUILD_DIR)/scripts/ci/coverage.sh
+	@echo -e "$(GREEN)✓ Coverage report generated$(NC)"
+
+##@ Code Quality
+
+lint: $(ALL_PROJECTS:%=lint-%) ## Lint all projects
+	@echo -e "$(GREEN)✓ All projects linted$(NC)"
+
+lint-%: ## Lint specific project
+	@echo -e "$(CYAN)Linting $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* lint
+	@echo -e "$(GREEN)✓ $* linted$(NC)"
+
+fmt: $(ALL_PROJECTS:%=fmt-%) ## Format all code
+	@echo -e "$(GREEN)✓ All code formatted$(NC)"
+
+fmt-%: ## Format specific project
+	@echo -e "$(CYAN)Formatting $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* fmt
+	@echo -e "$(GREEN)✓ $* formatted$(NC)"
+
+validate: ## Validate repository structure
+	@echo -e "$(CYAN)Validating repository structure...$(NC)"
+	@$(BUILD_DIR)/scripts/utils/validate-structure.sh
+	@echo -e "$(GREEN)✓ Repository structure valid$(NC)"
+
+##@ Security
+
+security: $(ALL_PROJECTS:%=security-%) ## Run security scans
+	@echo -e "$(GREEN)✓ Security scans completed$(NC)"
+
+security-%: ## Security scan specific project
+	@echo -e "$(CYAN)Scanning $* for vulnerabilities...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* security
+	@echo -e "$(GREEN)✓ $* security scan completed$(NC)"
+
+audit: ## Audit dependencies
+	@echo -e "$(CYAN)Auditing dependencies...$(NC)"
+	@$(TOOLS_DIR)/analyzers/dependency-check.sh
+	@echo -e "$(GREEN)✓ Dependency audit completed$(NC)"
+
+##@ Docker
+
+docker: $(ALL_PROJECTS:%=docker-%) ## Build all Docker images
+	@echo -e "$(GREEN)✓ All Docker images built$(NC)"
+
+docker-%: ## Build Docker image for specific project
+	@echo -e "$(CYAN)Building Docker image for $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* docker-build
+	@echo -e "$(GREEN)✓ $* Docker image built$(NC)"
+
+docker-push: $(ALL_PROJECTS:%=docker-push-%) ## Push all Docker images
+	@echo -e "$(GREEN)✓ All Docker images pushed$(NC)"
+
+docker-push-%: ## Push Docker image for specific project
+	@echo -e "$(CYAN)Pushing Docker image for $*...$(NC)"
+	@$(MAKE) -C $(PROJECTS_DIR)/$* docker-push
+	@echo -e "$(GREEN)✓ $* Docker image pushed$(NC)"
+
+##@ Kubernetes
+
+k8s-generate: ## Generate Kubernetes manifests
+	@echo -e "$(CYAN)Generating Kubernetes manifests...$(NC)"
+	@$(BUILD_DIR)/scripts/k8s/generate-manifests.sh
+	@echo -e "$(GREEN)✓ Kubernetes manifests generated$(NC)"
+
+k8s-validate: ## Validate Kubernetes manifests
+	@echo -e "$(CYAN)Validating Kubernetes manifests...$(NC)"
+	@$(BUILD_DIR)/scripts/k8s/validate-manifests.sh
+	@echo -e "$(GREEN)✓ Kubernetes manifests valid$(NC)"
+
+k8s-deploy-dev: ## Deploy to development cluster
+	@echo -e "$(CYAN)Deploying to development...$(NC)"
+	@$(BUILD_DIR)/scripts/k8s/deploy.sh development
+	@echo -e "$(GREEN)✓ Deployed to development$(NC)"
+
+##@ Release
+
+version: ## Display current version
+	@echo $(VERSION)
+
+changelog: ## Generate changelog
+	@echo -e "$(CYAN)Generating changelog...$(NC)"
+	@$(BUILD_DIR)/scripts/release/generate-changelog.sh
+	@echo -e "$(GREEN)✓ Changelog generated$(NC)"
+
+release: ## Create a new release
+	@echo -e "$(CYAN)Creating release...$(NC)"
+	@$(BUILD_DIR)/scripts/release/create-release.sh
+	@echo -e "$(GREEN)✓ Release created$(NC)"
+
+release-notes: ## Generate release notes
+	@echo -e "$(CYAN)Generating release notes...$(NC)"
+	@$(BUILD_DIR)/scripts/release/generate-notes.sh
+	@echo -e "$(GREEN)✓ Release notes generated$(NC)"
+
+##@ Utilities
+
+generate: ## Run code generation
+	@echo -e "$(CYAN)Running code generation...$(NC)"
+	@$(MAKE) -C $(PKG_DIR) generate
+	@for project in $(GO_PROJECTS); do \
+		$(MAKE) -C $(PROJECTS_DIR)/$$project generate 2>/dev/null || true; \
+	done
+	@echo -e "$(GREEN)✓ Code generation completed$(NC)"
+
+deps: ## Update dependencies
+	@echo -e "$(CYAN)Updating dependencies...$(NC)"
+	@go work sync
+	@for project in $(GO_PROJECTS); do \
+		echo -e "$(CYAN)Updating $$project dependencies...$(NC)"; \
+		cd $(PROJECTS_DIR)/$$project && go mod tidy; \
+	done
+	@echo -e "$(GREEN)✓ Dependencies updated$(NC)"
+
+tools: ## Install development tools
+	@echo -e "$(CYAN)Installing development tools...$(NC)"
+	@$(TOOLS_DIR)/install-tools.sh
+	@echo -e "$(GREEN)✓ Development tools installed$(NC)"
+
+# Project-specific targets
+$(foreach project,$(ALL_PROJECTS),$(eval $(call PROJECT_TARGET,$(project))))

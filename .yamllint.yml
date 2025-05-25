@@ -1,0 +1,79 @@
+# Phoenix Platform - yamllint configuration
+
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+  
+  trailing-spaces: enable
+  
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+  
+  comments:
+    min-spaces-from-content: 1
+    require-starting-space: true
+  
+  comments-indentation: enable
+  
+  document-start:
+    present: false
+  
+  document-end:
+    present: false
+  
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: 1
+  
+  commas:
+    max-spaces-before: 0
+    min-spaces-after: 1
+    max-spaces-after: 1
+  
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+  
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  
+  hyphens:
+    max-spaces-after: 1
+  
+  key-duplicates: enable
+  
+  key-ordering: disable
+  
+  new-line-at-end-of-file: enable
+  
+  new-lines:
+    type: unix
+  
+  octal-values:
+    forbid-implicit-octal: true
+  
+  quoted-strings:
+    quote-type: any
+    required: only-when-needed
+  
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+# Ignore patterns
+ignore: |
+  /vendor/
+  /node_modules/
+  *.generated.yaml
+  *.gen.yaml

@@ -1,0 +1,330 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+
+jobs:
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release_notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "Invalid version format: $VERSION"
+            exit 1
+          fi
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          ./scripts/release/generate-notes.sh ${{ steps.version.outputs.version }} > release-notes.md
+          NOTES=$(cat release-notes.md)
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  build-go-services:
+    name: Build Go Service - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - platform-api
+          - control-plane
+          - telemetry-collector
+          - experiment-controller
+          - pipeline-operator
+          - analytics-engine
+          - cli
+          - sdk-go
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: |
+            go.work.sum
+            projects/${{ matrix.service }}/go.sum
+
+      - name: Build binaries
+        working-directory: projects/${{ matrix.service }}
+        run: |
+          make build-all VERSION=${{ needs.prepare.outputs.version }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.service }}-binaries
+          path: projects/${{ matrix.service }}/dist/*
+
+      - name: Build Docker image
+        working-directory: projects/${{ matrix.service }}
+        run: |
+          make docker-build-push VERSION=${{ needs.prepare.outputs.version }}
+
+  build-node-services:
+    name: Build Node Service - ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - web-dashboard
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: projects/${{ matrix.service }}/pnpm-lock.yaml
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Build application
+        working-directory: projects/${{ matrix.service }}
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          tar -czf dist.tar.gz dist/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.service }}-dist
+          path: projects/${{ matrix.service }}/dist.tar.gz
+
+      - name: Build Docker image
+        working-directory: projects/${{ matrix.service }}
+        run: |
+          make docker-build-push VERSION=${{ needs.prepare.outputs.version }}
+
+  build-helm-charts:
+    name: Build Helm Charts
+    runs-on: ubuntu-latest
+    needs: prepare
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'v3.13.0'
+
+      - name: Package charts
+        run: |
+          VERSION=${{ needs.prepare.outputs.version }}
+          # Package umbrella chart
+          helm package deployments/helm/phoenix-platform --version ${VERSION#v}
+          
+          # Package individual charts
+          for chart in deployments/helm/charts/*; do
+            if [ -d "$chart" ]; then
+              helm package $chart --version ${VERSION#v}
+            fi
+          done
+
+      - name: Upload charts
+        uses: actions/upload-artifact@v3
+        with:
+          name: helm-charts
+          path: '*.tgz'
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [prepare, build-go-services, build-node-services, build-helm-charts]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts/
+
+      - name: Organize release assets
+        run: |
+          mkdir -p release-assets
+          
+          # Copy Go binaries
+          for service in platform-api control-plane telemetry-collector experiment-controller pipeline-operator analytics-engine cli sdk-go; do
+            if [ -d "artifacts/$service-binaries" ]; then
+              cp artifacts/$service-binaries/* release-assets/
+            fi
+          done
+          
+          # Copy Node distributions
+          if [ -d "artifacts/web-dashboard-dist" ]; then
+            cp artifacts/web-dashboard-dist/* release-assets/
+          fi
+          
+          # Copy Helm charts
+          if [ -d "artifacts/helm-charts" ]; then
+            cp artifacts/helm-charts/* release-assets/
+          fi
+          
+          # Create checksums
+          cd release-assets
+          sha256sum * > SHA256SUMS
+          cd ..
+
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.prepare.outputs.version }}
+          name: Phoenix Platform ${{ needs.prepare.outputs.version }}
+          body: ${{ needs.prepare.outputs.release_notes }}
+          draft: false
+          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
+          files: release-assets/*
+
+  publish-docs:
+    name: Publish Documentation
+    runs-on: ubuntu-latest
+    needs: [prepare, create-release]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Build documentation
+        run: |
+          pip install -r docs/requirements.txt
+          mkdocs build
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          cname: docs.phoenix.io
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [prepare, create-release]
+    environment:
+      name: production
+      url: https://phoenix.io
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE }}
+          aws-region: us-east-1
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name phoenix-production
+
+      - name: Deploy with Helm
+        run: |
+          VERSION=${{ needs.prepare.outputs.version }}
+          helm upgrade --install phoenix deployments/helm/phoenix-platform \
+            --namespace phoenix-system \
+            --create-namespace \
+            --values deployments/helm/phoenix-platform/values-prod.yaml \
+            --set global.image.tag=${VERSION} \
+            --wait \
+            --timeout 15m
+
+      - name: Verify deployment
+        run: |
+          kubectl -n phoenix-system wait --for=condition=ready pod -l app.kubernetes.io/name=phoenix --timeout=300s
+          ./scripts/smoke-test.sh https://api.phoenix.io
+
+  announce:
+    name: Announce Release
+    runs-on: ubuntu-latest
+    needs: [prepare, deploy-production]
+    if: always()
+    steps:
+      - name: Send Slack notification
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Phoenix Platform ${{ needs.prepare.outputs.version }} has been released!
+            
+            🚀 Production deployment: ${{ needs.deploy-production.result }}
+            📚 Documentation: https://docs.phoenix.io
+            📦 Downloads: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.version }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Tweet release
+        uses: ethomson/send-tweet-action@v1
+        with:
+          status: |
+            🚀 Phoenix Platform ${{ needs.prepare.outputs.version }} is now available!
+            
+            ✨ Highlights:
+            - 90% cost reduction in observability
+            - Zero data loss with intelligent sampling
+            - Cloud-native Kubernetes operator
+            
+            Get started: https://phoenix.io
+            Release notes: https://github.com/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.version }}
+            
+            #observability #kubernetes #opensource
+          consumer-key: ${{ secrets.TWITTER_CONSUMER_KEY }}
+          consumer-secret: ${{ secrets.TWITTER_CONSUMER_SECRET }}
+          access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}

@@ -1,212 +1,241 @@
 # Contributing to Phoenix Platform
 
-Thank you for your interest in contributing to Phoenix! This guide will help you get started with contributing to our project.
+Thank you for your interest in contributing to Phoenix Platform! This document provides guidelines and instructions for contributing to the project.
 
-## 🤝 Code of Conduct
+## Table of Contents
 
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please read it before contributing.
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Coding Standards](#coding-standards)
+- [Commit Guidelines](#commit-guidelines)
+- [Pull Request Process](#pull-request-process)
+- [Testing Requirements](#testing-requirements)
+- [Documentation](#documentation)
+- [Community](#community)
 
-## 🚀 Getting Started
+## Code of Conduct
+
+Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We are committed to providing a welcoming and inclusive environment for all contributors.
+
+## Getting Started
 
 ### Prerequisites
 
-- Go 1.21 or higher
-- Node.js 18 or higher
+- Go 1.21 or later
+- Node.js 18 or later
 - Docker and Docker Compose
-- Kubernetes cluster (kind, minikube, or cloud)
+- Make
 - Git
 
-### Development Setup
+### Setting Up Your Development Environment
 
-1. **Fork and Clone**
+1. **Fork the repository**
    ```bash
-   # Fork the repository on GitHub, then:
-   git clone https://github.com/YOUR-USERNAME/Phoenix.git
-   cd Phoenix
-   git remote add upstream https://github.com/phoenix-platform/phoenix.git
+   # Click the "Fork" button on GitHub
    ```
 
-2. **Install Dependencies**
+2. **Clone your fork**
    ```bash
+   git clone https://github.com/YOUR_USERNAME/phoenix-platform.git
    cd phoenix-platform
-   make deps
-   make setup-hooks
    ```
 
-3. **Start Development Environment**
+3. **Add upstream remote**
    ```bash
-   make dev
+   git remote add upstream https://github.com/phoenix/platform.git
    ```
 
-## 📋 How to Contribute
+4. **Set up the development environment**
+   ```bash
+   make setup
+   ```
 
-### Finding Issues
+5. **Start local services**
+   ```bash
+   make dev-up
+   ```
 
-- Check our [issue tracker](https://github.com/phoenix-platform/phoenix/issues)
-- Look for issues labeled `good first issue` or `help wanted`
-- Feel free to ask questions in issues or on Slack
+## Development Workflow
 
-### Types of Contributions
-
-We welcome many types of contributions:
-
-- 🐛 **Bug Fixes**: Fix bugs and improve stability
-- ✨ **Features**: Add new functionality
-- 📚 **Documentation**: Improve docs, add examples
-- 🧪 **Tests**: Increase test coverage
-- 🎨 **UI/UX**: Enhance the dashboard
-- 🔧 **Refactoring**: Improve code quality
-
-## 🔄 Development Workflow
-
-### 1. Create a Branch
+### 1. Create a Feature Branch
 
 ```bash
-# Update your fork
+# Update your local main branch
 git checkout main
-git fetch upstream
-git merge upstream/main
+git pull upstream main
 
 # Create a feature branch
 git checkout -b feature/your-feature-name
 ```
 
-Branch naming conventions:
-- `feature/` - New features
-- `fix/` - Bug fixes
-- `docs/` - Documentation changes
-- `refactor/` - Code refactoring
-- `test/` - Test additions/fixes
-
 ### 2. Make Your Changes
 
-Follow our coding standards:
+- Write clean, readable code
+- Follow the coding standards
+- Add tests for new functionality
+- Update documentation as needed
 
-#### Go Code
+### 3. Test Your Changes
+
+```bash
+# Run all tests
+make test
+
+# Run specific project tests
+make test-platform-api
+
+# Run linting
+make lint
+
+# Run security checks
+make security
+```
+
+### 4. Commit Your Changes
+
+Follow our [commit guidelines](#commit-guidelines) for commit messages.
+
+```bash
+git add .
+git commit -m "feat(api): add new optimization endpoint"
+```
+
+### 5. Push to Your Fork
+
+```bash
+git push origin feature/your-feature-name
+```
+
+### 6. Create a Pull Request
+
+Go to GitHub and create a pull request from your fork to the main repository.
+
+## Coding Standards
+
+### Go Code Style
+
+We follow standard Go conventions with some additional guidelines:
+
 ```go
-// Package comment
-// Package experiment provides experiment management functionality.
-package experiment
+// Package comment should be present
+package example
 
-// Exported types need comments
-// Service handles experiment lifecycle operations.
-type Service struct {
-    store Store
-    log   *zap.Logger
+import (
+    "context"
+    "fmt"
+    
+    "github.com/phoenix/platform/pkg/errors"
+)
+
+// ExampleService provides example functionality.
+type ExampleService struct {
+    logger logging.Logger
+    db     *sql.DB
 }
 
-// CreateExperiment creates a new A/B testing experiment.
-func (s *Service) CreateExperiment(ctx context.Context, req *CreateRequest) (*Experiment, error) {
-    // Validate request
-    if err := req.Validate(); err != nil {
-        return nil, fmt.Errorf("invalid request: %w", err)
+// NewExampleService creates a new example service.
+func NewExampleService(logger logging.Logger, db *sql.DB) *ExampleService {
+    return &ExampleService{
+        logger: logger,
+        db:     db,
+    }
+}
+
+// ProcessData processes the given data according to business rules.
+func (s *ExampleService) ProcessData(ctx context.Context, data string) error {
+    // Use structured logging
+    s.logger.Info("processing data", 
+        logging.String("data_length", len(data)))
+    
+    // Always handle errors explicitly
+    if err := s.validateData(data); err != nil {
+        return fmt.Errorf("validation failed: %w", err)
     }
     
-    // Business logic here
-    return experiment, nil
+    // More processing...
+    return nil
 }
 ```
 
-#### React/TypeScript Code
+### TypeScript/React Code Style
+
 ```typescript
-// Use functional components with TypeScript
-interface ExperimentCardProps {
-  experiment: Experiment;
-  onSelect: (id: string) => void;
+import React, { useState, useEffect } from 'react';
+import { useAppDispatch, useAppSelector } from '@/hooks';
+
+interface ExampleProps {
+  title: string;
+  onAction: (value: string) => void;
 }
 
-export const ExperimentCard: React.FC<ExperimentCardProps> = ({ 
-  experiment, 
-  onSelect 
+/**
+ * ExampleComponent demonstrates our coding standards.
+ */
+export const ExampleComponent: React.FC<ExampleProps> = ({ 
+  title, 
+  onAction 
 }) => {
-  // Component logic
+  const [value, setValue] = useState('');
+  const dispatch = useAppDispatch();
+  const { loading, error } = useAppSelector(state => state.example);
+
+  useEffect(() => {
+    // Effect logic here
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onAction(value);
+  };
+
   return (
-    <Card onClick={() => onSelect(experiment.id)}>
-      <CardContent>
-        <Typography variant="h6">{experiment.name}</Typography>
-      </CardContent>
-    </Card>
+    <div className="example-component">
+      <h2>{title}</h2>
+      <form onSubmit={handleSubmit}>
+        <input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          disabled={loading}
+        />
+        <button type="submit" disabled={loading}>
+          Submit
+        </button>
+      </form>
+      {error && <div className="error">{error}</div>}
+    </div>
   );
 };
 ```
 
-### 3. Write Tests
+### General Guidelines
 
-All code changes should include tests:
+1. **Naming Conventions**
+   - Go: Use camelCase for variables, PascalCase for types
+   - TypeScript: Use camelCase for variables/functions, PascalCase for types/components
+   - Files: Use snake_case for Go files, kebab-case for TypeScript files
 
-#### Go Tests
-```go
-func TestService_CreateExperiment(t *testing.T) {
-    // Arrange
-    mockStore := &MockStore{}
-    service := NewService(mockStore, logger)
-    
-    req := &CreateRequest{
-        Name: "test-experiment",
-        BaselinePipeline: "baseline-v1",
-    }
-    
-    // Act
-    exp, err := service.CreateExperiment(context.Background(), req)
-    
-    // Assert
-    require.NoError(t, err)
-    assert.Equal(t, "test-experiment", exp.Name)
-    mockStore.AssertExpectations(t)
-}
-```
+2. **Error Handling**
+   - Always handle errors explicitly
+   - Wrap errors with context
+   - Use structured logging for errors
 
-#### React Tests
-```typescript
-import { render, screen, fireEvent } from '@testing-library/react';
-import { ExperimentCard } from './ExperimentCard';
+3. **Testing**
+   - Write unit tests for all new code
+   - Aim for >80% code coverage
+   - Use table-driven tests in Go
+   - Use React Testing Library for React components
 
-describe('ExperimentCard', () => {
-  it('calls onSelect when clicked', () => {
-    const handleSelect = vi.fn();
-    const experiment = { id: '1', name: 'Test' };
-    
-    render(
-      <ExperimentCard 
-        experiment={experiment} 
-        onSelect={handleSelect} 
-      />
-    );
-    
-    fireEvent.click(screen.getByText('Test'));
-    expect(handleSelect).toHaveBeenCalledWith('1');
-  });
-});
-```
+4. **Documentation**
+   - Document all exported types and functions
+   - Include examples for complex functionality
+   - Keep documentation up to date
 
-### 4. Update Documentation
+## Commit Guidelines
 
-- Update relevant documentation in `/docs`
-- Add/update API documentation if you changed APIs
-- Update README if you added new features
-- Add examples if applicable
+We follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
-### 5. Run Checks
-
-Before committing:
-
-```bash
-# Format code
-make fmt
-
-# Run linters
-make lint
-
-# Run tests
-make test
-
-# Run all validation
-make validate
-```
-
-### 6. Commit Your Changes
-
-Follow our commit message convention:
+### Commit Message Format
 
 ```
 <type>(<scope>): <subject>
@@ -216,55 +245,69 @@ Follow our commit message convention:
 <footer>
 ```
 
-Types:
+### Types
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
+- `style`: Code style changes (formatting, etc)
 - `refactor`: Code refactoring
-- `test`: Test additions/changes
-- `chore`: Maintenance tasks
+- `perf`: Performance improvements
+- `test`: Test additions or modifications
+- `build`: Build system changes
+- `ci`: CI/CD changes
+- `chore`: Other changes
 
-Examples:
-```bash
-git commit -m "feat(api): add metrics export endpoint
-
-- Add new /v1/metrics/export endpoint
-- Support CSV and JSON formats
-- Add rate limiting
-
-Closes #123"
-```
-
-### 7. Push and Create PR
+### Examples
 
 ```bash
-# Push your branch
-git push origin feature/your-feature-name
+# Feature
+feat(api): add experiment validation endpoint
+
+# Bug fix
+fix(collector): resolve memory leak in metric processing
+
+# Documentation
+docs(readme): update installation instructions
+
+# With scope and breaking change
+feat(auth)!: change JWT token format
+
+BREAKING CHANGE: JWT tokens now include namespace claim
 ```
 
-Then create a Pull Request on GitHub with:
-- Clear title and description
-- Reference any related issues
-- Include screenshots for UI changes
-- Add test results
+## Pull Request Process
 
-## 📝 Pull Request Guidelines
+### Before Creating a PR
 
-### PR Checklist
+1. **Ensure all tests pass**
+   ```bash
+   make test
+   ```
 
-- [ ] Code follows project style guidelines
-- [ ] Tests pass locally (`make test`)
-- [ ] Documentation is updated
-- [ ] Commit messages follow convention
-- [ ] PR description explains the change
-- [ ] Related issues are linked
+2. **Run linting**
+   ```bash
+   make lint
+   ```
+
+3. **Update documentation**
+   - Update README if needed
+   - Add/update API documentation
+   - Update architectural diagrams if applicable
+
+### PR Requirements
+
+1. **Title**: Use conventional commit format
+2. **Description**: Fill out the PR template completely
+3. **Tests**: All tests must pass
+4. **Reviews**: Requires at least 2 approvals
+5. **No conflicts**: Resolve merge conflicts
 
 ### PR Template
 
 ```markdown
 ## Description
-Brief description of the changes
+Brief description of changes
 
 ## Type of Change
 - [ ] Bug fix
@@ -277,116 +320,146 @@ Brief description of the changes
 - [ ] Integration tests pass
 - [ ] Manual testing completed
 
-## Screenshots (if applicable)
-Add screenshots here
-
-## Related Issues
-Closes #(issue number)
+## Checklist
+- [ ] Code follows style guidelines
+- [ ] Self-review completed
+- [ ] Documentation updated
+- [ ] Tests added/updated
+- [ ] No new warnings
 ```
 
-## 🧪 Testing Guidelines
+## Testing Requirements
 
-### Test Coverage
+### Unit Tests
 
-We aim for:
-- 80% coverage for business logic
-- 70% coverage for API handlers
-- 60% coverage for UI components
+Every new function should have corresponding unit tests:
 
-### Running Tests
-
-```bash
-# All tests
-make test
-
-# Unit tests only
-make test-unit
-
-# Integration tests
-make test-integration
-
-# E2E tests
-make test-e2e
-
-# Coverage report
-make coverage
+```go
+func TestExampleService_ProcessData(t *testing.T) {
+    tests := []struct {
+        name    string
+        data    string
+        wantErr bool
+    }{
+        {
+            name:    "valid data",
+            data:    "test data",
+            wantErr: false,
+        },
+        {
+            name:    "empty data",
+            data:    "",
+            wantErr: true,
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            s := NewExampleService(testLogger, testDB)
+            err := s.ProcessData(context.Background(), tt.data)
+            if (err != nil) != tt.wantErr {
+                t.Errorf("ProcessData() error = %v, wantErr %v", err, tt.wantErr)
+            }
+        })
+    }
+}
 ```
 
-## 📚 Documentation Guidelines
+### Integration Tests
 
-### Writing Documentation
+Integration tests should cover service interactions:
+
+```go
+func TestExperimentLifecycle(t *testing.T) {
+    if testing.Short() {
+        t.Skip("Skipping integration test")
+    }
+    
+    // Setup
+    client := setupTestClient(t)
+    defer cleanupTestData(t)
+    
+    // Test experiment lifecycle
+    experiment := createTestExperiment(t, client)
+    startExperiment(t, client, experiment.ID)
+    waitForRunning(t, client, experiment.ID)
+    stopExperiment(t, client, experiment.ID)
+}
+```
+
+### E2E Tests
+
+End-to-end tests should cover complete user workflows:
+
+```typescript
+test('complete experiment workflow', async ({ page }) => {
+  // Login
+  await loginAs(page, 'test@example.com');
+  
+  // Create experiment
+  await page.goto('/experiments/new');
+  await fillExperimentForm(page, testExperiment);
+  await page.click('button[type="submit"]');
+  
+  // Verify creation
+  await expect(page).toHaveURL(/\/experiments\/\d+/);
+  await expect(page.locator('h1')).toContainText(testExperiment.name);
+});
+```
+
+## Documentation
+
+### Code Documentation
+
+- Document all exported types and functions
+- Include examples for complex APIs
+- Keep comments concise and valuable
+
+### Project Documentation
+
+When adding new features:
+
+1. Update relevant README files
+2. Add API documentation
+3. Update architecture diagrams if needed
+4. Add runbooks for operational procedures
+
+### Documentation Style
 
 - Use clear, concise language
 - Include code examples
-- Add diagrams where helpful
-- Keep it up to date
+- Add diagrams for complex concepts
+- Keep documentation close to code
 
-### Documentation Structure
+## Community
 
-```markdown
-# Feature Name
+### Getting Help
 
-## Overview
-Brief description
+- **Discord**: [Join our Discord](https://discord.gg/phoenix)
+- **Discussions**: Use GitHub Discussions for questions
+- **Issues**: Report bugs via GitHub Issues
 
-## Usage
-How to use the feature
+### Communication Guidelines
 
-### Example
-```code
-example here
-```
+- Be respectful and inclusive
+- Provide context in questions
+- Search existing issues before creating new ones
+- Use appropriate channels for different topics
 
-## Configuration
-Configuration options
+### Recognition
 
-## Troubleshooting
-Common issues and solutions
-```
+We value all contributions! Contributors are recognized in:
 
-## 🏗️ Architecture Guidelines
-
-### Adding New Services
-
-1. Follow the existing service structure
-2. Define proto contracts first
-3. Implement interfaces
-4. Add to validation scripts
-5. Update documentation
-
-### Database Changes
-
-1. Create migration files
-2. Test migrations up and down
-3. Update models
-4. Document schema changes
-
-## 🚢 Release Process
-
-We use semantic versioning (MAJOR.MINOR.PATCH):
-
-- MAJOR: Breaking changes
-- MINOR: New features (backward compatible)
-- PATCH: Bug fixes
-
-## 🆘 Getting Help
-
-- 💬 [Slack Community](https://phoenix-community.slack.com)
-- 📧 [Mailing List](https://groups.google.com/g/phoenix-platform)
-- 🐛 [Issue Tracker](https://github.com/phoenix-platform/phoenix/issues)
-- 📖 [Documentation](https://phoenix-platform.io/docs)
-
-## 🏆 Recognition
-
-Contributors are recognized in:
-- CONTRIBUTORS.md file
 - Release notes
+- Contributors file
 - Project website
+- Community calls
 
-## 📜 License
+## Additional Resources
 
-By contributing, you agree that your contributions will be licensed under the Apache 2.0 License.
-
----
+- [Architecture Guide](docs/architecture/README.md)
+- [API Documentation](docs/api/README.md)
+- [Development Guide](docs/guides/developer/getting-started.md)
+- [Phoenix Platform Website](https://phoenix.io)
 
 Thank you for contributing to Phoenix Platform! 🚀

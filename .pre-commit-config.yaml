@@ -1,99 +1,148 @@
-# Phoenix Platform Pre-commit Hooks
-# Enforces architectural decisions and prevents drift
+# Phoenix Platform - Pre-commit hooks configuration
+# These hooks run automatically before each commit to ensure code quality
 
 repos:
-  # Structure Validation
-  - repo: local
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-      - id: validate-structure
-        name: Validate Phoenix Structure
-        entry: phoenix-platform/scripts/validate/validate-structure.sh
-        language: script
-        pass_filenames: false
-        always_run: true
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: [--branch, main, --branch, master]
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
 
-      - id: no-root-docs
-        name: No Docs at Root
-        entry: bash -c 'if ls *.md 2>/dev/null | grep -v "CLAUDE.md" | grep -v ".pre-commit" | grep -E "(PHOENIX|PROJECT|IMPL|REVIEW|GUIDE|SPEC)"; then echo "ERROR: Phoenix docs must be in phoenix-platform/docs/"; exit 1; fi'
-        language: system
-        pass_filenames: false
-
-      - id: check-service-boundaries
-        name: Check Service Boundaries
-        entry: bash -c 'if grep -r "cmd/.*/internal" --include="*.go" . | grep -v "cmd/.*/.*\.go.*cmd/.*/internal"; then echo "ERROR: Cross-service internal imports detected"; exit 1; fi'
-        language: system
-        types: [go]
-
-  # Go Formatting and Linting
+  # Go specific hooks
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.54.2
+    rev: v1.55.2
     hooks:
       - id: golangci-lint
         args: ['--fix']
 
-  - repo: https://github.com/pre-commit/mirrors-gofmt
-    rev: v1.0.0-rc.1
+  # Go imports formatting
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.55.2
     hooks:
-      - id: gofmt
-
-  # Documentation
-  - repo: local
-    hooks:
-      - id: check-adr-format
-        name: Check ADR Format
-        entry: bash -c 'for f in phoenix-platform/docs/adr/ADR-*.md; do if [ -f "$f" ] && ! grep -q "## Status" "$f"; then echo "ERROR: $f missing Status section"; exit 1; fi; done'
+      - id: golangci-lint
+        name: goimports
+        entry: goimports -w
+        files: \.go$
         language: system
-        files: 'phoenix-platform/docs/adr/ADR-.*\.md$'
+        pass_filenames: true
 
-  # Security
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint
+        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: ['-c', '.yamllint.yml']
+
+  # Security scanning
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
 
-  # YAML/JSON
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+  # Markdown linting
+  - repo: https://github.com/markdownlint/markdownlint
+    rev: v0.13.0
     hooks:
-      - id: check-yaml
-        args: ['--unsafe']
-      - id: check-json
-      - id: check-toml
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-      - id: check-added-large-files
-        args: ['--maxkb=1000']
+      - id: markdownlint
+        args: ['-c', '.markdownlint.yml']
 
-  # Dockerfile
-  - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
+  # License header check
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.4
     hooks:
-      - id: hadolint-docker
-        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+      - id: insert-license
+        name: Add license header to Go files
+        files: \.go$
+        args:
+          - --license-filepath
+          - .license-header.txt
+          - --comment-style
+          - //
 
-  # Architecture Enforcement
+  # Custom Phoenix-specific hooks
   - repo: local
     hooks:
-      - id: enforce-gitops
-        name: Enforce GitOps
-        entry: bash -c 'if grep -r "kubectl apply" --include="*.go" --include="*.sh" . | grep -v "install-crds" | grep -v ".pre-commit"; then echo "ERROR: Direct kubectl apply forbidden (use GitOps)"; exit 1; fi'
+      # Validate repository structure
+      - id: validate-structure
+        name: Validate Repository Structure
+        entry: ./build/scripts/utils/validate-structure.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+      # Validate Go workspace
+      - id: validate-go-workspace
+        name: Validate Go Workspace
+        entry: bash -c 'go work sync && git diff --exit-code go.work.sum'
         language: system
         pass_filenames: false
+        files: (go\.mod|go\.work)$
 
-      - id: check-service-deps
-        name: Check Service Dependencies
-        entry: bash -c 'if grep -r "database/sql" phoenix-platform/cmd/api 2>/dev/null | grep -q "postgres"; then if ! grep -q "DATABASE_URL" phoenix-platform/.env.example 2>/dev/null; then echo "WARNING: Database used but DATABASE_URL not in .env.example"; fi; fi'
+      # Check project boundaries
+      - id: check-project-boundaries
+        name: Check Project Boundaries
+        entry: ./tools/analyzers/boundary-check.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+      # Validate no direct cross-project imports
+      - id: check-imports
+        name: Check Import Violations
+        entry: ./tools/analyzers/import-check.sh
+        language: script
+        files: \.go$
+
+      # Ensure all projects have required files
+      - id: check-project-requirements
+        name: Check Project Requirements
+        entry: ./tools/analyzers/project-requirements.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+      # Validate API contracts
+      - id: validate-api-contracts
+        name: Validate API Contracts
+        entry: ./tools/analyzers/contract-validator.sh
+        language: script
+        files: (\.proto|\.yaml|\.json)$
+        
+      # Check for LLM-generated anomalies
+      - id: llm-safety-check
+        name: LLM Safety Check
+        entry: ./tools/analyzers/llm-safety-check.sh
+        language: script
+        pass_filenames: true
+        always_run: false
+
+      # Prevent commits to old implementation
+      - id: no-old-implementation
+        name: No Old Implementation
+        entry: bash -c '! git diff --cached --name-only | grep -q "^OLD_IMPLEMENTATION/"'
         language: system
-        types: [go]
-
-      - id: validate-imports
-        name: Validate Go Imports
-        entry: bash -c 'if find . -name "*.go" -exec grep -l "\.\./\.\." {} \; | grep -v vendor; then echo "ERROR: Relative imports beyond module boundary"; exit 1; fi'
-        language: system
-        types: [go]
-
-# Configuration
-default_stages: [commit]
-fail_fast: false
-verbose: true
+        pass_filenames: false
+        always_run: true

@@ -1,0 +1,238 @@
+# AI/LLM Safety Configuration for Phoenix Platform
+# This file defines boundaries and rules for AI-assisted development
+
+version: 1.0
+last_updated: 2024-01-01
+
+# Boundaries define where AI agents can and cannot make changes
+boundaries:
+  - name: "No Direct Database Access"
+    description: "Database access must go through proper abstraction layers"
+    forbidden_patterns:
+      - "database/sql"
+      - "pgx/v5"
+      - "mongo-driver"
+    allowed_paths:
+      - "pkg/database/*"
+      - "projects/*/internal/store/*"
+      - "projects/*/internal/repository/*"
+    
+  - name: "No Hardcoded Secrets"
+    description: "Secrets must never be hardcoded in the codebase"
+    forbidden_patterns:
+      - "password.*=.*['\"].*['\"]"
+      - "secret.*=.*['\"].*['\"]"
+      - "apikey.*=.*['\"].*['\"]"
+      - "token.*=.*['\"].*['\"]"
+    exclude_paths:
+      - "*.example"
+      - "*.md"
+      - "docs/*"
+      - "test/*"
+
+  - name: "No Production Configurations"
+    description: "Production configs must be managed separately"
+    forbidden_patterns:
+      - "production"
+      - "prod\."
+      - "\.prod\."
+    allowed_paths:
+      - "deployments/kubernetes/overlays/production/*"
+      - "docs/*"
+      - ".github/workflows/*"
+
+  - name: "No Cross-Project Imports"
+    description: "Projects must remain independent"
+    forbidden_patterns:
+      - "github.com/phoenix/platform/projects/"
+    exceptions:
+      - from: "tests/*"
+        to: "projects/*"
+      - from: "tools/*"
+        to: "projects/*"
+
+  - name: "No Direct Kubernetes API Access"
+    description: "K8s operations must use operators or controllers"
+    forbidden_patterns:
+      - "k8s.io/client-go"
+    allowed_paths:
+      - "projects/experiment-controller/*"
+      - "projects/pipeline-operator/*"
+      - "pkg/k8s/*"
+
+# Code generation rules
+code_generation:
+  # Templates that AI can use for generation
+  templates_path: "tools/generators/templates"
+  
+  # Operations that AI is allowed to perform
+  allowed_operations:
+    - operation: "create_project"
+      template: "project-template"
+      requires_approval: true
+      
+    - operation: "add_endpoint"
+      template: "endpoint-template"
+      requires_approval: false
+      
+    - operation: "generate_client"
+      template: "client-template"
+      requires_approval: false
+      
+    - operation: "add_test"
+      template: "test-template"
+      requires_approval: false
+  
+  # Operations that AI must never perform
+  forbidden_operations:
+    - "modify_security_configs"
+    - "change_rbac_rules"
+    - "update_secrets"
+    - "modify_production_configs"
+    - "change_codeowners"
+    - "disable_tests"
+    - "remove_validation"
+
+# Validation rules that must pass
+validation:
+  # Checks before AI generates code
+  pre_generation:
+    - check: "validate_structure"
+      command: "./build/scripts/utils/validate-structure.sh"
+      required: true
+      
+    - check: "check_boundaries"
+      command: "./tools/analyzers/boundary-check.sh"
+      required: true
+      
+    - check: "scan_secrets"
+      command: "detect-secrets scan"
+      required: true
+  
+  # Checks after AI generates code
+  post_generation:
+    - check: "lint"
+      command: "make lint"
+      required: true
+      
+    - check: "test"
+      command: "make test"
+      required: true
+      
+    - check: "security_scan"
+      command: "make security"
+      required: true
+      
+    - check: "build"
+      command: "make build"
+      required: true
+
+# Pattern enforcement
+patterns:
+  # Required patterns in certain files
+  required:
+    - pattern: "^// Copyright .* Phoenix Platform"
+      files: "*.go"
+      message: "Go files must have copyright header"
+      
+    - pattern: "^package .+_test$"
+      files: "*_test.go"
+      message: "Test files must use _test package suffix"
+      
+    - pattern: "TODO\\(security\\):"
+      files: ["*/auth/*", "*/security/*"]
+      message: "Security TODOs must be marked"
+  
+  # Forbidden patterns
+  forbidden:
+    - pattern: "fmt\\.Print"
+      files: "*.go"
+      message: "Use structured logging instead of fmt.Print"
+      exclude: ["*_test.go", "cmd/*/main.go"]
+      
+    - pattern: "panic\\("
+      files: "*.go"
+      message: "Avoid panic, return errors instead"
+      exclude: ["*_test.go"]
+      
+    - pattern: "time\\.Sleep"
+      files: "*.go"
+      message: "Avoid time.Sleep, use proper synchronization"
+      exclude: ["*_test.go", "tests/*"]
+
+# File modification rules
+file_rules:
+  # Files that should never be modified by AI
+  immutable:
+    - "CODEOWNERS"
+    - ".ai-safety"
+    - "LICENSE"
+    - "go.work"
+    - ".github/workflows/security.yml"
+    - "deployments/kubernetes/overlays/production/*"
+    
+  # Files that require explicit user confirmation
+  requires_confirmation:
+    - "*.mod"
+    - "*.sum"
+    - "Makefile"
+    - ".github/workflows/*"
+    - "deployments/*"
+    - "migrations/*"
+
+# Import rules
+imports:
+  # Packages that should never be imported
+  forbidden:
+    - "unsafe"
+    - "reflect"  # Allowed only in specific paths
+    - "runtime"  # Allowed only in specific paths
+    
+  # Import restrictions
+  restrictions:
+    - package: "reflect"
+      allowed_paths: ["pkg/testing/*", "tests/*"]
+      
+    - package: "runtime"
+      allowed_paths: ["pkg/telemetry/*", "pkg/testing/*"]
+      
+    - package: "testing"
+      allowed_paths: ["*_test.go", "pkg/testing/*"]
+
+# Metrics for AI behavior monitoring
+metrics:
+  # Track these metrics to detect anomalies
+  track:
+    - metric: "files_changed_per_session"
+      threshold: 20
+      action: "warn"
+      
+    - metric: "lines_changed_per_file"
+      threshold: 500
+      action: "require_confirmation"
+      
+    - metric: "new_dependencies_added"
+      threshold: 5
+      action: "require_confirmation"
+      
+    - metric: "test_coverage_decrease"
+      threshold: 5  # percent
+      action: "block"
+
+# Enforcement
+enforcement:
+  # How strictly to enforce rules
+  mode: "strict"  # strict, warning, permissive
+  
+  # What to do on violations
+  on_violation:
+    pre_commit: "block"
+    ci_pipeline: "fail"
+    local_development: "warn"
+  
+  # Exemptions (use sparingly)
+  exemptions:
+    - rule: "No Direct Database Access"
+      path: "scripts/migrate.go"
+      reason: "Migration scripts need direct DB access"
+      expires: "2024-12-31"
