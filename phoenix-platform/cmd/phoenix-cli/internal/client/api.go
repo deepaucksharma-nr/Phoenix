@@ -214,3 +214,74 @@ func (c *APIClient) CheckExperimentOverlap(req CreateExperimentRequest) (*Overla
 
 	return &result, nil
 }
+
+// ListPipelines lists available pipeline templates
+func (c *APIClient) ListPipelines() ([]Pipeline, error) {
+	resp, err := c.doRequest("GET", "/api/v1/pipelines", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result struct {
+		Pipelines []Pipeline `json:"pipelines"`
+	}
+	if err := c.parseResponse(resp, &result); err != nil {
+		return nil, err
+	}
+
+	return result.Pipelines, nil
+}
+
+// CreatePipelineDeployment creates a new pipeline deployment
+func (c *APIClient) CreatePipelineDeployment(req CreatePipelineDeploymentRequest) (*PipelineDeployment, error) {
+	resp, err := c.doRequest("POST", "/api/v1/pipelines/deployments", req)
+	if err != nil {
+		return nil, err
+	}
+
+	var deployment PipelineDeployment
+	if err := c.parseResponse(resp, &deployment); err != nil {
+		return nil, err
+	}
+
+	return &deployment, nil
+}
+
+// ListPipelineDeployments lists pipeline deployments
+func (c *APIClient) ListPipelineDeployments(req ListPipelineDeploymentsRequest) ([]PipelineDeployment, error) {
+	params := url.Values{}
+	if req.Namespace != "" {
+		params.Add("namespace", req.Namespace)
+	}
+	if req.Status != "" {
+		params.Add("status", req.Status)
+	}
+
+	path := "/api/v1/pipelines/deployments"
+	if len(params) > 0 {
+		path += "?" + params.Encode()
+	}
+
+	resp, err := c.doRequest("GET", path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var result struct {
+		Deployments []PipelineDeployment `json:"deployments"`
+	}
+	if err := c.parseResponse(resp, &result); err != nil {
+		return nil, err
+	}
+
+	return result.Deployments, nil
+}
+
+// DeletePipelineDeployment deletes a pipeline deployment
+func (c *APIClient) DeletePipelineDeployment(deploymentID string) error {
+	resp, err := c.doRequest("DELETE", "/api/v1/pipelines/deployments/"+deploymentID, nil)
+	if err != nil {
+		return err
+	}
+	return c.parseResponse(resp, nil)
+}

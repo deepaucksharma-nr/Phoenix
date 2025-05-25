@@ -32,6 +32,36 @@ help:
 	@echo 'Targets:'
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
+## docs: Build documentation
+docs:
+	@echo "Building documentation with MkDocs..."
+	@cd .. && mkdocs build
+
+## docs-serve: Serve documentation locally
+docs-serve:
+	@echo "Serving documentation at http://localhost:8000..."
+	@cd .. && mkdocs serve
+
+## docs-deploy: Deploy documentation to GitHub Pages
+docs-deploy:
+	@echo "Deploying documentation to GitHub Pages..."
+	@cd .. && mkdocs gh-deploy
+
+## docs-check: Run documentation quality checks
+docs-check:
+	@echo "Running documentation quality checks..."
+	@cd .. && ./scripts/check-docs.sh
+
+## docs-generate-api: Generate API documentation from proto files
+docs-generate-api:
+	@echo "Generating API documentation..."
+	@cd .. && ./scripts/generate-api-docs.sh
+
+## docs-version: Deploy a new documentation version
+docs-version:
+	@echo "Deploying documentation version..."
+	@cd .. && ./scripts/docs-version.sh deploy $(VERSION)
+
 ## deps: Download and install dependencies
 deps:
 	@echo "Installing dependencies..."

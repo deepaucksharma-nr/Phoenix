@@ -109,14 +109,58 @@ type Pipeline struct {
 
 // PipelineDeployment represents a direct pipeline deployment
 type PipelineDeployment struct {
-	ID             string            `json:"id"`
-	DeploymentName string            `json:"deployment_name"`
-	PipelineName   string            `json:"pipeline_name"`
-	Namespace      string            `json:"namespace"`
-	TargetNodes    map[string]string `json:"target_nodes"`
+	ID             string                 `json:"id"`
+	DeploymentName string                 `json:"deployment_name"`
+	PipelineName   string                 `json:"pipeline_name"`
+	Namespace      string                 `json:"namespace"`
+	TargetNodes    map[string]string      `json:"target_nodes"`
 	Parameters     map[string]interface{} `json:"parameters"`
-	Status         string            `json:"status"`
-	Phase          string            `json:"phase"`
-	CreatedAt      time.Time         `json:"created_at"`
-	UpdatedAt      time.Time         `json:"updated_at"`
+	Status         string                 `json:"status"`
+	Phase          string                 `json:"phase"`
+	Instances      *DeploymentInstances   `json:"instances,omitempty"`
+	Metrics        *DeploymentMetrics     `json:"metrics,omitempty"`
+	CreatedAt      time.Time              `json:"created_at"`
+	UpdatedAt      time.Time              `json:"updated_at"`
+}
+
+// CreatePipelineDeploymentRequest represents a request to create a pipeline deployment
+type CreatePipelineDeploymentRequest struct {
+	DeploymentName string                 `json:"deployment_name"`
+	PipelineName   string                 `json:"pipeline_name"`
+	Namespace      string                 `json:"namespace"`
+	TargetNodes    map[string]string      `json:"target_nodes"`
+	Parameters     map[string]interface{} `json:"parameters,omitempty"`
+	Resources      *ResourceRequirements  `json:"resources,omitempty"`
+}
+
+// ListPipelineDeploymentsRequest represents a request to list pipeline deployments
+type ListPipelineDeploymentsRequest struct {
+	Namespace string `json:"namespace,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+
+// DeploymentInstances tracks deployment instance counts
+type DeploymentInstances struct {
+	Desired int `json:"desired"`
+	Ready   int `json:"ready"`
+	Updated int `json:"updated"`
+}
+
+// DeploymentMetrics contains the latest metrics for a deployment
+type DeploymentMetrics struct {
+	Cardinality int64   `json:"cardinality"`
+	Throughput  string  `json:"throughput"`
+	ErrorRate   float64 `json:"error_rate"`
+}
+
+// ResourceRequirements defines resource requirements and limits
+type ResourceRequirements struct {
+	Requests ResourceList `json:"requests,omitempty"`
+	Limits   ResourceList `json:"limits,omitempty"`
+}
+
+// ResourceList defines CPU and memory resources
+type ResourceList struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
 }

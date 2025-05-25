@@ -28,6 +28,11 @@ type PostgresStore struct {
 	db *sql.DB
 }
 
+// DB returns the underlying database connection
+func (s *PostgresStore) DB() *sql.DB {
+	return s.db
+}
+
 // NewPostgresStore creates a new PostgreSQL store
 func NewPostgresStore(dbURL string) (*PostgresStore, error) {
 	db, err := sql.Open("postgres", dbURL)

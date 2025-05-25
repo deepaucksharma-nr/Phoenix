@@ -1,0 +1,269 @@
+# Phoenix Platform Documentation
+site_name: Phoenix Platform
+site_description: Automated observability cost optimization through intelligent OpenTelemetry pipeline management
+site_url: https://phoenix-platform.io
+repo_url: https://github.com/deepaucksharma-nr/Phoenix
+repo_name: Phoenix
+
+# Theme Configuration
+theme:
+  name: material
+  custom_dir: docs/overrides
+  logo: assets/phoenix-logo.svg
+  favicon: assets/favicon.ico
+  
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.prune
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    
+    # Table of contents
+    - toc.follow
+    - toc.integrate
+    
+    # Search
+    - search.suggest
+    - search.highlight
+    - search.share
+    
+    # Content
+    - content.code.annotate
+    - content.code.copy
+    - content.tooltips
+    - content.tabs.link
+    
+    # Header
+    - header.autohide
+    
+    # Announce
+    - announce.dismiss
+
+# Navigation Structure
+nav:
+  - Home:
+    - Overview: index.md
+    - Quick Start: phoenix-platform/docs/OVERVIEW_QUICK_START.md
+    - Architecture: phoenix-platform/docs/ARCHITECTURE.md
+    
+  - Getting Started:
+    - Developer Quick Start: phoenix-platform/docs/DEVELOPER_QUICK_START.md
+    - Installation: phoenix-platform/docs/DEPLOYMENT.md
+    - Build and Run: phoenix-platform/docs/BUILD_AND_RUN.md
+    - User Guide: phoenix-platform/docs/USER_GUIDE.md
+    
+  - Development:
+    - Development Guide: phoenix-platform/docs/DEVELOPMENT.md
+    - Testing: phoenix-platform/docs/TESTING.md
+    - Contributing: CONTRIBUTING.md
+    - Code of Conduct: CODE_OF_CONDUCT.md
+    
+  - API Reference:
+    - Overview: phoenix-platform/docs/API_REFERENCE.md
+    - REST API: api/rest.md
+    - gRPC API: api/grpc.md
+    - WebSocket API: api/websocket.md
+    - CLI Reference: api/cli.md
+    - API Playground: api/playground.md
+    
+  - Configuration:
+    - Pipeline Guide: phoenix-platform/docs/PIPELINE_GUIDE.md
+    - Process Simulator: phoenix-platform/docs/PROCESS_SIMULATOR_REFERENCE.md
+    - Helm Values: helm/values.md
+    
+  - Architecture:
+    - System Design: phoenix-platform/docs/ARCHITECTURE.md
+    - Technical Specifications:
+      - Master Specification: phoenix-platform/docs/TECHNICAL_SPEC_MASTER.md
+      - API Service: phoenix-platform/docs/TECHNICAL_SPEC_API_SERVICE.md
+      - Experiment Controller: phoenix-platform/docs/TECHNICAL_SPEC_EXPERIMENT_CONTROLLER.md
+      - Dashboard: phoenix-platform/docs/TECHNICAL_SPEC_DASHBOARD.md
+      - Pipeline Operator: phoenix-platform/docs/TECHNICAL_SPEC_PIPELINE_OPERATOR.md
+      - Process Simulator: phoenix-platform/docs/TECHNICAL_SPEC_PROCESS_SIMULATOR.md
+    - Architecture Decisions:
+      - ADR-001 No Service Mesh: phoenix-platform/docs/adr/ADR-001-no-service-mesh.md
+      - ADR-002 GitOps Mandatory: phoenix-platform/docs/adr/ADR-002-gitops-mandatory.md
+      - ADR-003 Visual Pipeline Builder: phoenix-platform/docs/adr/ADR-003-visual-pipeline-builder.md
+      - ADR-004 Mono-repo Boundaries: phoenix-platform/docs/adr/ADR-004-mono-repo-boundaries.md
+      - ADR-005 Dual Metrics Export: phoenix-platform/docs/adr/ADR-005-dual-metrics-export.md
+      
+  - Operations:
+    - Deployment Guide: phoenix-platform/docs/DEPLOYMENT.md
+    - Troubleshooting: phoenix-platform/docs/TROUBLESHOOTING.md
+    - Production Readiness: phoenix-platform/docs/PRODUCTION_READINESS_CHECKLIST.md
+    - Monitoring: operations/monitoring.md
+    
+  - Project Management:
+    - Product Requirements: phoenix-platform/docs/PRODUCT_REQUIREMENTS.md
+    - Implementation Status: phoenix-platform/docs/IMPLEMENTATION_STATUS.md
+    - Project Roadmap: phoenix-platform/docs/planning/PROJECT_STATUS.md
+    - Active Plans:
+      - CLI Implementation: phoenix-platform/docs/planning/CLI_IMPLEMENTATION_PLAN.md
+      - Pipeline API Design: phoenix-platform/docs/planning/PIPELINE_DEPLOYMENT_API_DESIGN.md
+      - UI Error Handling: phoenix-platform/docs/planning/UI_ERROR_HANDLING_ENHANCEMENT.md
+      
+  - Governance:
+    - Documentation Standards: docs/DOCUMENTATION_GOVERNANCE.md
+    - Mono-repo Governance: docs/MONO_REPO_GOVERNANCE.md
+    - Static Analysis Rules: docs/STATIC_ANALYSIS_RULES.md
+    - File Naming Standards: phoenix-platform/docs/FILE_NAMING_STANDARDS.md
+
+# Plugins
+plugins:
+  - search:
+      separator: '[\s\-\.]'
+      lang:
+        - en
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: iso_datetime
+  - minify:
+      minify_html: true
+  - macros
+  - awesome-pages
+  - tags:
+      tags_file: tags.md
+  - social:
+      cards_color:
+        fill: "#0FF1CE"
+        text: "#FFFFFF"
+  - redirects:
+      redirect_maps:
+        'getting-started.md': 'phoenix-platform/docs/DEVELOPER_QUICK_START.md'
+        
+# Extensions
+markdown_extensions:
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+      
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.snippets:
+      base_path: 
+        - docs/snippets
+      check_paths: true
+
+# Extra Configuration
+extra:
+  # Versioning
+  version:
+    provider: mike
+    default: latest
+    
+  # Social links
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/deepaucksharma-nr/Phoenix
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/phoenix-platform
+    - icon: fontawesome/brands/slack
+      link: https://phoenix-community.slack.com
+      
+  # Analytics
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX
+    
+  # Status
+  status:
+    new: Recently added
+    deprecated: Deprecated
+    
+  # Generator notice
+  generator: false
+  
+  # Extra features
+  feature:
+    tabs: true
+    
+  # SEO
+  seo:
+    og_image: assets/phoenix-og-image.png
+    twitter_card: summary_large_image
+    twitter_site: "@phoenixplatform"
+    keywords: "observability,cost optimization,opentelemetry,kubernetes,monitoring,metrics"
+    
+  # Consent
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+    
+# Extra CSS
+extra_css:
+  - stylesheets/extra.css
+  
+# Extra JavaScript
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+# Copyright
+copyright: |
+  &copy; 2024 Phoenix Platform Contributors –
+  <a href="#__consent">Change cookie settings</a>

@@ -1,0 +1,36 @@
+# Phoenix Platform Documentation - Robots.txt
+
+# Allow all robots
+User-agent: *
+Allow: /
+
+# Optimize crawl rate
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://phoenix-platform.io/sitemap.xml
+
+# Disallow certain paths
+Disallow: /api/playground  # Interactive content
+Disallow: /_sources/      # Source files
+Disallow: /search/        # Search results
+Disallow: /404.html       # Error page
+
+# Allow important bots explicitly
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Block bad bots
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

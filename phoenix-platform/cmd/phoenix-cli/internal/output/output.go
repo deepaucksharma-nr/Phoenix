@@ -25,7 +25,7 @@ func PrintExperiment(exp *client.Experiment, format string) {
 		// Table format
 		fmt.Printf("ID:          %s\n", exp.ID)
 		fmt.Printf("Name:        %s\n", exp.Name)
-		fmt.Printf("Status:      %s\n", colorizeStatus(exp.Status))
+		fmt.Printf("Status:      %s\n", ColorizeStatus(exp.Status))
 		fmt.Printf("Description: %s\n", exp.Description)
 		fmt.Printf("Baseline:    %s\n", exp.BaselinePipeline)
 		fmt.Printf("Candidate:   %s\n", exp.CandidatePipeline)
@@ -66,7 +66,7 @@ func PrintExperimentList(experiments []client.Experiment, format string) {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				exp.ID[:8], // Short ID
 				truncate(exp.Name, 30),
-				colorizeStatus(exp.Status),
+				ColorizeStatus(exp.Status),
 				truncate(exp.BaselinePipeline, 20),
 				truncate(exp.CandidatePipeline, 20),
 				exp.CreatedAt.Format("2006-01-02 15:04"),
@@ -129,9 +129,8 @@ func PrintWarning(message string) {
 	fmt.Printf("⚠️  %s\n", message)
 }
 
-// Helper functions
-
-func colorizeStatus(status string) string {
+// ColorizeStatus adds visual indicators to status strings
+func ColorizeStatus(status string) string {
 	// In a real implementation, you might use a color library
 	// For now, just return the status with a prefix
 	switch status {

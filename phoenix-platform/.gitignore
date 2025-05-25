@@ -159,3 +159,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+# MkDocs documentation
+site/
+.cache/
+mkdocs-material-cache/

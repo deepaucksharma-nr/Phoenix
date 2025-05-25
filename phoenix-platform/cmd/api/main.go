@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,6 +23,7 @@ import (
 
 	"github.com/phoenix/platform/pkg/api"
 	pb "github.com/phoenix/platform/pkg/api/v1"
+	"github.com/phoenix/platform/pkg/models"
 	"github.com/phoenix/platform/pkg/store"
 )
 
@@ -49,6 +52,9 @@ func main() {
 	}
 	defer postgresStore.Close()
 
+	// Get database connection for pipeline deployment service
+	db := postgresStore.DB()
+
 	// Create gRPC server (simplified, without auth for now)
 	grpcServer := grpc.NewServer()
 
@@ -75,7 +81,7 @@ func main() {
 
 	// Create HTTP server
 	httpPort := getEnvInt("HTTP_PORT", defaultHTTPPort)
-	httpServer := createHTTPServer(httpPort, grpcPort, logger)
+	httpServer := createHTTPServer(httpPort, grpcPort, logger, db)
 
 	// Start HTTP server
 	go func() {
@@ -107,7 +113,7 @@ func main() {
 	logger.Info("servers stopped")
 }
 
-func createHTTPServer(httpPort, grpcPort int, logger *zap.Logger) *http.Server {
+func createHTTPServer(httpPort, grpcPort int, logger *zap.Logger, db *sql.DB) *http.Server {
 	// Create router
 	router := chi.NewRouter()
 
@@ -160,6 +166,26 @@ func createHTTPServer(httpPort, grpcPort int, logger *zap.Logger) *http.Server {
 	// Mount API routes
 	router.Mount("/api/v1", gwmux)
 
+	// Create pipeline deployment service
+	pipelineService := api.NewPipelineDeploymentService(db, logger)
+
+	// Pipeline routes
+	router.Route("/api/v1/pipelines", func(r chi.Router) {
+		// Pipeline templates (static for now)
+		r.Get("/", listPipelines)
+		r.Get("/{name}", getPipeline)
+		r.Post("/validate", validatePipeline)
+		
+		// Pipeline deployments
+		r.Route("/deployments", func(r chi.Router) {
+			r.Post("/", createPipelineDeploymentHandler(pipelineService, logger))
+			r.Get("/", listPipelineDeploymentsHandler(pipelineService, logger))
+			r.Get("/{id}", getPipelineDeploymentHandler(pipelineService, logger))
+			r.Patch("/{id}", updatePipelineDeploymentHandler(pipelineService, logger))
+			r.Delete("/{id}", deletePipelineDeploymentHandler(pipelineService, logger))
+		})
+	})
+
 	// WebSocket handler - temporarily commented out
 	// wsHandler := api.NewWebSocketHandler(logger)
 	// router.HandleFunc("/ws", wsHandler.ServeHTTP)
@@ -187,4 +213,211 @@ func getEnvInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+// Pipeline template handlers (static data for now)
+func listPipelines(w http.ResponseWriter, r *http.Request) {
+	pipelines := []map[string]interface{}{
+		{
+			"name":        "process-baseline-v1",
+			"description": "Baseline configuration with no optimization",
+			"type":        "baseline",
+		},
+		{
+			"name":        "process-topk-v1",
+			"description": "Keep only top K resource-consuming processes",
+			"type":        "optimization",
+			"parameters": map[string]interface{}{
+				"top_k": map[string]interface{}{
+					"type":        "integer",
+					"default":     10,
+					"description": "Number of top processes to keep",
+				},
+			},
+		},
+		{
+			"name":        "process-priority-filter-v1",
+			"description": "Keep only critical processes",
+			"type":        "optimization",
+			"parameters": map[string]interface{}{
+				"critical_processes": map[string]interface{}{
+					"type":        "array",
+					"required":    true,
+					"description": "List of critical process names to keep",
+				},
+			},
+		},
+		{
+			"name":        "process-aggregated-v1",
+			"description": "Aggregate metrics by process name",
+			"type":        "optimization",
+		},
+		{
+			"name":        "process-adaptive-v1",
+			"description": "Adaptive filtering based on resource usage",
+			"type":        "optimization",
+		},
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"pipelines": pipelines,
+	})
+}
+
+func getPipeline(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	
+	pipeline := map[string]interface{}{
+		"name":        name,
+		"description": "Pipeline template",
+		"config":      "# OpenTelemetry Collector configuration\n# This would contain the actual YAML config",
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pipeline)
+}
+
+func validatePipeline(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Config string `json:"config"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	
+	// TODO: Implement actual validation
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"valid":   true,
+		"message": "Pipeline configuration is valid",
+	})
+}
+
+// Pipeline deployment handlers
+func createPipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req models.CreateDeploymentRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		
+		deployment, err := service.CreateDeployment(r.Context(), &req)
+		if err != nil {
+			logger.Error("failed to create deployment", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(deployment)
+	}
+}
+
+func listPipelineDeploymentsHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		req := models.ListDeploymentsRequest{
+			Namespace:    r.URL.Query().Get("namespace"),
+			Status:       r.URL.Query().Get("status"),
+			PipelineName: r.URL.Query().Get("pipeline"),
+		}
+		
+		// Parse page size
+		if pageSizeStr := r.URL.Query().Get("page_size"); pageSizeStr != "" {
+			var pageSize int
+			fmt.Sscanf(pageSizeStr, "%d", &pageSize)
+			req.PageSize = pageSize
+		}
+		if req.PageSize <= 0 || req.PageSize > 100 {
+			req.PageSize = 20
+		}
+		
+		resp, err := service.ListDeployments(r.Context(), &req)
+		if err != nil {
+			logger.Error("failed to list deployments", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
+func getPipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		deploymentID := chi.URLParam(r, "id")
+		
+		deployment, err := service.GetDeployment(r.Context(), deploymentID)
+		if err != nil {
+			if err.Error() == "deployment not found" {
+				http.Error(w, "Deployment not found", http.StatusNotFound)
+				return
+			}
+			logger.Error("failed to get deployment", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(deployment)
+	}
+}
+
+func updatePipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		deploymentID := chi.URLParam(r, "id")
+		
+		var req models.UpdateDeploymentRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+		
+		err := service.UpdateDeployment(r.Context(), deploymentID, &req)
+		if err != nil {
+			if err.Error() == "deployment not found" {
+				http.Error(w, "Deployment not found", http.StatusNotFound)
+				return
+			}
+			logger.Error("failed to update deployment", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"deployment_id": deploymentID,
+			"status":        "updating",
+			"message":       "Deployment update initiated",
+		})
+	}
+}
+
+func deletePipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		deploymentID := chi.URLParam(r, "id")
+		
+		err := service.DeleteDeployment(r.Context(), deploymentID)
+		if err != nil {
+			if err.Error() == "deployment not found" {
+				http.Error(w, "Deployment not found", http.StatusNotFound)
+				return
+			}
+			logger.Error("failed to delete deployment", zap.Error(err))
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"deployment_id": deploymentID,
+			"status":        "deleting",
+			"message":       "Deployment removal initiated",
+		})
+	}
 }
