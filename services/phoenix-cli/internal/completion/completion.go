@@ -57,7 +57,7 @@ func DeploymentIDCompletion(cmd *cobra.Command, args []string, toComplete string
 	for _, dep := range deployments {
 		if strings.HasPrefix(dep.ID, toComplete) {
 			// Format: ID:NAME (STATUS)
-			suggestion := dep.ID + ":" + dep.Name + " (" + dep.Status + ")"
+			suggestion := dep.ID + ":" + dep.DeploymentName + " (" + dep.Status + ")"
 			suggestions = append(suggestions, suggestion)
 		}
 	}
@@ -156,18 +156,17 @@ func NamespaceCompletion(cmd *cobra.Command, args []string, toComplete string) (
 
 // getAPIClient creates an API client from command context
 func getAPIClient(cmd *cobra.Command) (*client.APIClient, error) {
-	configManager := config.NewManager()
-	cfg, err := configManager.Load()
-	if err != nil {
-		return nil, err
-	}
-
+	// Get endpoint from viper config
 	endpoint := viper.GetString("api.endpoint")
 	if endpoint == "" {
-		endpoint = cfg.API.Endpoint
+		endpoint = "http://localhost:8080"
 	}
 
-	return client.NewAPIClient(endpoint, cfg.Auth.Token), nil
+	// Get token from config
+	cfg := config.New()
+	token := cfg.GetToken()
+
+	return client.NewAPIClient(endpoint, token), nil
 }
 
 // getNamespace gets namespace from flags or config

@@ -360,15 +360,11 @@ func getReadmeTemplate(name, description, language string) string {
 
 ## Installation
 
-```bash
-phoenix plugin install .
-```
+` + "```bash\nphoenix plugin install .\n```" + `
 
 ## Usage
 
-```bash
-phoenix %s [arguments]
-```
+` + "```bash\nphoenix %s [arguments]\n```" + `
 
 ## Development
 
@@ -376,19 +372,19 @@ This plugin is written in %s. To modify:
 
 1. Edit the main executable file
 2. Update the plugin.json manifest if needed
-3. Reinstall the plugin: `phoenix plugin install . --force`
+3. Reinstall the plugin: ` + "`phoenix plugin install . --force`"
 
 ## Plugin Structure
 
-- `plugin.json` - Plugin manifest with metadata
-- `%s` - Main executable
-- `README.md` - This file
+- ` + "`plugin.json`" + ` - Plugin manifest with metadata
+- ` + "`%s`" + ` - Main executable
+- ` + "`README.md`" + ` - This file
 
 ## Environment Variables
 
 When executed, the plugin has access to:
-- `PHOENIX_PLUGIN_NAME` - The plugin name
-- `PHOENIX_PLUGIN_VERSION` - The plugin version
+- ` + "`PHOENIX_PLUGIN_NAME`" + ` - The plugin name
+- ` + "`PHOENIX_PLUGIN_VERSION`" + ` - The plugin version
 
 ## API Integration
 
@@ -399,14 +395,6 @@ To interact with the Phoenix API from your plugin, you can:
 3. Use the Phoenix API token from the user's configuration
 
 Example API call:
-```bash
-# Get auth token from phoenix config
-API_TOKEN=$(phoenix config get auth_token)
-API_URL=$(phoenix config get api_url)
-
-# Make API request
-curl -H "Authorization: Bearer $API_TOKEN" \
-     "$API_URL/api/v1/experiments"
-```
+` + "```bash\n# Get auth token from phoenix config\nAPI_TOKEN=$(phoenix config get auth_token)\nAPI_URL=$(phoenix config get api_url)\n\n# Make API request\ncurl -H \"Authorization: Bearer $API_TOKEN\" \\\n     \"$API_URL/api/v1/experiments\"\n```" + `
 `, name, description, name, language, getExecutableName(language))
 }

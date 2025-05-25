@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 	"github.com/phoenix/platform/packages/go-common/telemetry/logging"
 )
 
@@ -20,7 +21,7 @@ func main() {
 	// Initialize logger
 	logger := logging.NewDevelopmentLogger()
 	logger.Info("Starting Platform API service",
-		logging.String("version", getVersion()))
+		zap.String("version", getVersion()))
 
 	// Create router
 	r := chi.NewRouter()
@@ -53,9 +54,9 @@ func main() {
 	
 	// Start server in goroutine
 	go func() {
-		logger.Info("Server starting", logging.String("addr", srv.Addr))
+		logger.Info("Server starting", zap.String("addr", srv.Addr))
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Server failed to start", logging.Error(err))
+			logger.Fatal("Server failed to start", zap.Error(err))
 		}
 	}()
 	
@@ -71,7 +72,7 @@ func main() {
 	defer cancel()
 	
 	if err := srv.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown", logging.Error(err))
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 	
 	logger.Info("Server stopped")

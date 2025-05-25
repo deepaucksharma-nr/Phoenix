@@ -1,8 +1,19 @@
-go 1.21
+go 1.22.3
 
 use (
 	./packages/go-common
 	./pkg
 	./projects/platform-api
+	./services/analytics
+	./services/anomaly-detector
+	./services/api
+	./services/benchmark
+	./services/control-actuator-go
+	./services/controller
+	./services/generator
+	./services/generators/synthetic
+	./services/loadsim-operator
 	./services/phoenix-cli
+	./services/pipeline-operator
+	./services/validator
 )
