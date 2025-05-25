@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/validator
+module github.com/phoenix-vnext/platform/services/validator
 
 go 1.21
 

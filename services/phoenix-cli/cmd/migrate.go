@@ -90,7 +90,7 @@ func init() {
 	rootCmd.AddCommand(migrateCmd)
 }
 
-func getMigrationManager() (*migration.MigrationManager, error) {
+func getMigrationManager() (*migration.Manager, error) {
 	configFile := viper.ConfigFileUsed()
 	if configFile == "" {
 		// Use default config path
@@ -101,7 +101,7 @@ func getMigrationManager() (*migration.MigrationManager, error) {
 		configFile = filepath.Join(home, ".phoenix", "config.yaml")
 	}
 
-	return migration.NewMigrationManager(configFile), nil
+	return migration.NewManager(configFile), nil
 }
 
 func runMigrateUp(cmd *cobra.Command, args []string) error {

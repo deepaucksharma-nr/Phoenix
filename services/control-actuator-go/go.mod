@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/control-actuator-go
+module github.com/phoenix-vnext/platform/services/control-actuator-go
 
 go 1.21
 

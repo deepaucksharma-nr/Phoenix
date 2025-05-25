@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/controller
+module github.com/phoenix-vnext/platform/services/controller
 
 go 1.21
 

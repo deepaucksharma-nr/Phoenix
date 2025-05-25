@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/loadsim-operator
+module github.com/phoenix-vnext/platform/services/loadsim-operator
 
 go 1.21
 

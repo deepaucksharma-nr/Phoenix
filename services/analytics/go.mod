@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/analytics
+module github.com/phoenix-vnext/platform/services/analytics
 
 go 1.21
 

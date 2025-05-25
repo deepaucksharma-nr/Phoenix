@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/benchmark
+module github.com/phoenix-vnext/platform/services/benchmark
 
 go 1.21
 

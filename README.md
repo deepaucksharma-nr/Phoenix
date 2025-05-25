@@ -1,193 +1,155 @@
-# Phoenix Platform - Ultimate Monorepo Architecture
+# Phoenix Platform
 
-<div align="center">
-  <img src="docs/assets/phoenix-logo.svg" alt="Phoenix Logo" width="200"/>
-  
-  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-  [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](go.mod)
-  [![Node Version](https://img.shields.io/badge/Node-18+-339933?style=flat&logo=node.js)](package.json)
-  [![CI Status](https://github.com/phoenix/platform/workflows/CI/badge.svg)](https://github.com/phoenix/platform/actions)
-  [![Coverage](https://codecov.io/gh/phoenix/platform/branch/main/graph/badge.svg)](https://codecov.io/gh/phoenix/platform)
-  [![Documentation](https://img.shields.io/badge/docs-phoenix.io-orange)](https://docs.phoenix.io)
-</div>
+A modular observability cost optimization platform that reduces metrics cardinality by up to 90% while maintaining critical visibility.
 
-## 🚀 Overview
-
-Phoenix Platform is a cutting-edge observability cost optimization system designed to reduce metrics cardinality by up to 90% while maintaining critical visibility. Built as a monorepo with completely independent micro-projects, it provides enterprise-grade tooling for managing observability costs at scale.
-
-### Key Features
-
-- **90% Cost Reduction**: Advanced cardinality reduction algorithms
-- **Zero Data Loss**: Intelligent sampling preserves critical metrics
-- **Real-time Optimization**: Adaptive algorithms respond to traffic patterns
-- **Cloud Native**: Kubernetes-native with full GitOps support
-- **Multi-tenancy**: Isolated experiments per namespace
-- **Enterprise Ready**: SOC2 compliant with full audit trails
-
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    subgraph "User Interfaces"
-        CLI[Phoenix CLI]
-        WEB[Web Dashboard]
-        API[REST/gRPC API]
-    end
-    
-    subgraph "Control Plane"
-        EXP[Experiment Controller]
-        PIPE[Pipeline Operator]
-        CONFIG[Config Service]
-    end
-    
-    subgraph "Data Plane"
-        COLL[Telemetry Collector]
-        PROC[Processors]
-        EXPO[Exporters]
-    end
-    
-    subgraph "Analytics"
-        ANAL[Analytics Engine]
-        ML[ML Models]
-        VIS[Visualization]
-    end
-    
-    subgraph "Infrastructure"
-        K8S[Kubernetes]
-        DB[(PostgreSQL)]
-        CACHE[(Redis)]
-        QUEUE[Message Queue]
-    end
-    
-    CLI --> API
-    WEB --> API
-    API --> EXP
-    API --> CONFIG
-    EXP --> PIPE
-    PIPE --> COLL
-    COLL --> PROC
-    PROC --> EXPO
-    PROC --> ANAL
-    ANAL --> ML
-    ANAL --> VIS
-    
-    EXP --> DB
-    CONFIG --> CACHE
-    ANAL --> QUEUE
-```
-
-## 📦 Repository Structure
+## 🏗️ Monorepo Structure
 
 ```
 phoenix/
-├── .github/              # GitHub configuration and workflows
-├── build/               # Shared build infrastructure
-├── deployments/         # Deployment configurations (K8s, Helm, Terraform)
-├── pkg/                 # Shared Go packages
-├── tools/               # Development tools and scripts
-├── projects/            # Independent micro-projects
-│   ├── platform-api/    # Core API Service
-│   ├── control-plane/   # Control Plane Service
-│   ├── telemetry-collector/  # Custom OTel Collector
-│   ├── experiment-controller/ # K8s Experiment Controller
-│   ├── pipeline-operator/     # Pipeline CRD Operator
-│   ├── analytics-engine/      # Analytics & ML Service
-│   ├── web-dashboard/         # React Dashboard
-│   ├── cli/                   # Phoenix CLI
-│   └── ...                    # More projects
-├── tests/               # Cross-project integration tests
-├── docs/                # Documentation
-└── scripts/             # Root-level scripts
+├── packages/              # Shared packages
+│   ├── go-common/        # Go utilities and interfaces
+│   └── contracts/        # API contracts (proto, OpenAPI)
+├── projects/             # Service implementations
+│   ├── analytics/        # Analytics engine
+│   ├── anomaly-detector/ # Anomaly detection service
+│   ├── api/             # API gateway
+│   ├── benchmark/       # Benchmarking service
+│   ├── controller/      # Experiment controller
+│   ├── generator/       # Configuration generator
+│   ├── loadsim-operator/# Load simulation K8s operator
+│   ├── pipeline-operator/# Pipeline management K8s operator
+│   └── platform-api/    # Platform API service
+├── infrastructure/      # Deployment configurations
+│   ├── kubernetes/      # K8s manifests and CRDs
+│   └── helm/           # Helm charts
+├── monitoring/         # Observability configurations
+│   ├── prometheus/     # Prometheus rules and config
+│   └── grafana/       # Grafana dashboards
+├── scripts/           # Operational scripts
+└── tests/            # Integration and E2E tests
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
 - Go 1.21+
-- Node.js 18+
-- Docker 20+
-- Kubernetes 1.28+ (optional)
+- Docker & Docker Compose
+- Kubernetes cluster (optional)
 - Make
 
-### Setup Development Environment
+### Local Development
 
+1. **Clone and setup**:
+   ```bash
+   git clone https://github.com/phoenix/platform.git
+   cd platform
+   ./scripts/setup-dev-env.sh
+   ```
+
+2. **Start dependencies**:
+   ```bash
+   make -f Makefile.dev dev-up
+   ```
+
+3. **Run services**:
+   ```bash
+   # All services with hot reload
+   goreman start
+   
+   # Or individual services
+   make -f Makefile.dev run-api
+   make -f Makefile.dev run-controller
+   ```
+
+4. **Access services**:
+   - API: http://localhost:8080
+   - Prometheus: http://localhost:9090
+   - Grafana: http://localhost:3000 (admin/admin)
+
+### Kubernetes Deployment
+
+1. **Development environment**:
+   ```bash
+   ./scripts/deploy-dev.sh
+   ```
+
+2. **Production with Helm**:
+   ```bash
+   helm install phoenix infrastructure/helm/phoenix/ \
+     --namespace phoenix \
+     --values values-prod.yaml
+   ```
+
+## 🏛️ Architecture
+
+### Core Services
+- **API Gateway**: REST/gRPC gateway for external access
+- **Experiment Controller**: Manages A/B testing experiments
+- **Config Generator**: Generates OpenTelemetry pipeline configurations
+- **Analytics Engine**: Processes and analyzes metrics data
+- **Anomaly Detector**: Detects unusual patterns in metrics
+
+### Kubernetes Operators
+- **Pipeline Operator**: Manages OTel collector DaemonSets
+- **LoadSim Operator**: Orchestrates load testing jobs
+
+### Shared Packages
+- **go-common**: Shared Go libraries and interfaces
+- **contracts**: API contracts and protobuf definitions
+
+## 🔒 Monorepo Boundaries
+
+This repository enforces strict modular boundaries:
+
+1. **No cross-project imports**: Projects cannot import from other projects
+2. **Shared code in packages**: All shared code must be in `/packages/*`
+3. **Interface-based communication**: Services communicate through defined interfaces
+
+Validate boundaries:
 ```bash
-# Clone the repository
-git clone https://github.com/phoenix/platform.git
-cd platform
-
-# Setup development environment
-make setup
-
-# Start local services
-make dev-up
-
-# Verify setup
-make validate
+./scripts/validate-boundaries.sh
 ```
 
-### Build Everything
+## 🧪 Testing
 
 ```bash
-# Build all projects
-make build
+# Unit tests
+make test-unit
 
-# Build specific project
-make build-platform-api
-
-# Build only changed projects
-make build-changed
-```
-
-### Run Tests
-
-```bash
-# Run all tests
-make test
-
-# Run specific project tests
-make test-platform-api
-
-# Run integration tests
+# Integration tests
 make test-integration
 
-# Run with coverage
+# E2E tests
+make test-e2e
+
+# All tests with coverage
 make test-coverage
 ```
 
-## 🔧 Development
+## 📊 Monitoring
 
-### Working with Projects
+The platform includes comprehensive observability:
 
-Each project is independent with its own:
-- Dependencies
-- Build process
-- Tests
-- Documentation
-- Release cycle
+- **Metrics**: Prometheus with custom recording rules
+- **Dashboards**: Pre-built Grafana dashboards
+- **Tracing**: OpenTelemetry integration (optional)
+- **Logs**: Structured JSON logging
 
+## 🛠️ Development
+
+### Building
 ```bash
-# Work on a specific project
-cd projects/platform-api
+# Build all services
+make build
 
-# Install dependencies
-make deps
+# Build specific service
+cd projects/api && go build ./...
 
-# Run locally
-make run
-
-# Run tests
-make test
-
-# Build Docker image
+# Build Docker images
 make docker-build
 ```
 
-### Code Style
-
-We enforce consistent code style across all projects:
-
+### Code Quality
 ```bash
 # Format code
 make fmt
@@ -195,198 +157,41 @@ make fmt
 # Run linters
 make lint
 
-# Run security scans
-make security
+# Validate structure
+make validate
 ```
 
-### Creating a New Project
-
-```bash
-# Use the project generator
-./tools/generators/create-project.sh my-new-service
-
-# This creates:
-# - projects/my-new-service/
-# - Makefile with standard targets
-# - Basic project structure
-# - CI/CD workflows
-```
-
-## 📊 Projects Overview
-
-| Project | Language | Description | Status |
-|---------|----------|-------------|--------|
-| platform-api | Go | Core REST/gRPC API | ✅ Production |
-| control-plane | Go | Experiment orchestration | ✅ Production |
-| telemetry-collector | Go | Custom OTel collector | ✅ Production |
-| experiment-controller | Go | K8s controller | ✅ Production |
-| pipeline-operator | Go | Pipeline CRD operator | 🚧 Beta |
-| analytics-engine | Go | Analytics & ML service | 🚧 Beta |
-| web-dashboard | React | Web UI | ✅ Production |
-| cli | Go | Command-line interface | ✅ Production |
-| sdk-go | Go | Go SDK | ✅ Production |
-| sdk-python | Python | Python SDK | 📋 Planned |
-| sdk-js | TypeScript | JavaScript SDK | 📋 Planned |
-
-## 🚀 Deployment
-
-### Local Development
-
-```bash
-# Start all services locally
-docker-compose up -d
-
-# Access services
-# - API: http://localhost:8080
-# - Dashboard: http://localhost:3000
-# - Prometheus: http://localhost:9090
-# - Grafana: http://localhost:3001
-```
-
-### Kubernetes
-
-```bash
-# Deploy to development
-make k8s-deploy-dev
-
-# Deploy to production
-make k8s-deploy-prod
-
-# Using Helm
-helm install phoenix deployments/helm/phoenix-platform \
-  --namespace phoenix-system \
-  --values deployments/helm/phoenix-platform/values-prod.yaml
-```
-
-### GitOps
-
-```bash
-# Generate manifests for GitOps
-make k8s-generate
-
-# Manifests are written to:
-# deployments/kubernetes/overlays/production/
-```
+### Git Hooks
+Pre-commit hooks are automatically installed to:
+- Validate monorepo boundaries
+- Run linters
+- Check code formatting
 
 ## 📚 Documentation
 
-- [Architecture Guide](docs/architecture/README.md)
-- [API Reference](docs/api/README.md)
-- [Developer Guide](docs/guides/developer/getting-started.md)
-- [Operator Guide](docs/guides/operator/deployment-guide.md)
-- [User Guide](docs/guides/user/quick-start.md)
-
-### Building Documentation
-
-```bash
-# Serve documentation locally
-make docs-serve
-
-# Build documentation
-make docs-build
-
-# Documentation available at http://localhost:8000
-```
-
-## 🧪 Testing Strategy
-
-We maintain comprehensive test coverage:
-
-- **Unit Tests**: Per-project, fast, isolated
-- **Integration Tests**: Cross-service communication
-- **E2E Tests**: Full user workflows
-- **Performance Tests**: Load and stress testing
-- **Security Tests**: Vulnerability scanning
-
-```bash
-# Run all tests with coverage
-make test-all
-
-# Run specific test suites
-make test-unit
-make test-integration
-make test-e2e
-make test-performance
-make test-security
-```
-
-## 🔒 Security
-
-Security is a top priority:
-
-- All dependencies are regularly scanned
-- Container images are scanned before deployment
-- Security patches are applied within 24 hours
-- SOC2 compliance maintained
-
-```bash
-# Run security scans
-make security
-
-# Update dependencies
-make deps-update
-
-# Audit dependencies
-make audit
-```
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Monorepo Boundaries](MONOREPO_BOUNDARIES.md)
+- [Interface Contracts](docs/INTERFACE_CONTRACTS.md)
+- [Migration Guide](MIGRATION_FINAL_REPORT.md)
 
 ## 🤝 Contributing
 
-We love contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Workflow
-
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Run `make validate`
-6. Submit a pull request
-
-### Code Review Process
-
-- All changes require review
-- CI must pass
-- Documentation must be updated
-- Tests must be included
-
-## 📈 Performance
-
-Phoenix Platform is designed for scale:
-
-- Handles 1M+ metrics/second
-- Sub-millisecond processing latency
-- 99.99% uptime SLA
-- Horizontal scaling to 1000+ nodes
-
-## 🛠️ Troubleshooting
-
-See our comprehensive [Troubleshooting Guide](docs/TROUBLESHOOTING.md).
-
-Common issues:
-- [Local development setup](docs/troubleshooting/local-setup.md)
-- [Kubernetes deployment](docs/troubleshooting/k8s-deployment.md)
-- [Performance issues](docs/troubleshooting/performance.md)
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Ensure boundary validation passes (`./scripts/validate-boundaries.sh`)
+4. Run tests (`make test`)
+5. Commit your changes
+6. Push to the branch
+7. Open a Pull Request
 
 ## 📄 License
 
-Copyright 2024 Phoenix Platform
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
-Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
+## 🏷️ Version
 
-## 🌟 Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=phoenix/platform&type=Date)](https://star-history.com/#phoenix/platform&Date)
-
-## 💬 Community
-
-- [Discord](https://discord.gg/phoenix)
-- [Slack](https://phoenix-community.slack.com)
-- [Twitter](https://twitter.com/phoenixplatform)
-- [Blog](https://blog.phoenix.io)
+Current version: v2.0.0 (Post-migration monorepo structure)
 
 ---
 
-<div align="center">
-  Made with ❤️ by the Phoenix Team
-</div>
+Built with ❤️ by the Phoenix Platform team

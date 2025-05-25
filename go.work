@@ -1,15 +1,29 @@
-go 1.21
+go 1.22.3
+
+toolchain go1.24.3
 
 use (
-    ./packages/go-common
-    ./packages/contracts
-    ./projects/analytics
-    ./projects/anomaly-detector
-    ./projects/benchmark
-    ./projects/control-actuator-go
-    ./projects/controller
-    ./projects/loadsim-operator
-    ./projects/pipeline-operator
-    ./projects/platform-api
-    ./pkg
+	./operators/loadsim
+	./operators/pipeline
+	./pkg
+	./projects/analytics
+	./projects/anomaly-detector
+	./projects/benchmark
+	./projects/control-actuator-go
+	./projects/controller
+	./projects/loadsim-operator
+	./projects/pipeline-operator
+	./projects/platform-api
+	./services/analytics
+	./services/anomaly-detector
+	./services/api
+	./services/benchmark
+	./services/control-actuator-go
+	./services/controller
+	./services/generator
+	./services/generators/synthetic
+	./services/loadsim-operator
+	./services/phoenix-cli
+	./services/pipeline-operator
+	./services/validator
 )

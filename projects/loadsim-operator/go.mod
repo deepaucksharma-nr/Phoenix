@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/projects/loadsim-operator
+module github.com/phoenix-vnext/platform/projects/loadsim-operator
 
 go 1.21
 
@@ -7,10 +7,11 @@ require go.uber.org/zap v1.26.0
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/stretchr/testify v1.8.4 // indirect
+	github.com/stretchr/testify v1.9.0 // indirect
 	go.uber.org/goleak v1.2.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 )
 
 replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+
 replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts
