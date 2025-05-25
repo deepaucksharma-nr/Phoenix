@@ -10,8 +10,8 @@ import (
 
 	"go.uber.org/zap"
 	
-	"github.com/phoenix-platform/pkg/clients/experiment"
-	experimentv1 "github.com/phoenix-platform/api/proto/v1/experiment"
+	"github.com/phoenix/platform/pkg/clients/experiment"
+	experimentv1 "github.com/phoenix/platform/api/proto/v1/experiment"
 )
 
 // ExperimentHandler handles HTTP requests for experiments

@@ -16,7 +16,7 @@ import (
 	"github.com/phoenix/platform/cmd/api-gateway/internal/handlers"
 	"github.com/phoenix/platform/cmd/api-gateway/internal/middleware"
 	"github.com/phoenix/platform/pkg/auth"
-	"github.com/phoenix-platform/pkg/clients"
+	"github.com/phoenix/platform/pkg/clients"
 )
 
 const (

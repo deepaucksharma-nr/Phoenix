@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/structpb"
 	
-	controllerv1 "github.com/phoenix-platform/api/phoenix/controller/v1"
+	controllerv1 "github.com/phoenix/platform/api/phoenix/controller/v1"
 )
 
 // ControlHandler handles HTTP requests for control operations

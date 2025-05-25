@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	grpcserver "github.com/phoenix/platform/cmd/control-service/internal/grpc"
-	controllerv1 "github.com/phoenix-platform/api/proto/v1/controller"
+	controllerv1 "github.com/phoenix/platform/api/proto/v1/controller"
 )
 
 const (

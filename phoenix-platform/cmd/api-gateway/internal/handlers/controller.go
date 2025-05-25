@@ -10,8 +10,8 @@ import (
 
 	"go.uber.org/zap"
 	
-	"github.com/phoenix-platform/pkg/clients/controller"
-	controllerv1 "github.com/phoenix-platform/api/proto/v1/controller"
+	"github.com/phoenix/platform/pkg/clients/controller"
+	controllerv1 "github.com/phoenix/platform/api/proto/v1/controller"
 )
 
 // ControlHandler handles HTTP requests for control operations

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	controllerv1 "github.com/phoenix-platform/api/phoenix/controller/v1"
+	controllerv1 "github.com/phoenix/platform/api/phoenix/controller/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"

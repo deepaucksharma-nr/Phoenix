@@ -4,7 +4,7 @@
 
 echo "Initializing Phoenix-vNext Ultimate Stack environment..."
 SCRIPT_DIR_INIT="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR_INIT")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR_INIT")")"
 cd "$PROJECT_ROOT" || { echo "ERROR: Failed to change to project root directory '$PROJECT_ROOT'"; exit 1; }
 
 # Create .env file from template if it doesn't exist

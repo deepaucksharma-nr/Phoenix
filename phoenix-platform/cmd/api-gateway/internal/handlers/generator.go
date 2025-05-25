@@ -10,9 +10,9 @@ import (
 
 	"go.uber.org/zap"
 	
-	"github.com/phoenix-platform/pkg/clients/generator"
-	generatorv1 "github.com/phoenix-platform/api/proto/v1/generator"
-	commonv1 "github.com/phoenix-platform/api/proto/v1/common"
+	"github.com/phoenix/platform/pkg/clients/generator"
+	generatorv1 "github.com/phoenix/platform/api/proto/v1/generator"
+	commonv1 "github.com/phoenix/platform/api/proto/v1/common"
 )
 
 // GeneratorHandler handles HTTP requests for configuration generation

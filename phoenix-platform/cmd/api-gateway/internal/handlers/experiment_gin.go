@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	
-	experimentv1 "github.com/phoenix-platform/api/phoenix/experiment/v1"
+	experimentv1 "github.com/phoenix/platform/api/phoenix/experiment/v1"
 )
 
 // ExperimentHandler handles HTTP requests for experiments

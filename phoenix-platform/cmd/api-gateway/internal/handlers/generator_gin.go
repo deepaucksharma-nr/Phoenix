@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	
-	generatorv1 "github.com/phoenix-platform/api/phoenix/generator/v1"
+	generatorv1 "github.com/phoenix/platform/api/phoenix/generator/v1"
 )
 
 // GeneratorHandler handles HTTP requests for configuration generation

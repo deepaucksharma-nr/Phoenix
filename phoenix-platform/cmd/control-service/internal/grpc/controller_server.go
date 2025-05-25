@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
-	controllerv1 "github.com/phoenix-platform/api/proto/v1/controller"
-	commonv1 "github.com/phoenix-platform/api/proto/v1/common"
+	controllerv1 "github.com/phoenix/platform/api/proto/v1/controller"
+	commonv1 "github.com/phoenix/platform/api/proto/v1/common"
 )
 
 // ControllerServer implements the controller service for traffic management and drift detection

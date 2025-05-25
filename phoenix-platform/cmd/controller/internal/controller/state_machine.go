@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 	"github.com/phoenix/platform/cmd/controller/internal/clients"
-	"github.com/deepaucksharma/phoenix/phoenix-platform/pkg/analysis"
+	"github.com/phoenix/platform/pkg/analysis"
 )
 
 // StateMachine manages experiment state transitions
