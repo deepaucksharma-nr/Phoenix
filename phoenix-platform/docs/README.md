@@ -7,11 +7,11 @@ This directory contains all documentation for the Phoenix Observability Platform
 ### Getting Started
 - [Overview & Concepts](OVERVIEW_QUICK_START.md) - Introduction to Phoenix platform
 - [Developer Quick Start](DEVELOPER_QUICK_START.md) - 5-minute developer onboarding
-- [Architecture Overview](architecture.md) - System architecture and design
+- [Architecture Overview](ARCHITECTURE.md) - System architecture and design
 
 ### Development
 - [Development Guide](DEVELOPMENT.md) - Detailed development environment setup
-- [Build and Run Guide](../BUILD_AND_RUN.md) - Quick commands for building and running
+- [Build and Run Guide](BUILD_AND_RUN.md) - Quick commands for building and running
 - [Implementation Status](IMPLEMENTATION_STATUS.md) - Current development status
 
 ### Deployment  
@@ -19,9 +19,9 @@ This directory contains all documentation for the Phoenix Observability Platform
 
 ### Reference Documentation
 - [API Reference](API_REFERENCE.md) - Complete API documentation
-- [Pipeline Configuration Guide](pipeline-guide.md) - OpenTelemetry pipeline configuration
+- [Pipeline Configuration Guide](PIPELINE_GUIDE.md) - OpenTelemetry pipeline configuration
 - [Process Simulator Reference](PROCESS_SIMULATOR_REFERENCE.md) - Process simulator documentation
-- [Troubleshooting](troubleshooting.md) - Common issues and solutions
+- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
 
 ### Technical Specifications
 All technical specifications have been moved to `technical-specs/` subdirectory:
@@ -30,13 +30,16 @@ All technical specifications have been moved to `technical-specs/` subdirectory:
 - [Dashboard Specification](TECHNICAL_SPEC_DASHBOARD.md) - Frontend dashboard implementation
 - [Experiment Controller Specification](TECHNICAL_SPEC_EXPERIMENT_CONTROLLER.md) - Controller service implementation
 - [Pipeline Operator Specification](TECHNICAL_SPEC_PIPELINE_OPERATOR.md) - Kubernetes operator implementation
-- Process Simulator Specification - (Currently in `/docs/TECHNICAL_SPEC_PROCESS_SIMULATOR.md`, needs to be moved)
+- [Process Simulator Specification](TECHNICAL_SPEC_PROCESS_SIMULATOR.md) - Process simulator implementation
 
 ### Planning & Status
 Project planning documents are in `planning/` subdirectory:
 - [Product Requirements Document](PRODUCT_REQUIREMENTS.md) - Detailed product requirements (v1.4)
-- [Implementation Roadmap](planning/IMPLEMENTATION_ROADMAP.md) - 12-week development plan
 - [Project Status](planning/PROJECT_STATUS.md) - Real-time implementation tracking
+- [CLI Implementation Plan](planning/CLI_IMPLEMENTATION_PLAN.md) - Phoenix CLI development plan
+- [Pipeline Deployment API Design](planning/PIPELINE_DEPLOYMENT_API_DESIGN.md) - Direct pipeline deployment design
+- [UI Error Handling Enhancement](planning/UI_ERROR_HANDLING_ENHANCEMENT.md) - UI improvements plan
+- [Experiment Overlap Detection](planning/EXPERIMENT_OVERLAP_DETECTION_DESIGN.md) - Overlap detection design
 
 ### Reviews & Analysis
 Review documents are in `reviews/` subdirectory:
@@ -46,7 +49,7 @@ Review documents are in `reviews/` subdirectory:
 ## Documentation Standards
 
 ### File Naming Conventions
-- **User-facing guides**: lowercase with hyphens (e.g., `pipeline-guide.md`, `troubleshooting.md`)
+- **User-facing guides**: UPPERCASE with underscores (e.g., `PIPELINE_GUIDE.md`, `TROUBLESHOOTING.md`)
 - **Technical documents**: UPPERCASE with underscores (e.g., `API_REFERENCE.md`, `DEVELOPER_QUICK_START.md`)
 - **Technical specifications**: UPPERCASE with underscores (e.g., `TECHNICAL_SPEC_MASTER.md`)
 - **Product documents**: Product name + type + version (e.g., `PRODUCT_REQUIREMENTS.md`)

@@ -508,6 +508,6 @@ docker-compose -f docker-compose.dev.yml exec experiment-controller /bin/sh
 ## Next Steps
 
 - Review the [API Documentation](./API_REFERENCE.md)
-- Check the [Architecture Guide](./architecture.md)
+- Check the [Architecture Guide](./ARCHITECTURE.md)
 - Read about [Testing](./TESTING.md)
-- See [Troubleshooting Guide](./troubleshooting.md)
+- See [Troubleshooting Guide](./TROUBLESHOOTING.md)

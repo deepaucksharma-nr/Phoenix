@@ -83,7 +83,7 @@ test-e2e:
 	@$(GOTEST) -v -tags=e2e -timeout=30m ./test/e2e/...
 
 ## build: Build all components
-build: build-api build-controller build-generator build-control-service build-api-gateway build-operators build-simulator build-dashboard
+build: build-api build-controller build-generator build-control-service build-api-gateway build-operators build-simulator build-dashboard build-cli
 
 ## build-api: Build API service
 build-api:
@@ -135,6 +135,12 @@ build-dashboard:
 	@cd dashboard && npm run build
 	@mkdir -p $(DIST_DIR)/dashboard
 	@cp -r dashboard/dist/* $(DIST_DIR)/dashboard/
+
+## build-cli: Build Phoenix CLI
+build-cli:
+	@echo "Building Phoenix CLI..."
+	@mkdir -p $(BUILD_DIR)
+	@CGO_ENABLED=0 $(GOBUILD) -ldflags="-X 'github.com/phoenix-platform/cmd/phoenix-cli/cmd.Version=$(VERSION)' -X 'github.com/phoenix-platform/cmd/phoenix-cli/cmd.GitCommit=$$(git rev-parse --short HEAD)' -X 'github.com/phoenix-platform/cmd/phoenix-cli/cmd.BuildDate=$$(date -u +%Y-%m-%dT%H:%M:%SZ)'" -o $(BUILD_DIR)/phoenix ./cmd/phoenix-cli
 
 ## docker: Build all Docker images
 docker: docker-api docker-controller docker-generator docker-control-service docker-api-gateway docker-operators docker-simulator docker-dashboard
