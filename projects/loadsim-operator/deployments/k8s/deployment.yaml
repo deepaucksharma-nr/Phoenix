@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadsim-operator
+  labels:
+    app.kubernetes.io/name: loadsim-operator
+    app.kubernetes.io/part-of: phoenix-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loadsim-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loadsim-operator
+    spec:
+      containers:
+      - name: loadsim-operator
+        image: ghcr.io/phoenix/loadsim-operator:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: production
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http

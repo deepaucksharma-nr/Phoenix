@@ -107,14 +107,14 @@ fi
 # Update import paths for Go services
 if [ "$SERVICE_TYPE" = "go" ]; then
     echo "Updating Go import paths..."
-    find "$NEW_PATH" -type f -name "*.go" -exec sed -i \
+    find "$NEW_PATH" -type f -name "*.go" -exec sed -i '' \
         -e "s|github.com/phoenix/|github.com/phoenix-vnext/|g" \
         -e "s|OLD_IMPLEMENTATION/||g" \
         {} +
     
     # Update go.mod
     if [ -f "$NEW_PATH/go.mod" ]; then
-        sed -i "s|module .*|module github.com/phoenix-vnext/projects/$SERVICE_NAME|" "$NEW_PATH/go.mod"
+        sed -i '' "s|module .*|module github.com/phoenix-vnext/projects/$SERVICE_NAME|" "$NEW_PATH/go.mod"
     fi
 fi
 

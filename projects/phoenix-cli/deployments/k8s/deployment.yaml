@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix-cli
+  labels:
+    app.kubernetes.io/name: phoenix-cli
+    app.kubernetes.io/part-of: phoenix-platform
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: phoenix-cli
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: phoenix-cli
+    spec:
+      containers:
+      - name: phoenix-cli
+        image: ghcr.io/phoenix/phoenix-cli:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: ENVIRONMENT
+          value: production
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
