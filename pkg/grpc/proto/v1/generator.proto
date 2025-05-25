@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package phoenix.generator.v1;
 
-option go_package = "github.com/phoenix-platform/api/proto/v1/generator;generatorv1";
+option go_package = "github.com/phoenix/platform/pkg/grpc/proto/v1/generator;generatorv1";
 
 import "google/protobuf/timestamp.proto";
 import "v1/common.proto";
