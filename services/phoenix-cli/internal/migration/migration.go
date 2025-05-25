@@ -1,7 +1,6 @@
 package migration
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
