@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: phoenix
+      POSTGRES_USER: phoenix
+      POSTGRES_PASSWORD: phoenix123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phoenix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile.local
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "9090:9090"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: phoenix
+      DB_PASSWORD: phoenix123
+      DB_NAME: phoenix
+      LOG_LEVEL: debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./services/api:/app
+      - ./packages:/packages
+
+  # Controller Service
+  controller:
+    build:
+      context: .
+      dockerfile: services/controller/Dockerfile.local
+    ports:
+      - "8082:8082"
+      - "9091:9090"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: phoenix
+      DB_PASSWORD: phoenix123
+      DB_NAME: phoenix
+      LOG_LEVEL: debug
+      API_SERVICE_ADDR: api:8081
+    depends_on:
+      - api
+    volumes:
+      - ./services/controller:/app
+      - ./packages:/packages
+
+  # Generator Service
+  generator:
+    build:
+      context: .
+      dockerfile: services/generator/Dockerfile.local
+    ports:
+      - "8083:8083"
+      - "9092:9090"
+    environment:
+      LOG_LEVEL: debug
+      TEMPLATE_PATH: /app/templates
+    volumes:
+      - ./services/generator:/app
+      - ./packages:/packages
+      - ./infrastructure/kubernetes/base:/app/templates
+
+  # Dashboard (React App)
+  dashboard:
+    build:
+      context: services/dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:8080
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

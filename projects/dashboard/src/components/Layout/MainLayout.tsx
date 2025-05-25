@@ -33,7 +33,8 @@ import {
   Notifications as NotificationsIcon,
   ChevronLeft as ChevronLeftIcon,
 } from '@mui/icons-material'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { logout } from '@store/slices/authSlice'
 
 const drawerWidth = 240
 
@@ -70,7 +71,8 @@ export const MainLayout: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(state => state.auth.user)
 
   const [drawerOpen, setDrawerOpen] = useState(!isMobile)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
@@ -97,7 +99,7 @@ export const MainLayout: React.FC = () => {
   }
 
   const handleLogout = async () => {
-    await logout()
+    await dispatch(logout()).unwrap()
     navigate('/login')
   }
 

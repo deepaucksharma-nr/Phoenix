@@ -1,0 +1,9 @@
+Phoenix Platform Integration Validation
+======================================
+Date: Mon May 26 05:02:34 IST 2025
+Repository: /Users/deepaksharma/Desktop/src/Phoenix
+
+
+[0;34m==== Go Workspace Configuration ====[0m
+
+[0;32m[PASS][0m go.work file exists

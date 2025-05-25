@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/pkg
+module github.com/phoenix-vnext/platform/pkg
 
 go 1.21
 

@@ -6,10 +6,24 @@ import (
 	"time"
 
 	"github.com/phoenix/platform/services/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/services/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/services/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
+
+// getAPIClient creates an API client with current configuration
+func getAPIClient() (*client.APIClient, error) {
+	endpoint := viper.GetString("api.endpoint")
+	if endpoint == "" {
+		endpoint = "http://localhost:8080"
+	}
+
+	cfg := config.New()
+	token := cfg.GetToken()
+
+	return client.NewAPIClient(endpoint, token), nil
+}
 
 var benchmarkCmd = &cobra.Command{
 	Use:   "benchmark",
@@ -311,13 +325,14 @@ func runExperimentOperations(apiClient *client.APIClient, totalExperiments, conc
 				
 				// Create experiment
 				req := client.CreateExperimentRequest{
-					Name:        fmt.Sprintf("benchmark-exp-%d-%d", worker, j),
-					Namespace:   "benchmark",
-					PipelineA:   "process-baseline-v1",
-					PipelineB:   "process-intelligent-v1",
-					TrafficSplit: "50/50",
-					Duration:    "30m",
-					Selector:    "app=benchmark",
+					Name:              fmt.Sprintf("benchmark-exp-%d-%d", worker, j),
+					Description:       "Benchmark experiment",
+					BaselinePipeline:  "process-baseline-v1",
+					CandidatePipeline: "process-intelligent-v1",
+					TargetNodes: map[string]string{
+						"selector": "app=benchmark",
+					},
+					Duration: 30 * time.Minute,
 				}
 
 				experiment, err := apiClient.CreateExperiment(req)

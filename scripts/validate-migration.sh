@@ -38,8 +38,8 @@ echo -e "${BLUE}=== Phoenix Migration Validation ===${NC}"
 echo ""
 
 # Check if specific service provided
-SERVICE_NAME=$1
-if [ -n "${SERVICE_NAME:-}" ]; then
+SERVICE_NAME=${1:-}
+if [ -n "${SERVICE_NAME}" ]; then
     echo -e "${YELLOW}Validating migration for: $SERVICE_NAME${NC}"
     PROJECTS=("projects/$SERVICE_NAME")
 else

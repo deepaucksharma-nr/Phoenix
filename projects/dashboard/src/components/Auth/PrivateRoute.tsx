@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { Box, CircularProgress, Typography } from '@mui/material'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { checkAuth } from '@store/slices/authSlice'
 
 interface PrivateRouteProps {
   children: React.ReactNode
@@ -9,12 +10,13 @@ interface PrivateRouteProps {
 
 export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
   const location = useLocation()
-  const { isAuthenticated, loading, checkAuth } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const { isAuthenticated, loading } = useAppSelector(state => state.auth)
 
   useEffect(() => {
     // Check auth status on mount
-    checkAuth()
-  }, [checkAuth])
+    dispatch(checkAuth())
+  }, [dispatch])
 
   // Show loading state while checking authentication
   if (loading) {
