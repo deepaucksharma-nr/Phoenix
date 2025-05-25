@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "phoenix.fullname" . }}-dashboard
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+data:
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name _;
+        
+        root /usr/share/nginx/html;
+        index index.html;
+        
+        # Security headers
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+        add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" always;
+        
+        # API proxy
+        location /api/ {
+            proxy_pass http://{{ include "phoenix.fullname" . }}-api:{{ .Values.api.service.httpPort }}/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+        }
+        
+        # WebSocket proxy
+        location /ws {
+            proxy_pass http://{{ include "phoenix.fullname" . }}-api:{{ .Values.api.service.httpPort }}/ws;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "Upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        # SPA fallback
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+  
+  config.js: |
+    window.PHOENIX_CONFIG = {
+      API_URL: '/api/v1',
+      WS_URL: '/ws',
+      ENVIRONMENT: '{{ .Values.dashboard.environment | default "production" }}',
+      VERSION: '{{ .Chart.AppVersion }}',
+      FEATURES: {
+        EXPERIMENTS: true,
+        PIPELINES: true,
+        ANALYTICS: true,
+        REAL_TIME: true
+      }
+    };

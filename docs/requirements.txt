@@ -1,0 +1,42 @@
+# MkDocs and Material theme
+mkdocs>=1.5.3
+mkdocs-material>=9.5.3
+mkdocs-material-extensions>=1.3
+
+# Essential plugins
+mkdocs-minify-plugin>=0.7.2
+mkdocs-redirects>=1.2.1
+mkdocs-git-revision-date-localized-plugin>=1.2.2
+mkdocs-awesome-pages-plugin>=2.9.2
+mkdocs-macros-plugin>=1.0.5
+mkdocs-material[imaging]>=9.5.3
+mkdocs-tags>=1.0.0
+
+# Search enhancements
+mkdocs-localsearch>=0.12.1
+
+# Content processing
+pymdown-extensions>=10.5
+pygments>=2.17.2
+mkdocs-jupyter>=0.24.6
+
+# Diagramming
+mkdocs-mermaid2-plugin>=1.1.1
+mkdocs-drawio-exporter>=0.8.0
+
+# Documentation quality
+mkdocs-spellcheck>=1.0.2
+mkdocs-linkcheck>=1.0.3
+
+# API documentation
+mkdocs-swagger-ui>=0.6.8
+
+# PDF generation (optional)
+mkdocs-pdf-export-plugin>=0.5.10
+
+# Versioning
+mike>=2.0.0
+
+# Development tools
+mkdocs-serve>=0.0.1
+watchdog>=3.0.0

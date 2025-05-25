@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Phoenix Platform Release ${{ github.ref }}
+            
+            ## Changes
+            - See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details
+            
+            ## Docker Images
+            All service images have been pushed to Docker Hub with tag `${{ github.ref }}`
+          draft: false
+          prerelease: false
+
+  build-binaries:
+    name: Build Binaries
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [linux, darwin, windows]
+        arch: [amd64, arm64]
+        service: 
+          - api
+          - controller
+          - generator
+          - control-service
+          - api-gateway
+          - simulator
+        exclude:
+          - os: windows
+            arch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          output_name="${{ matrix.service }}-${{ matrix.os }}-${{ matrix.arch }}"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            output_name="${output_name}.exe"
+          fi
+          CGO_ENABLED=0 go build -o "build/${output_name}" ./cmd/${{ matrix.service }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./build/${{ matrix.service }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
+          asset_name: ${{ matrix.service }}-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.os == 'windows' && '.exe' || '' }}
+          asset_content_type: application/octet-stream
+
+  docker-release:
+    name: Docker Release
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: 
+          - api
+          - controller
+          - generator
+          - control-service
+          - api-gateway
+          - simulator
+          - dashboard
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: phoenix/${{ matrix.service }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./docker/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  helm-release:
+    name: Helm Chart Release
+    needs: docker-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Package Helm chart
+        run: |
+          helm package charts/phoenix -d .
+
+      - name: Upload Helm chart
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release.outputs.upload_url }}
+          asset_path: ./phoenix-*.tgz
+          asset_name: phoenix-chart.tgz
+          asset_content_type: application/gzip

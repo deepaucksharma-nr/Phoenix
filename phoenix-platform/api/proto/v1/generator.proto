@@ -1,0 +1,336 @@
+syntax = "proto3";
+
+package phoenix.generator.v1;
+
+option go_package = "github.com/phoenix-platform/api/proto/v1/generator;generatorv1";
+
+import "google/protobuf/timestamp.proto";
+import "api/proto/v1/common.proto";
+
+// Template represents a reusable pipeline configuration template
+message Template {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string category = 4; // cost-optimization, performance, security
+  
+  // Template configuration
+  TemplateConfig config = 5;
+  
+  // Expected outcomes
+  repeated ExpectedOutcome expected_outcomes = 6;
+  
+  // Metadata
+  map<string, string> labels = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Template configuration
+message TemplateConfig {
+  // Pipeline stages to add/modify
+  repeated phoenix.common.v1.PipelineStage stages = 1;
+  
+  // Rules for metric filtering
+  repeated FilterRule filter_rules = 2;
+  
+  // Sampling configuration
+  SamplingConfig sampling = 3;
+  
+  // Aggregation configuration
+  AggregationConfig aggregation = 4;
+  
+  // Custom processors
+  repeated ProcessorConfig processors = 5;
+}
+
+// Filter rule for metrics
+message FilterRule {
+  string id = 1;
+  string name = 2;
+  FilterType type = 3;
+  string pattern = 4; // regex or glob pattern
+  FilterAction action = 5;
+  map<string, string> metadata = 6;
+}
+
+// Filter type
+enum FilterType {
+  FILTER_TYPE_UNSPECIFIED = 0;
+  FILTER_TYPE_METRIC_NAME = 1;
+  FILTER_TYPE_LABEL = 2;
+  FILTER_TYPE_VALUE_RANGE = 3;
+  FILTER_TYPE_CARDINALITY = 4;
+}
+
+// Filter action
+enum FilterAction {
+  FILTER_ACTION_UNSPECIFIED = 0;
+  FILTER_ACTION_KEEP = 1;
+  FILTER_ACTION_DROP = 2;
+  FILTER_ACTION_MODIFY = 3;
+}
+
+// Sampling configuration
+message SamplingConfig {
+  bool enabled = 1;
+  SamplingStrategy strategy = 2;
+  double rate = 3; // 0.0 to 1.0
+  map<string, double> per_metric_rates = 4;
+}
+
+// Sampling strategy
+enum SamplingStrategy {
+  SAMPLING_STRATEGY_UNSPECIFIED = 0;
+  SAMPLING_STRATEGY_UNIFORM = 1;
+  SAMPLING_STRATEGY_ADAPTIVE = 2;
+  SAMPLING_STRATEGY_PRIORITY = 3;
+}
+
+// Aggregation configuration
+message AggregationConfig {
+  bool enabled = 1;
+  int32 interval_seconds = 2;
+  repeated AggregationMethod methods = 3;
+  repeated string dimensions = 4; // labels to group by
+}
+
+// Aggregation method
+enum AggregationMethod {
+  AGGREGATION_METHOD_UNSPECIFIED = 0;
+  AGGREGATION_METHOD_SUM = 1;
+  AGGREGATION_METHOD_AVG = 2;
+  AGGREGATION_METHOD_MIN = 3;
+  AGGREGATION_METHOD_MAX = 4;
+  AGGREGATION_METHOD_COUNT = 5;
+}
+
+// Processor configuration
+message ProcessorConfig {
+  string type = 1; // transform, enrich, filter
+  string name = 2;
+  map<string, string> settings = 3;
+}
+
+// Expected outcome from applying a template
+message ExpectedOutcome {
+  string metric = 1; // e.g., "cost_reduction", "latency_improvement"
+  double min_value = 2;
+  double max_value = 3;
+  string unit = 4;
+}
+
+// Generate configuration request
+message GenerateConfigurationRequest {
+  // Source pipeline to optimize
+  oneof source {
+    string pipeline_id = 1;
+    phoenix.common.v1.Pipeline pipeline = 2;
+  }
+  
+  // Optimization goals
+  repeated OptimizationGoal goals = 3;
+  
+  // Constraints
+  repeated Constraint constraints = 4;
+  
+  // Template preferences
+  repeated string preferred_template_ids = 5;
+  repeated string excluded_template_ids = 6;
+}
+
+// Optimization goal
+message OptimizationGoal {
+  GoalType type = 1;
+  double target_value = 2;
+  int32 priority = 3; // 1-10, higher is more important
+}
+
+// Goal type
+enum GoalType {
+  GOAL_TYPE_UNSPECIFIED = 0;
+  GOAL_TYPE_COST_REDUCTION = 1;
+  GOAL_TYPE_METRIC_REDUCTION = 2;
+  GOAL_TYPE_LATENCY_REDUCTION = 3;
+  GOAL_TYPE_RESOURCE_OPTIMIZATION = 4;
+}
+
+// Constraint for configuration generation
+message Constraint {
+  ConstraintType type = 1;
+  string metric = 2;
+  double min_value = 3;
+  double max_value = 4;
+}
+
+// Constraint type
+enum ConstraintType {
+  CONSTRAINT_TYPE_UNSPECIFIED = 0;
+  CONSTRAINT_TYPE_METRIC_RETENTION = 1; // Keep at least X% of metrics
+  CONSTRAINT_TYPE_LATENCY_BOUND = 2;    // Max latency increase
+  CONSTRAINT_TYPE_RESOURCE_LIMIT = 3;   // Max resource usage
+}
+
+// Generate configuration response
+message GenerateConfigurationResponse {
+  // Generated pipeline configurations
+  repeated GeneratedConfiguration configurations = 1;
+  
+  // Analysis of current pipeline
+  PipelineAnalysis analysis = 2;
+}
+
+// Generated configuration option
+message GeneratedConfiguration {
+  string id = 1;
+  phoenix.common.v1.Pipeline pipeline = 2;
+  
+  // Templates applied
+  repeated string template_ids = 3;
+  
+  // Predicted outcomes
+  repeated PredictedOutcome predicted_outcomes = 4;
+  
+  // Confidence score (0-100)
+  double confidence_score = 5;
+  
+  // Explanation
+  string explanation = 6;
+}
+
+// Predicted outcome
+message PredictedOutcome {
+  string metric = 1;
+  double current_value = 2;
+  double predicted_value = 3;
+  double improvement_percentage = 4;
+  string unit = 5;
+}
+
+// Pipeline analysis
+message PipelineAnalysis {
+  // Identified issues
+  repeated Issue issues = 1;
+  
+  // Current metrics
+  map<string, double> current_metrics = 2;
+  
+  // Optimization opportunities
+  repeated OptimizationOpportunity opportunities = 3;
+}
+
+// Issue in current pipeline
+message Issue {
+  IssueSeverity severity = 1;
+  string type = 2;
+  string description = 3;
+  string component = 4;
+  repeated string affected_metrics = 5;
+}
+
+// Issue severity
+enum IssueSeverity {
+  ISSUE_SEVERITY_UNSPECIFIED = 0;
+  ISSUE_SEVERITY_INFO = 1;
+  ISSUE_SEVERITY_WARNING = 2;
+  ISSUE_SEVERITY_ERROR = 3;
+}
+
+// Optimization opportunity
+message OptimizationOpportunity {
+  string id = 1;
+  string description = 2;
+  double potential_improvement = 3;
+  string template_id = 4;
+  int32 complexity = 5; // 1-5, higher is more complex
+}
+
+// List templates request
+message ListTemplatesRequest {
+  repeated string categories = 1;
+  map<string, string> label_selector = 2;
+  phoenix.common.v1.PaginationRequest pagination = 3;
+}
+
+// List templates response
+message ListTemplatesResponse {
+  repeated Template templates = 1;
+  phoenix.common.v1.PaginationResponse pagination = 2;
+}
+
+// Config generator service
+service ConfigGeneratorService {
+  // Generate optimized configurations for a pipeline
+  rpc GenerateConfiguration(GenerateConfigurationRequest) returns (GenerateConfigurationResponse);
+  
+  // List available templates
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse);
+  
+  // Get template by ID
+  rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse);
+  
+  // Create custom template
+  rpc CreateTemplate(CreateTemplateRequest) returns (CreateTemplateResponse);
+  
+  // Validate a pipeline configuration
+  rpc ValidateConfiguration(ValidateConfigurationRequest) returns (ValidateConfigurationResponse);
+}
+
+// Get template request
+message GetTemplateRequest {
+  string id = 1;
+}
+
+// Get template response
+message GetTemplateResponse {
+  Template template = 1;
+}
+
+// Create template request
+message CreateTemplateRequest {
+  Template template = 1;
+}
+
+// Create template response
+message CreateTemplateResponse {
+  Template template = 1;
+}
+
+// Validate configuration request
+message ValidateConfigurationRequest {
+  phoenix.common.v1.Pipeline pipeline = 1;
+  bool check_syntax = 2;
+  bool check_semantics = 3;
+  bool simulate = 4;
+}
+
+// Validate configuration response
+message ValidateConfigurationResponse {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+  repeated ValidationWarning warnings = 3;
+  SimulationResult simulation = 4;
+}
+
+// Validation error
+message ValidationError {
+  string code = 1;
+  string message = 2;
+  string component = 3;
+  string field = 4;
+}
+
+// Validation warning
+message ValidationWarning {
+  string code = 1;
+  string message = 2;
+  string component = 3;
+  string suggestion = 4;
+}
+
+// Simulation result
+message SimulationResult {
+  bool success = 1;
+  map<string, double> predicted_metrics = 2;
+  repeated string potential_issues = 3;
+}

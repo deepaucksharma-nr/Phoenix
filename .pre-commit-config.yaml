@@ -1,0 +1,99 @@
+# Phoenix Platform Pre-commit Hooks
+# Enforces architectural decisions and prevents drift
+
+repos:
+  # Structure Validation
+  - repo: local
+    hooks:
+      - id: validate-structure
+        name: Validate Phoenix Structure
+        entry: phoenix-platform/scripts/validate/validate-structure.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+      - id: no-root-docs
+        name: No Docs at Root
+        entry: bash -c 'if ls *.md 2>/dev/null | grep -v "CLAUDE.md" | grep -v ".pre-commit" | grep -E "(PHOENIX|PROJECT|IMPL|REVIEW|GUIDE|SPEC)"; then echo "ERROR: Phoenix docs must be in phoenix-platform/docs/"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      - id: check-service-boundaries
+        name: Check Service Boundaries
+        entry: bash -c 'if grep -r "cmd/.*/internal" --include="*.go" . | grep -v "cmd/.*/.*\.go.*cmd/.*/internal"; then echo "ERROR: Cross-service internal imports detected"; exit 1; fi'
+        language: system
+        types: [go]
+
+  # Go Formatting and Linting
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v1.54.2
+    hooks:
+      - id: golangci-lint
+        args: ['--fix']
+
+  - repo: https://github.com/pre-commit/mirrors-gofmt
+    rev: v1.0.0-rc.1
+    hooks:
+      - id: gofmt
+
+  # Documentation
+  - repo: local
+    hooks:
+      - id: check-adr-format
+        name: Check ADR Format
+        entry: bash -c 'for f in phoenix-platform/docs/adr/ADR-*.md; do if [ -f "$f" ] && ! grep -q "## Status" "$f"; then echo "ERROR: $f missing Status section"; exit 1; fi; done'
+        language: system
+        files: 'phoenix-platform/docs/adr/ADR-.*\.md$'
+
+  # Security
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+
+  # YAML/JSON
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+        args: ['--unsafe']
+      - id: check-json
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+
+  # Dockerfile
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: ['--ignore', 'DL3008', '--ignore', 'DL3009']
+
+  # Architecture Enforcement
+  - repo: local
+    hooks:
+      - id: enforce-gitops
+        name: Enforce GitOps
+        entry: bash -c 'if grep -r "kubectl apply" --include="*.go" --include="*.sh" . | grep -v "install-crds" | grep -v ".pre-commit"; then echo "ERROR: Direct kubectl apply forbidden (use GitOps)"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+      - id: check-service-deps
+        name: Check Service Dependencies
+        entry: bash -c 'if grep -r "database/sql" phoenix-platform/cmd/api 2>/dev/null | grep -q "postgres"; then if ! grep -q "DATABASE_URL" phoenix-platform/.env.example 2>/dev/null; then echo "WARNING: Database used but DATABASE_URL not in .env.example"; fi; fi'
+        language: system
+        types: [go]
+
+      - id: validate-imports
+        name: Validate Go Imports
+        entry: bash -c 'if find . -name "*.go" -exec grep -l "\.\./\.\." {} \; | grep -v vendor; then echo "ERROR: Relative imports beyond module boundary"; exit 1; fi'
+        language: system
+        types: [go]
+
+# Configuration
+default_stages: [commit]
+fail_fast: false
+verbose: true
