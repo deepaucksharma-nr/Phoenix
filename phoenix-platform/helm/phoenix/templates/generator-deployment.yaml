@@ -1,0 +1,110 @@
+{{- if .Values.generator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "phoenix.fullname" . }}-generator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: generator
+spec:
+  replicas: {{ .Values.generator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: generator
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/generator-configmap.yaml") . | sha256sum }}
+        {{- with .Values.generator.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "phoenix.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: generator
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "phoenix.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.generator.podSecurityContext | nindent 8 }}
+      containers:
+        - name: generator
+          securityContext:
+            {{- toYaml .Values.generator.securityContext | nindent 12 }}
+          image: "{{ .Values.generator.image.repository }}:{{ .Values.generator.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.generator.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.generator.service.grpcPort }}
+              protocol: TCP
+            - name: metrics
+              containerPort: {{ .Values.generator.service.metricsPort }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.generator.service.grpcPort }}"
+            - name: METRICS_PORT
+              value: "{{ .Values.generator.service.metricsPort }}"
+            - name: LOG_LEVEL
+              value: {{ .Values.generator.logLevel }}
+            - name: GIT_REPO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.generator.git.secretName }}
+                  key: repo-url
+            - name: GIT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.generator.git.secretName }}
+                  key: token
+            - name: GIT_BRANCH
+              value: {{ .Values.generator.git.branch }}
+            - name: PIPELINE_CATALOG_PATH
+              value: {{ .Values.generator.pipelineCatalogPath }}
+            - name: NEW_RELIC_OTLP_ENDPOINT
+              value: {{ .Values.newrelic.otlpEndpoint }}
+            {{- with .Values.generator.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            grpc:
+              port: {{ .Values.generator.service.grpcPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            grpc:
+              port: {{ .Values.generator.service.grpcPort }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.generator.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/phoenix
+              readOnly: true
+            - name: pipeline-templates
+              mountPath: /pipelines/templates
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "phoenix.fullname" . }}-generator
+        - name: pipeline-templates
+          configMap:
+            name: {{ include "phoenix.fullname" . }}-pipeline-templates
+      {{- with .Values.generator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.generator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.generator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package phoenix.v1;
+
+option go_package = "github.com/phoenix/platform/pkg/api/v1;v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// ControllerService manages control signals and drift detection
+service ControllerService {
+  // Apply a control signal to an experiment
+  rpc ApplyControlSignal(ApplyControlSignalRequest) returns (ApplyControlSignalResponse);
+  
+  // Get a specific control signal
+  rpc GetControlSignal(GetControlSignalRequest) returns (GetControlSignalResponse);
+  
+  // List control signals for an experiment
+  rpc ListControlSignals(ListControlSignalsRequest) returns (ListControlSignalsResponse);
+  
+  // Get drift report for an experiment
+  rpc GetDriftReport(GetDriftReportRequest) returns (GetDriftReportResponse);
+  
+  // Stream drift events in real-time
+  rpc StreamDriftEvents(StreamDriftEventsRequest) returns (stream DriftEvent);
+}
+
+// SignalType defines the type of control signal
+enum SignalType {
+  SIGNAL_TYPE_UNSPECIFIED = 0;
+  SIGNAL_TYPE_TRAFFIC_SPLIT = 1;
+  SIGNAL_TYPE_ROLLBACK = 2;
+  SIGNAL_TYPE_CONFIG_UPDATE = 3;
+  SIGNAL_TYPE_PAUSE = 4;
+  SIGNAL_TYPE_RESUME = 5;
+}
+
+// ControlStatus defines the status of a control operation
+enum ControlStatus {
+  CONTROL_STATUS_UNSPECIFIED = 0;
+  CONTROL_STATUS_PENDING = 1;
+  CONTROL_STATUS_ACTIVE = 2;
+  CONTROL_STATUS_COMPLETED = 3;
+  CONTROL_STATUS_FAILED = 4;
+}
+
+// ControlSignal represents a control action
+message ControlSignal {
+  string id = 1;
+  string experiment_id = 2;
+  SignalType type = 3;
+  map<string, google.protobuf.Value> parameters = 4;
+  ControlStatus status = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp applied_at = 7;
+  string applied_by = 8;
+  string reason = 9;
+}
+
+// DriftReport contains drift analysis results
+message DriftReport {
+  string experiment_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double drift_score = 3;
+  repeated DriftMetric metrics = 4;
+  bool requires_action = 5;
+  string recommended_action = 6;
+}
+
+// DriftMetric represents a single drift measurement
+message DriftMetric {
+  string name = 1;
+  double baseline_value = 2;
+  double current_value = 3;
+  double deviation_percentage = 4;
+  bool is_significant = 5;
+}
+
+// DriftEvent for streaming
+message DriftEvent {
+  string experiment_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string event_type = 3;
+  DriftMetric metric = 4;
+  string message = 5;
+}
+
+// Request/Response messages
+message ApplyControlSignalRequest {
+  string experiment_id = 1;
+  ControlSignal signal = 2;
+}
+
+message ApplyControlSignalResponse {
+  string signal_id = 1;
+  ControlStatus status = 2;
+  string message = 3;
+}
+
+message GetControlSignalRequest {
+  string signal_id = 1;
+}
+
+message GetControlSignalResponse {
+  ControlSignal signal = 1;
+}
+
+message ListControlSignalsRequest {
+  string experiment_id = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListControlSignalsResponse {
+  repeated ControlSignal signals = 1;
+  string next_page_token = 2;
+}
+
+message GetDriftReportRequest {
+  string experiment_id = 1;
+}
+
+message GetDriftReportResponse {
+  DriftReport report = 1;
+}
+
+message StreamDriftEventsRequest {
+  string experiment_id = 1;
+}

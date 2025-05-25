@@ -1,0 +1,905 @@
+package store
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	_ "github.com/lib/pq"
+	"github.com/phoenix/platform/pkg/interfaces"
+	"github.com/phoenix/platform/pkg/models"
+	"go.uber.org/zap"
+)
+
+// AdvancedPostgresStore implements the interfaces.Store interface using PostgreSQL
+// This is an advanced implementation with support for all domain models
+type AdvancedPostgresStore struct {
+	db     *sql.DB
+	logger *zap.Logger
+}
+
+// NewAdvancedPostgresStore creates a new PostgreSQL store with advanced features
+func NewAdvancedPostgresStore(connectionString string, logger *zap.Logger) (*AdvancedPostgresStore, error) {
+	db, err := sql.Open("postgres", connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open database: %w", err)
+	}
+
+	// Test the connection
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	if err := db.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Set connection pool settings
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+	db.SetConnMaxLifetime(5 * time.Minute)
+
+	store := &AdvancedPostgresStore{
+		db:     db,
+		logger: logger,
+	}
+
+	// Initialize schema
+	if err := store.initSchema(); err != nil {
+		return nil, fmt.Errorf("failed to initialize schema: %w", err)
+	}
+
+	return store, nil
+}
+
+// initSchema creates the necessary tables if they don't exist
+func (s *AdvancedPostgresStore) initSchema() error {
+	schema := `
+	CREATE TABLE IF NOT EXISTS experiments (
+		id VARCHAR(255) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		owner VARCHAR(255),
+		status VARCHAR(50) NOT NULL,
+		spec JSONB,
+		results JSONB,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		started_at TIMESTAMP WITH TIME ZONE,
+		completed_at TIMESTAMP WITH TIME ZONE
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_experiments_status ON experiments(status);
+	CREATE INDEX IF NOT EXISTS idx_experiments_owner ON experiments(owner);
+	CREATE INDEX IF NOT EXISTS idx_experiments_created_at ON experiments(created_at);
+
+	CREATE TABLE IF NOT EXISTS pipelines (
+		id VARCHAR(255) PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		description TEXT,
+		owner VARCHAR(255),
+		config JSONB NOT NULL,
+		template_id VARCHAR(255),
+		version INTEGER DEFAULT 1,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_pipelines_owner ON pipelines(owner);
+	CREATE INDEX IF NOT EXISTS idx_pipelines_template ON pipelines(template_id);
+
+	CREATE TABLE IF NOT EXISTS users (
+		id VARCHAR(255) PRIMARY KEY,
+		email VARCHAR(255) UNIQUE NOT NULL,
+		name VARCHAR(255) NOT NULL,
+		password_hash VARCHAR(255) NOT NULL,
+		role VARCHAR(50) NOT NULL DEFAULT 'user',
+		organization VARCHAR(255),
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		last_login_at TIMESTAMP WITH TIME ZONE
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+	CREATE TABLE IF NOT EXISTS audit_logs (
+		id SERIAL PRIMARY KEY,
+		user_id VARCHAR(255),
+		action VARCHAR(255) NOT NULL,
+		resource_type VARCHAR(50) NOT NULL,
+		resource_id VARCHAR(255),
+		details JSONB,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+	CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+	CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
+	`
+
+	_, err := s.db.Exec(schema)
+	return err
+}
+
+// Close closes the database connection
+func (s *AdvancedPostgresStore) Close() error {
+	return s.db.Close()
+}
+
+// Experiments
+
+func (s *AdvancedPostgresStore) CreateExperiment(ctx context.Context, experiment *interfaces.Experiment) error {
+	specJSON, err := json.Marshal(experiment.Spec)
+	if err != nil {
+		return fmt.Errorf("failed to marshal spec: %w", err)
+	}
+
+	query := `
+		INSERT INTO experiments (id, name, description, owner, status, spec, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+
+	now := time.Now()
+	experiment.CreatedAt = now
+	experiment.UpdatedAt = now
+
+	_, err = s.db.ExecContext(ctx, query,
+		experiment.ID,
+		experiment.Name,
+		experiment.Description,
+		experiment.Owner,
+		experiment.Status,
+		specJSON,
+		experiment.CreatedAt,
+		experiment.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create experiment: %w", err)
+	}
+
+	s.logger.Info("created experiment",
+		zap.String("id", experiment.ID),
+		zap.String("name", experiment.Name))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) GetExperiment(ctx context.Context, id string) (*interfaces.Experiment, error) {
+	query := `
+		SELECT id, name, description, owner, status, spec, results,
+		       created_at, updated_at, started_at, completed_at
+		FROM experiments
+		WHERE id = $1
+	`
+
+	var experiment interfaces.Experiment
+	var specJSON, resultsJSON sql.NullString
+	var startedAt, completedAt sql.NullTime
+
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&experiment.ID,
+		&experiment.Name,
+		&experiment.Description,
+		&experiment.Owner,
+		&experiment.Status,
+		&specJSON,
+		&resultsJSON,
+		&experiment.CreatedAt,
+		&experiment.UpdatedAt,
+		&startedAt,
+		&completedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("experiment not found: %s", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get experiment: %w", err)
+	}
+
+	// Unmarshal JSON fields
+	if specJSON.Valid {
+		if err := json.Unmarshal([]byte(specJSON.String), &experiment.Spec); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal spec: %w", err)
+		}
+	}
+	if resultsJSON.Valid {
+		if err := json.Unmarshal([]byte(resultsJSON.String), &experiment.Results); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal results: %w", err)
+		}
+	}
+
+	// Handle nullable timestamps
+	if startedAt.Valid {
+		experiment.StartedAt = &startedAt.Time
+	}
+	if completedAt.Valid {
+		experiment.CompletedAt = &completedAt.Time
+	}
+
+	return &experiment, nil
+}
+
+func (s *AdvancedPostgresStore) UpdateExperiment(ctx context.Context, experiment *interfaces.Experiment) error {
+	specJSON, err := json.Marshal(experiment.Spec)
+	if err != nil {
+		return fmt.Errorf("failed to marshal spec: %w", err)
+	}
+
+	var resultsJSON []byte
+	if experiment.Results != nil {
+		resultsJSON, err = json.Marshal(experiment.Results)
+		if err != nil {
+			return fmt.Errorf("failed to marshal results: %w", err)
+		}
+	}
+
+	query := `
+		UPDATE experiments
+		SET name = $2, description = $3, owner = $4, status = $5,
+		    spec = $6, results = $7, updated_at = $8,
+		    started_at = $9, completed_at = $10
+		WHERE id = $1
+	`
+
+	experiment.UpdatedAt = time.Now()
+
+	result, err := s.db.ExecContext(ctx, query,
+		experiment.ID,
+		experiment.Name,
+		experiment.Description,
+		experiment.Owner,
+		experiment.Status,
+		specJSON,
+		resultsJSON,
+		experiment.UpdatedAt,
+		experiment.StartedAt,
+		experiment.CompletedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("experiment not found: %s", experiment.ID)
+	}
+
+	s.logger.Info("updated experiment",
+		zap.String("id", experiment.ID),
+		zap.String("status", string(experiment.Status)))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) DeleteExperiment(ctx context.Context, id string) error {
+	query := `DELETE FROM experiments WHERE id = $1`
+
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete experiment: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("experiment not found: %s", id)
+	}
+
+	s.logger.Info("deleted experiment", zap.String("id", id))
+	return nil
+}
+
+func (s *AdvancedPostgresStore) ListExperiments(ctx context.Context, filter interfaces.ExperimentFilter) ([]*interfaces.Experiment, error) {
+	query := `
+		SELECT id, name, description, owner, status, spec, results,
+		       created_at, updated_at, started_at, completed_at
+		FROM experiments
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argCount := 0
+
+	// Build dynamic query based on filter
+	if filter.Owner != "" {
+		argCount++
+		query += fmt.Sprintf(" AND owner = $%d", argCount)
+		args = append(args, filter.Owner)
+	}
+
+	if filter.Status != "" {
+		argCount++
+		query += fmt.Sprintf(" AND status = $%d", argCount)
+		args = append(args, filter.Status)
+	}
+
+	// Add ordering
+	query += " ORDER BY created_at DESC"
+
+	// Add pagination
+	if filter.Limit > 0 {
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, filter.Limit)
+	}
+	if filter.Offset > 0 {
+		argCount++
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list experiments: %w", err)
+	}
+	defer rows.Close()
+
+	experiments := []*interfaces.Experiment{}
+	for rows.Next() {
+		var experiment interfaces.Experiment
+		var specJSON, resultsJSON sql.NullString
+		var startedAt, completedAt sql.NullTime
+
+		err := rows.Scan(
+			&experiment.ID,
+			&experiment.Name,
+			&experiment.Description,
+			&experiment.Owner,
+			&experiment.Status,
+			&specJSON,
+			&resultsJSON,
+			&experiment.CreatedAt,
+			&experiment.UpdatedAt,
+			&startedAt,
+			&completedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan experiment: %w", err)
+		}
+
+		// Unmarshal JSON fields
+		if specJSON.Valid {
+			if err := json.Unmarshal([]byte(specJSON.String), &experiment.Spec); err != nil {
+				s.logger.Warn("failed to unmarshal spec", zap.String("id", experiment.ID), zap.Error(err))
+			}
+		}
+		if resultsJSON.Valid {
+			if err := json.Unmarshal([]byte(resultsJSON.String), &experiment.Results); err != nil {
+				s.logger.Warn("failed to unmarshal results", zap.String("id", experiment.ID), zap.Error(err))
+			}
+		}
+
+		// Handle nullable timestamps
+		if startedAt.Valid {
+			experiment.StartedAt = &startedAt.Time
+		}
+		if completedAt.Valid {
+			experiment.CompletedAt = &completedAt.Time
+		}
+
+		experiments = append(experiments, &experiment)
+	}
+
+	return experiments, nil
+}
+
+// Pipelines
+
+func (s *AdvancedPostgresStore) CreatePipeline(ctx context.Context, pipeline *interfaces.Pipeline) error {
+	configJSON, err := json.Marshal(pipeline.Config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	query := `
+		INSERT INTO pipelines (id, name, description, owner, config, template_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+
+	now := time.Now()
+	pipeline.CreatedAt = now
+	pipeline.UpdatedAt = now
+
+	_, err = s.db.ExecContext(ctx, query,
+		pipeline.ID,
+		pipeline.Name,
+		pipeline.Description,
+		pipeline.Owner,
+		configJSON,
+		pipeline.TemplateID,
+		pipeline.CreatedAt,
+		pipeline.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create pipeline: %w", err)
+	}
+
+	s.logger.Info("created pipeline",
+		zap.String("id", pipeline.ID),
+		zap.String("name", pipeline.Name))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) GetPipeline(ctx context.Context, id string) (*interfaces.Pipeline, error) {
+	query := `
+		SELECT id, name, description, owner, config, template_id, version,
+		       created_at, updated_at
+		FROM pipelines
+		WHERE id = $1
+	`
+
+	var pipeline interfaces.Pipeline
+	var configJSON string
+
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&pipeline.ID,
+		&pipeline.Name,
+		&pipeline.Description,
+		&pipeline.Owner,
+		&configJSON,
+		&pipeline.TemplateID,
+		&pipeline.Version,
+		&pipeline.CreatedAt,
+		&pipeline.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("pipeline not found: %s", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pipeline: %w", err)
+	}
+
+	// Unmarshal config
+	if err := json.Unmarshal([]byte(configJSON), &pipeline.Config); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	return &pipeline, nil
+}
+
+func (s *AdvancedPostgresStore) UpdatePipeline(ctx context.Context, pipeline *interfaces.Pipeline) error {
+	configJSON, err := json.Marshal(pipeline.Config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	query := `
+		UPDATE pipelines
+		SET name = $2, description = $3, owner = $4, config = $5,
+		    template_id = $6, version = version + 1, updated_at = $7
+		WHERE id = $1
+	`
+
+	pipeline.UpdatedAt = time.Now()
+	pipeline.Version++
+
+	result, err := s.db.ExecContext(ctx, query,
+		pipeline.ID,
+		pipeline.Name,
+		pipeline.Description,
+		pipeline.Owner,
+		configJSON,
+		pipeline.TemplateID,
+		pipeline.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update pipeline: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("pipeline not found: %s", pipeline.ID)
+	}
+
+	s.logger.Info("updated pipeline",
+		zap.String("id", pipeline.ID),
+		zap.Int("version", pipeline.Version))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) DeletePipeline(ctx context.Context, id string) error {
+	query := `DELETE FROM pipelines WHERE id = $1`
+
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete pipeline: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("pipeline not found: %s", id)
+	}
+
+	s.logger.Info("deleted pipeline", zap.String("id", id))
+	return nil
+}
+
+func (s *AdvancedPostgresStore) ListPipelines(ctx context.Context, filter interfaces.PipelineFilter) ([]*interfaces.Pipeline, error) {
+	query := `
+		SELECT id, name, description, owner, config, template_id, version,
+		       created_at, updated_at
+		FROM pipelines
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argCount := 0
+
+	// Build dynamic query based on filter
+	if filter.Owner != "" {
+		argCount++
+		query += fmt.Sprintf(" AND owner = $%d", argCount)
+		args = append(args, filter.Owner)
+	}
+
+	if filter.TemplateID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND template_id = $%d", argCount)
+		args = append(args, filter.TemplateID)
+	}
+
+	// Add ordering
+	query += " ORDER BY created_at DESC"
+
+	// Add pagination
+	if filter.Limit > 0 {
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, filter.Limit)
+	}
+	if filter.Offset > 0 {
+		argCount++
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pipelines: %w", err)
+	}
+	defer rows.Close()
+
+	pipelines := []*interfaces.Pipeline{}
+	for rows.Next() {
+		var pipeline interfaces.Pipeline
+		var configJSON string
+
+		err := rows.Scan(
+			&pipeline.ID,
+			&pipeline.Name,
+			&pipeline.Description,
+			&pipeline.Owner,
+			&configJSON,
+			&pipeline.TemplateID,
+			&pipeline.Version,
+			&pipeline.CreatedAt,
+			&pipeline.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan pipeline: %w", err)
+		}
+
+		// Unmarshal config
+		if err := json.Unmarshal([]byte(configJSON), &pipeline.Config); err != nil {
+			s.logger.Warn("failed to unmarshal config", zap.String("id", pipeline.ID), zap.Error(err))
+		}
+
+		pipelines = append(pipelines, &pipeline)
+	}
+
+	return pipelines, nil
+}
+
+// Users
+
+func (s *AdvancedPostgresStore) CreateUser(ctx context.Context, user *interfaces.User) error {
+	query := `
+		INSERT INTO users (id, email, name, password_hash, role, organization, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+
+	now := time.Now()
+	user.CreatedAt = now
+	user.UpdatedAt = now
+
+	_, err := s.db.ExecContext(ctx, query,
+		user.ID,
+		user.Email,
+		user.Name,
+		user.PasswordHash,
+		user.Role,
+		user.Organization,
+		user.CreatedAt,
+		user.UpdatedAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to create user: %w", err)
+	}
+
+	s.logger.Info("created user",
+		zap.String("id", user.ID),
+		zap.String("email", user.Email))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) GetUser(ctx context.Context, id string) (*interfaces.User, error) {
+	query := `
+		SELECT id, email, name, password_hash, role, organization,
+		       created_at, updated_at, last_login_at
+		FROM users
+		WHERE id = $1
+	`
+
+	var user interfaces.User
+	var lastLoginAt sql.NullTime
+
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Name,
+		&user.PasswordHash,
+		&user.Role,
+		&user.Organization,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&lastLoginAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found: %s", id)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if lastLoginAt.Valid {
+		user.LastLoginAt = &lastLoginAt.Time
+	}
+
+	return &user, nil
+}
+
+func (s *AdvancedPostgresStore) GetUserByEmail(ctx context.Context, email string) (*interfaces.User, error) {
+	query := `
+		SELECT id, email, name, password_hash, role, organization,
+		       created_at, updated_at, last_login_at
+		FROM users
+		WHERE email = $1
+	`
+
+	var user interfaces.User
+	var lastLoginAt sql.NullTime
+
+	err := s.db.QueryRowContext(ctx, query, email).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Name,
+		&user.PasswordHash,
+		&user.Role,
+		&user.Organization,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+		&lastLoginAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("user not found: %s", email)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	if lastLoginAt.Valid {
+		user.LastLoginAt = &lastLoginAt.Time
+	}
+
+	return &user, nil
+}
+
+func (s *AdvancedPostgresStore) UpdateUser(ctx context.Context, user *interfaces.User) error {
+	query := `
+		UPDATE users
+		SET email = $2, name = $3, password_hash = $4, role = $5,
+		    organization = $6, updated_at = $7, last_login_at = $8
+		WHERE id = $1
+	`
+
+	user.UpdatedAt = time.Now()
+
+	result, err := s.db.ExecContext(ctx, query,
+		user.ID,
+		user.Email,
+		user.Name,
+		user.PasswordHash,
+		user.Role,
+		user.Organization,
+		user.UpdatedAt,
+		user.LastLoginAt,
+	)
+
+	if err != nil {
+		return fmt.Errorf("failed to update user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found: %s", user.ID)
+	}
+
+	s.logger.Info("updated user",
+		zap.String("id", user.ID),
+		zap.String("email", user.Email))
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) DeleteUser(ctx context.Context, id string) error {
+	query := `DELETE FROM users WHERE id = $1`
+
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found: %s", id)
+	}
+
+	s.logger.Info("deleted user", zap.String("id", id))
+	return nil
+}
+
+// Audit logging
+
+func (s *AdvancedPostgresStore) CreateAuditLog(ctx context.Context, log *interfaces.AuditLog) error {
+	detailsJSON, err := json.Marshal(log.Details)
+	if err != nil {
+		return fmt.Errorf("failed to marshal details: %w", err)
+	}
+
+	query := `
+		INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+
+	log.CreatedAt = time.Now()
+
+	err = s.db.QueryRowContext(ctx, query,
+		log.UserID,
+		log.Action,
+		log.ResourceType,
+		log.ResourceID,
+		detailsJSON,
+		log.CreatedAt,
+	).Scan(&log.ID)
+
+	if err != nil {
+		return fmt.Errorf("failed to create audit log: %w", err)
+	}
+
+	return nil
+}
+
+func (s *AdvancedPostgresStore) ListAuditLogs(ctx context.Context, filter interfaces.AuditLogFilter) ([]*interfaces.AuditLog, error) {
+	query := `
+		SELECT id, user_id, action, resource_type, resource_id, details, created_at
+		FROM audit_logs
+		WHERE 1=1
+	`
+	args := []interface{}{}
+	argCount := 0
+
+	// Build dynamic query based on filter
+	if filter.UserID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND user_id = $%d", argCount)
+		args = append(args, filter.UserID)
+	}
+
+	if filter.ResourceType != "" {
+		argCount++
+		query += fmt.Sprintf(" AND resource_type = $%d", argCount)
+		args = append(args, filter.ResourceType)
+	}
+
+	if filter.ResourceID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND resource_id = $%d", argCount)
+		args = append(args, filter.ResourceID)
+	}
+
+	if !filter.StartTime.IsZero() {
+		argCount++
+		query += fmt.Sprintf(" AND created_at >= $%d", argCount)
+		args = append(args, filter.StartTime)
+	}
+
+	if !filter.EndTime.IsZero() {
+		argCount++
+		query += fmt.Sprintf(" AND created_at <= $%d", argCount)
+		args = append(args, filter.EndTime)
+	}
+
+	// Add ordering
+	query += " ORDER BY created_at DESC"
+
+	// Add pagination
+	if filter.Limit > 0 {
+		argCount++
+		query += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, filter.Limit)
+	}
+	if filter.Offset > 0 {
+		argCount++
+		query += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, filter.Offset)
+	}
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list audit logs: %w", err)
+	}
+	defer rows.Close()
+
+	logs := []*interfaces.AuditLog{}
+	for rows.Next() {
+		var log interfaces.AuditLog
+		var detailsJSON string
+
+		err := rows.Scan(
+			&log.ID,
+			&log.UserID,
+			&log.Action,
+			&log.ResourceType,
+			&log.ResourceID,
+			&detailsJSON,
+			&log.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan audit log: %w", err)
+		}
+
+		// Unmarshal details
+		if err := json.Unmarshal([]byte(detailsJSON), &log.Details); err != nil {
+			s.logger.Warn("failed to unmarshal details", zap.Int("id", log.ID), zap.Error(err))
+		}
+
+		logs = append(logs, &log)
+	}
+
+	return logs, nil
+}

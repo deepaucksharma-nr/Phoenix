@@ -1,0 +1,253 @@
+name: Phoenix Platform CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  GO_VERSION: '1.21'
+  NODE_VERSION: '18'
+  GOLANGCI_LINT_VERSION: 'v1.55'
+
+jobs:
+  # Validate mono-repo structure and governance
+  validate-structure:
+    name: Validate Structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        
+      - name: Check required directories
+        run: |
+          # Check mono-repo structure
+          required_dirs="phoenix-platform/cmd phoenix-platform/pkg phoenix-platform/docs"
+          for dir in $required_dirs; do
+            if [ ! -d "$dir" ]; then
+              echo "❌ Missing required directory: $dir"
+              exit 1
+            fi
+          done
+          echo "✅ Mono-repo structure validated"
+          
+      - name: Check CODEOWNERS
+        run: |
+          if [ ! -f "CODEOWNERS" ]; then
+            echo "❌ CODEOWNERS file missing"
+            exit 1
+          fi
+          echo "✅ CODEOWNERS file present"
+
+  # Lint Go code
+  lint-go:
+    name: Lint Go Code
+    runs-on: ubuntu-latest
+    needs: validate-structure
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+            
+      - name: Install dependencies
+        working-directory: phoenix-platform
+        run: go mod download
+        
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: ${{ env.GOLANGCI_LINT_VERSION }}
+          working-directory: phoenix-platform
+          args: --timeout=5m
+
+  # Lint frontend code
+  lint-frontend:
+    name: Lint Frontend Code
+    runs-on: ubuntu-latest
+    needs: validate-structure
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: phoenix-platform/dashboard/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: phoenix-platform/dashboard
+        run: npm ci
+        
+      - name: Run ESLint
+        working-directory: phoenix-platform/dashboard
+        run: npm run lint
+        
+      - name: Check formatting
+        working-directory: phoenix-platform/dashboard
+        run: npm run format:check
+
+  # Run Go tests
+  test-go:
+    name: Test Go Code
+    runs-on: ubuntu-latest
+    needs: lint-go
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: phoenix
+          POSTGRES_PASSWORD: phoenix
+          POSTGRES_DB: phoenix_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+          
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - name: Run unit tests
+        working-directory: phoenix-platform
+        env:
+          DATABASE_URL: postgres://phoenix:phoenix@localhost:5432/phoenix_test?sslmode=disable
+          REDIS_URL: redis://localhost:6379
+        run: |
+          go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./phoenix-platform/coverage.out
+          flags: unittests
+          name: codecov-umbrella
+
+  # Run frontend tests
+  test-frontend:
+    name: Test Frontend Code
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: phoenix-platform/dashboard/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: phoenix-platform/dashboard
+        run: npm ci
+        
+      - name: Run tests
+        working-directory: phoenix-platform/dashboard
+        run: npm test -- --coverage
+        
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./phoenix-platform/dashboard/coverage/lcov.info
+          flags: frontend
+          name: codecov-umbrella
+
+  # Build artifacts
+  build:
+    name: Build Artifacts
+    runs-on: ubuntu-latest
+    needs: [test-go, test-frontend]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Build Go services
+        working-directory: phoenix-platform
+        run: make build
+        
+      - name: Build Docker images
+        working-directory: phoenix-platform
+        run: make docker
+        
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: phoenix-binaries
+          path: phoenix-platform/build/
+          
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: validate-structure
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'phoenix-platform'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+          
+      - name: Run gosec security scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt sarif -out gosec-results.sarif ./phoenix-platform/...'
+          
+      - name: Upload gosec results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'gosec-results.sarif'
+
+  # Validate commit messages
+  commitlint:
+    name: Validate Commit Messages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: '.commitlintrc.yml'

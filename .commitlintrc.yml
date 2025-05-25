@@ -1,0 +1,88 @@
+# Phoenix Platform Commit Message Configuration
+# Enforces conventional commit format: type(scope): subject
+
+extends:
+  - '@commitlint/config-conventional'
+
+rules:
+  # Enforce type
+  type-enum:
+    - 2
+    - always
+    - - feat      # New feature
+      - fix       # Bug fix
+      - docs      # Documentation only
+      - style     # Code style (formatting, semicolons, etc)
+      - refactor  # Code refactoring
+      - perf      # Performance improvements
+      - test      # Adding or updating tests
+      - build     # Build system or dependencies
+      - ci        # CI/CD configuration
+      - chore     # Other changes that don't modify src or test
+      - revert    # Revert a previous commit
+      
+  # Enforce scope
+  scope-enum:
+    - 2
+    - always
+    - - api         # API service changes
+      - dashboard   # Frontend dashboard changes
+      - controller  # Experiment controller changes
+      - generator   # Config generator changes
+      - operator    # Kubernetes operator changes
+      - simulator   # Process simulator changes
+      - pkg         # Shared package changes
+      - auth        # Authentication/authorization changes
+      - store       # Database/storage changes
+      - docs        # Documentation changes
+      - deps        # Dependency updates
+      - ci          # CI/CD changes
+      - helm        # Helm chart changes
+      - k8s         # Kubernetes manifest changes
+      
+  # Scope is required
+  scope-empty:
+    - 2
+    - never
+    
+  # Subject requirements
+  subject-empty:
+    - 2
+    - never
+    
+  subject-full-stop:
+    - 2
+    - never
+    - '.'
+    
+  subject-case:
+    - 2
+    - never
+    - ['sentence-case', 'start-case', 'pascal-case', 'upper-case']
+    
+  # Body requirements
+  body-leading-blank:
+    - 1
+    - always
+    
+  body-max-line-length:
+    - 2
+    - always
+    - 100
+    
+  # Footer requirements
+  footer-leading-blank:
+    - 1
+    - always
+    
+  footer-max-line-length:
+    - 2
+    - always
+    - 100
+    
+# Example valid commit messages:
+# feat(api): add experiment validation endpoint
+# fix(controller): correct state transition logic
+# docs(api): update API documentation
+# test(pkg): add unit tests for store package
+# chore(deps): update Go dependencies
