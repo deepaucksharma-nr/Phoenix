@@ -11,6 +11,7 @@ resources:
   - config-generator.yaml
   - pipeline-operator.yaml
   - loadsim-operator.yaml
+  - dashboard.yaml
   - secrets.yaml
   - configmaps.yaml
   - network-policies.yaml

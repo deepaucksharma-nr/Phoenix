@@ -876,22 +876,360 @@ experiment = client.create_experiment(
 )
 ```
 
+### Pipeline Deployments API
+
+#### Create Pipeline Deployment
+
+```http
+POST /v1/pipeline-deployments
+Content-Type: application/json
+```
+
+Request Body:
+```json
+{
+  "name": "production-intelligent-pipeline",
+  "namespace": "production",
+  "template": "process-intelligent-v1",
+  "config": {
+    "sampling_rate": 0.1,
+    "batch_size": 1000,
+    "memory_limit_mib": 512
+  },
+  "description": "Production deployment with intelligent filtering"
+}
+```
+
+Response:
+```json
+{
+  "id": "dep-789",
+  "name": "production-intelligent-pipeline",
+  "namespace": "production",
+  "template": "process-intelligent-v1",
+  "status": "active",
+  "created_at": "2024-11-24T14:00:00Z",
+  "created_by": "user@example.com"
+}
+```
+
+#### List Pipeline Deployments
+
+```http
+GET /v1/pipeline-deployments?namespace={namespace}
+```
+
+Query Parameters:
+- `namespace` (required): Filter by namespace
+- `status` (optional): Filter by status (active, suspended, rollback)
+
+Response:
+```json
+{
+  "deployments": [
+    {
+      "id": "dep-789",
+      "name": "production-intelligent-pipeline",
+      "namespace": "production",
+      "template": "process-intelligent-v1",
+      "status": "active",
+      "created_at": "2024-11-24T14:00:00Z",
+      "updated_at": "2024-11-24T14:00:00Z"
+    }
+  ]
+}
+```
+
+#### Get Pipeline Deployment
+
+```http
+GET /v1/pipeline-deployments/{id}
+```
+
+Response includes full deployment details with configuration.
+
+#### Update Pipeline Deployment Configuration
+
+```http
+PATCH /v1/pipeline-deployments/{id}
+Content-Type: application/json
+```
+
+Request Body:
+```json
+{
+  "config": {
+    "sampling_rate": 0.05,
+    "batch_size": 2000
+  },
+  "reason": "Reducing sampling rate based on volume analysis"
+}
+```
+
+#### Update Pipeline Deployment Status
+
+```http
+PUT /v1/pipeline-deployments/{id}/status
+Content-Type: application/json
+```
+
+Request Body:
+```json
+{
+  "status": "suspended",
+  "reason": "Maintenance window"
+}
+```
+
+#### Get Pipeline Deployment History
+
+```http
+GET /v1/pipeline-deployments/{id}/history
+```
+
+Response:
+```json
+{
+  "history": [
+    {
+      "id": "hist-1",
+      "deployment_id": "dep-789",
+      "action": "create",
+      "config": {...},
+      "created_at": "2024-11-24T14:00:00Z",
+      "created_by": "user@example.com"
+    },
+    {
+      "id": "hist-2",
+      "deployment_id": "dep-789",
+      "action": "update",
+      "reason": "Configuration optimization",
+      "created_at": "2024-11-24T15:00:00Z",
+      "created_by": "admin@example.com"
+    }
+  ]
+}
+```
+
+#### Rollback Pipeline Deployment
+
+```http
+POST /v1/pipeline-deployments/{id}/rollback
+Content-Type: application/json
+```
+
+Request Body:
+```json
+{
+  "history_id": "hist-1",
+  "reason": "Reverting to previous stable configuration"
+}
+```
+
+#### Delete Pipeline Deployment
+
+```http
+DELETE /v1/pipeline-deployments/{id}
+```
+
+Response: 204 No Content
+
+#### Export Pipeline Deployment
+
+```http
+GET /v1/pipeline-deployments/{id}/export
+```
+
+Response:
+```json
+{
+  "deployment": {
+    "id": "dep-789",
+    "name": "production-intelligent-pipeline",
+    "namespace": "production",
+    "template": "process-intelligent-v1",
+    "config": {...},
+    "status": "active"
+  },
+  "history": [...],
+  "exported_at": "2024-11-24T16:00:00Z"
+}
+```
+
 ### CLI Usage
 
+The Phoenix CLI provides a comprehensive command-line interface for managing experiments and pipeline deployments.
+
+#### Installation
+
 ```bash
-# Configure CLI
-phoenix config set api.url https://api.phoenix.example.com
+# Download and install
+curl -sSL https://get.phoenix.example.com/cli | bash
+
+# Or build from source
+git clone https://github.com/phoenix/platform
+cd platform/phoenix-platform
+make build-cli
+sudo mv bin/phoenix /usr/local/bin/
+```
+
+#### Authentication
+
+```bash
+# Login interactively
 phoenix auth login
 
+# Login with credentials
+phoenix auth login --username user@example.com --password yourpassword
+
+# Check authentication status
+phoenix auth status
+
+# Logout
+phoenix auth logout
+```
+
+#### Configuration Management
+
+```bash
+# Set API URL
+phoenix config set api_url https://api.phoenix.example.com
+
+# Set default namespace
+phoenix config set default_namespace production
+
+# View all configuration
+phoenix config list
+
+# Get specific config value
+phoenix config get api_url
+
+# Reset configuration
+phoenix config reset
+```
+
+#### Experiment Management
+
+```bash
 # Create experiment
 phoenix experiment create \
-  --name "cli-test" \
-  --baseline "process-baseline-v1" \
-  --candidate "process-priority-filter-v1" \
-  --duration "24h"
+  --name "cost-optimization-test" \
+  --namespace "production" \
+  --pipeline-a "process-baseline-v1" \
+  --pipeline-b "process-intelligent-v1" \
+  --traffic-split "50/50" \
+  --duration "2h" \
+  --selector "app=webserver" \
+  --min-cost-reduction 20 \
+  --max-data-loss 2
 
-# Check status
+# List experiments
+phoenix experiment list --namespace production --status running
+
+# Get experiment status
 phoenix experiment status exp-123
+
+# Follow experiment status (real-time updates)
+phoenix experiment status exp-123 --follow
+
+# Start experiment
+phoenix experiment start exp-123
+
+# Get experiment metrics
+phoenix experiment metrics exp-123
+
+# Stop experiment
+phoenix experiment stop exp-123 --reason "Manual intervention required"
+
+# Promote experiment
+phoenix experiment promote exp-123 --reason "Met all success criteria"
+
+# Export experiment configuration
+phoenix experiment export exp-123 > experiment-config.yaml
+```
+
+#### Pipeline Deployment Management
+
+```bash
+# Deploy a pipeline directly (without experiment)
+phoenix pipeline deploy \
+  --name "prod-intelligent-pipeline" \
+  --namespace "production" \
+  --template "process-intelligent-v1" \
+  --description "Production intelligent pipeline" \
+  --config-override '{"sampling_rate": 0.1, "batch_size": 1000}'
+
+# List pipeline deployments
+phoenix pipeline deployments list --namespace production
+
+# Get deployment status
+phoenix pipeline deployment status dep-789
+
+# Update deployment configuration
+phoenix pipeline deployment update dep-789 \
+  --config-override '{"sampling_rate": 0.05}' \
+  --reason "Reduce sampling based on volume"
+
+# View deployment history
+phoenix pipeline deployment history dep-789
+
+# Rollback to previous configuration
+phoenix pipeline deployment rollback dep-789 \
+  --history-id hist-1 \
+  --reason "Performance regression detected"
+
+# Export deployment configuration
+phoenix pipeline deployment export dep-789 > deployment-backup.yaml
+
+# List available pipeline templates
+phoenix pipeline templates list
+```
+
+#### Output Formats
+
+All commands support multiple output formats:
+
+```bash
+# Table format (default)
+phoenix experiment list
+
+# JSON format
+phoenix experiment list --output json
+
+# YAML format
+phoenix experiment list --output yaml
+
+# Custom table columns
+phoenix experiment list --columns id,name,status,duration
+```
+
+#### Shell Completion
+
+```bash
+# Generate bash completion
+phoenix completion bash > /etc/bash_completion.d/phoenix
+
+# Generate zsh completion
+phoenix completion zsh > "${fpath[1]}/_phoenix"
+
+# Generate fish completion
+phoenix completion fish > ~/.config/fish/completions/phoenix.fish
+```
+
+#### Advanced Usage
+
+```bash
+# Batch operations with jq
+phoenix experiment list --output json | \
+  jq -r '.experiments[] | select(.status == "completed") | .id' | \
+  xargs -I {} phoenix experiment export {} > {}.yaml
+
+# Monitor multiple experiments
+watch -n 5 'phoenix experiment list --namespace production --output table'
+
+# CI/CD integration
+export PHOENIX_API_TOKEN="your-ci-token"
+phoenix experiment create --name "ci-test-$BUILD_ID" ...
 ```
 
 ## Best Practices
