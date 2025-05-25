@@ -13,3 +13,4 @@ require (
 )
 
 replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts
