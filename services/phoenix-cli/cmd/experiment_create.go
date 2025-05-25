@@ -115,7 +115,8 @@ func runCreateExperiment(cmd *cobra.Command, args []string) error {
 		}
 
 		if overlap.HasOverlap {
-			output.PrintOverlapWarning(overlap)
+			overlaps := []interface{}{overlap}
+			output.PrintOverlapWarning(overlaps)
 			
 			if overlap.Severity == "blocking" {
 				return fmt.Errorf("cannot create experiment due to blocking overlap")
@@ -143,7 +144,7 @@ func runCreateExperiment(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display result
-	output.PrintExperiment(experiment, outputFormat)
+	output.PrintExperiment(experiment)
 	
 	fmt.Println("\n✓ Experiment created successfully!")
 	fmt.Printf("\nTo start the experiment, run:\n  phoenix experiment start %s\n", experiment.ID)

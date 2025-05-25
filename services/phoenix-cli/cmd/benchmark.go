@@ -477,9 +477,9 @@ func printBenchmarkResult(cmd *cobra.Command, result *BenchmarkResult) error {
 	
 	switch outputFormat {
 	case "json":
-		return output.PrintJSON(cmd.OutOrStdout(), result)
+		return output.PrintJSON(result)
 	case "yaml":
-		return output.PrintYAML(cmd.OutOrStdout(), result)
+		return output.PrintYAML(result)
 	default:
 		fmt.Printf("Benchmark Results: %s\n", result.Name)
 		fmt.Printf("===========================================\n")

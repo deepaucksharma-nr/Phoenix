@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { User } from '@types/auth';
-import axios from 'axios';
+import { User } from '@/types/auth';
+import axiosInstance from '@/config/axios';
 
 interface AuthState {
   user: User | null;
@@ -15,7 +15,7 @@ interface AuthState {
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { email: string; password: string }) => {
-    const response = await axios.post('/api/auth/login', credentials);
+    const response = await axiosInstance.post('/api/auth/login', credentials);
     return response.data;
   }
 );
@@ -23,7 +23,7 @@ export const login = createAsyncThunk(
 export const register = createAsyncThunk(
   'auth/register',
   async (data: { name: string; email: string; password: string }) => {
-    const response = await axios.post('/api/auth/register', data);
+    const response = await axiosInstance.post('/api/auth/register', data);
     return response.data;
   }
 );
@@ -34,9 +34,7 @@ export const checkAuth = createAsyncThunk(
     const token = localStorage.getItem('token');
     if (!token) throw new Error('No token');
     
-    const response = await axios.get('/api/auth/me', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await axiosInstance.get('/api/auth/me');
     return response.data;
   }
 );

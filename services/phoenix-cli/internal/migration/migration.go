@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -202,6 +203,38 @@ func (m *Manager) Rollback(version string) error {
 	return nil
 }
 
+// ListBackups returns list of available backups
+func (m *Manager) ListBackups() ([]map[string]interface{}, error) {
+	backupDir := filepath.Join(filepath.Dir(m.configPath), "backups")
+	
+	files, err := os.ReadDir(backupDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []map[string]interface{}{}, nil
+		}
+		return nil, fmt.Errorf("failed to read backup directory: %w", err)
+	}
+	
+	var backups []map[string]interface{}
+	for _, file := range files {
+		if !file.IsDir() && filepath.Ext(file.Name()) == ".yaml" {
+			info, err := file.Info()
+			if err != nil {
+				continue
+			}
+			
+			backups = append(backups, map[string]interface{}{
+				"filename":  file.Name(),
+				"version":   "1.0.0", // Would parse from file in real implementation
+				"timestamp": info.ModTime().Format(time.RFC3339),
+				"size":      info.Size(),
+			})
+		}
+	}
+	
+	return backups, nil
+}
+
 // History returns migration history
 func (m *Manager) History() ([]Version, error) {
 	// For now, return a simple history
@@ -209,4 +242,28 @@ func (m *Manager) History() ([]Version, error) {
 	return []Version{
 		{Version: "1.0.0", UpdatedAt: time.Now()},
 	}, nil
+}
+	return backups, nil
+}
+
+// ExportConfig exports the configuration in the specified format
+func (m *Manager) ExportConfig(format string) ([]byte, error) {
+	data, err := os.ReadFile(m.configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+	
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+	
+	switch format {
+	case "json":
+		return json.MarshalIndent(config, "", "  ")
+	case "yaml":
+		return yaml.Marshal(config)
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
 }

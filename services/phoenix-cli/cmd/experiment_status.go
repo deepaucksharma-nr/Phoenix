@@ -66,7 +66,7 @@ func runExperimentStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display experiment details
-	output.PrintExperiment(experiment, outputFormat)
+	output.PrintExperiment(experiment)
 
 	// Show deployment status if available
 	if experiment.Status == "running" || experiment.Status == "initializing" {

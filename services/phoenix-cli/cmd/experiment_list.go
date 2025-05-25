@@ -77,7 +77,12 @@ func runListExperiments(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	output.PrintExperimentList(experiments, outputFormat)
+	// Convert to interface slice
+	var expList []interface{}
+	for _, exp := range experiments {
+		expList = append(expList, exp)
+	}
+	output.PrintExperimentList(expList)
 
 	return nil
 }

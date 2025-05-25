@@ -37,12 +37,14 @@ import { MetricCard } from '../components/Metrics/MetricCard'
 import { MetricsChart } from '../components/Metrics/MetricsChart'
 import { ExperimentWizard } from '../components/ExperimentWizard'
 import { WelcomeGuide } from '../components/Onboarding'
-import { useExperimentStore } from '../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { fetchExperiments } from '@store/slices/experimentSlice'
 import { formatDistanceToNow } from 'date-fns'
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { experiments, fetchExperiments, loading } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const { experiments, loading } = useAppSelector(state => state.experiments)
   const [wizardOpen, setWizardOpen] = useState(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [systemMetrics, setSystemMetrics] = useState({
@@ -53,7 +55,7 @@ export const Dashboard: React.FC = () => {
   })
 
   useEffect(() => {
-    fetchExperiments()
+    dispatch(fetchExperiments())
     
     // Check if user should see onboarding
     const hasCompletedOnboarding = localStorage.getItem('phoenix_onboarding_completed')
@@ -61,7 +63,7 @@ export const Dashboard: React.FC = () => {
     if (!hasCompletedOnboarding && !hasExperiments) {
       setWelcomeOpen(true)
     }
-  }, [fetchExperiments])
+  }, [dispatch])
   
   useEffect(() => {
     // Listen for experiment wizard event from onboarding

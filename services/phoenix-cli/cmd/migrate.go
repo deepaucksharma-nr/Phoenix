@@ -114,7 +114,12 @@ func runMigrateUp(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if migration is needed
-	needed, currentVersion, err := mm.CheckMigrationNeeded()
+	needed, err := mm.CheckMigrationNeeded()
+	if err != nil {
+		return fmt.Errorf("failed to check migration status: %w", err)
+	}
+	
+	currentVersion, err := mm.GetCurrentVersion()
 	if err != nil {
 		return fmt.Errorf("failed to check migration status: %w", err)
 	}
@@ -153,7 +158,7 @@ func runMigrateStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get current version: %w", err)
 	}
 
-	needed, _, err := mm.CheckMigrationNeeded()
+	needed, err := mm.CheckMigrationNeeded()
 	if err != nil {
 		return fmt.Errorf("failed to check migration status: %w", err)
 	}
@@ -169,9 +174,9 @@ func runMigrateStatus(cmd *cobra.Command, args []string) error {
 
 	switch outputFormat {
 	case "json":
-		return output.PrintJSON(cmd.OutOrStdout(), status)
+		return output.PrintJSON(status)
 	case "yaml":
-		return output.PrintYAML(cmd.OutOrStdout(), status)
+		return output.PrintYAML(status)
 	default:
 		fmt.Printf("Configuration Status:\n")
 		fmt.Printf("  Current Version: %s\n", currentVersion)
@@ -219,11 +224,11 @@ func runMigrateBackupList(cmd *cobra.Command, args []string) error {
 	
 	switch outputFormat {
 	case "json":
-		return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{
+		return output.PrintJSON(map[string]interface{}{
 			"backups": backups,
 		})
 	case "yaml":
-		return output.PrintYAML(cmd.OutOrStdout(), map[string]interface{}{
+		return output.PrintYAML(map[string]interface{}{
 			"backups": backups,
 		})
 	default:
@@ -231,11 +236,12 @@ func runMigrateBackupList(cmd *cobra.Command, args []string) error {
 		fmt.Fprintln(w, "FILENAME\tVERSION\tTIMESTAMP\tSIZE")
 		
 		for _, backup := range backups {
+			size, _ := backup["size"].(int64)
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
-				backup.Filename,
-				backup.Version,
-				backup.Timestamp.Format("2006-01-02 15:04:05"),
-				output.FormatBytes(backup.Size),
+				backup["filename"],
+				backup["version"],
+				backup["timestamp"],
+				output.FormatBytes(size),
 			)
 		}
 		
