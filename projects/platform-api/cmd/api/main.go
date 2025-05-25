@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/phoenix/platform/pkg/telemetry/logging"
+	"github.com/phoenix/platform/packages/go-common/telemetry/logging"
 )
 
 func main() {

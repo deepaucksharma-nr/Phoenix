@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/projects/control-actuator-go
+module github.com/phoenix/platform/projects/control-actuator-go
 
 go 1.21
 
@@ -21,3 +21,5 @@ require (
 	golang.org/x/sys v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
+replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts

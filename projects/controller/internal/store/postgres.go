@@ -2,49 +2,43 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/lib/pq"
+	"github.com/phoenix/platform/packages/go-common/database/postgres"
+	"github.com/phoenix/platform/projects/controller/internal/controller"
 	"go.uber.org/zap"
-
-	"github.com/phoenix/platform/cmd/controller/internal/controller"
 )
 
 // PostgresStore implements the ExperimentStore interface using PostgreSQL
 type PostgresStore struct {
-	db     *sql.DB
+	store  *postgres.PostgresStore
 	logger *zap.Logger
 }
 
 // NewPostgresStore creates a new PostgreSQL-backed experiment store
 func NewPostgresStore(connectionString string, logger *zap.Logger) (*PostgresStore, error) {
-	db, err := sql.Open("postgres", connectionString)
+	baseStore, err := postgres.NewPostgresStore(connectionString)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
-	// Test the connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, fmt.Errorf("failed to create postgres store: %w", err)
 	}
 
 	// Set connection pool settings
+	db := baseStore.DB()
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	store := &PostgresStore{
-		db:     db,
+		store:  baseStore,
 		logger: logger,
 	}
 
 	// Run migrations
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	if err := store.migrate(ctx); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
@@ -54,7 +48,7 @@ func NewPostgresStore(connectionString string, logger *zap.Logger) (*PostgresSto
 
 // Close closes the database connection
 func (s *PostgresStore) Close() error {
-	return s.db.Close()
+	return s.store.Close()
 }
 
 // CreateExperiment creates a new experiment in the database
@@ -82,7 +76,7 @@ func (s *PostgresStore) CreateExperiment(ctx context.Context, exp *controller.Ex
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	_, err = s.db.ExecContext(ctx, query,
+	_, err = s.store.DB().ExecContext(ctx, query,
 		exp.ID,
 		exp.Name,
 		exp.Description,
@@ -123,7 +117,7 @@ func (s *PostgresStore) GetExperiment(ctx context.Context, id string) (*controll
 	var exp controller.Experiment
 	var configJSON, statusJSON, metadataJSON []byte
 
-	err := s.db.QueryRowContext(ctx, query, id).Scan(
+	err := s.store.DB().QueryRowContext(ctx, query, id).Scan(
 		&exp.ID,
 		&exp.Name,
 		&exp.Description,
@@ -135,7 +129,7 @@ func (s *PostgresStore) GetExperiment(ctx context.Context, id string) (*controll
 		&exp.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
+	if err != nil {
 		return nil, fmt.Errorf("experiment not found: %s", id)
 	}
 	if err != nil {
@@ -187,7 +181,7 @@ func (s *PostgresStore) UpdateExperiment(ctx context.Context, exp *controller.Ex
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	result, err := s.db.ExecContext(ctx, query,
+	result, err := s.store.DB().ExecContext(ctx, query,
 		exp.ID,
 		exp.Name,
 		exp.Description,
@@ -256,7 +250,7 @@ func (s *PostgresStore) ListExperiments(ctx context.Context, filter controller.E
 		args = append(args, filter.Offset)
 	}
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.store.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query experiments: %w", err)
 	}
@@ -330,7 +324,7 @@ func (s *PostgresStore) migrate(ctx context.Context) error {
 
 	for i, migration := range migrations {
 		s.logger.Debug("running migration", zap.Int("index", i))
-		if _, err := s.db.ExecContext(ctx, migration); err != nil {
+		if _, err := s.store.DB().ExecContext(ctx, migration); err != nil {
 			return fmt.Errorf("failed to run migration %d: %w", i, err)
 		}
 	}

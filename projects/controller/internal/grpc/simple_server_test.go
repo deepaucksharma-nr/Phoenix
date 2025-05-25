@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
 
-	"github.com/phoenix/platform/cmd/controller/internal/controller"
-	pb "github.com/phoenix/platform/pkg/api/v1"
+	"github.com/phoenix/platform/projects/controller/internal/controller"
+	pb "github.com/phoenix/platform/packages/contracts/proto/v1"
 )
 
 // MockExperimentStore is a mock implementation of the ExperimentStore interface

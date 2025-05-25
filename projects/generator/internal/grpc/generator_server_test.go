@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	generatorv1 "github.com/phoenix/platform/api/proto/v1"
-	"github.com/phoenix/platform/cmd/generator/internal/config"
+	"github.com/phoenix/platform/projects/generator/internal/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

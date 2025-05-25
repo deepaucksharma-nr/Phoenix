@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	pipelinev1alpha1 "github.com/phoenix/platform/operators/pipeline/api/v1alpha1"
+	pipelinev1alpha1 "github.com/phoenix/platform/projects/pipeline/api/v1alpha1"
 )
 
 // PipelineDeployment represents a pipeline deployment request

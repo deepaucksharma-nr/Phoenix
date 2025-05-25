@@ -1,17 +1,17 @@
 package store
 
 import (
-	"database/sql"
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/phoenix/platform/packages/go-common/database/sqlite"
 )
 
 // SQLiteStore provides persistent storage for benchmark results
 type SQLiteStore struct {
-	db *sql.DB
+	store *sqlite.Store
 }
 
 type BenchmarkResult struct {
@@ -27,12 +27,12 @@ type BenchmarkResult struct {
 }
 
 func NewSQLiteStore(dbPath string) (*SQLiteStore, error) {
-	db, err := sql.Open("sqlite3", dbPath)
+	baseStore, err := sqlite.NewStore(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
-	store := &SQLiteStore{db: db}
+	store := &SQLiteStore{store: baseStore}
 	if err := store.initialize(); err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
@@ -78,7 +78,7 @@ func (s *SQLiteStore) initialize() error {
 	CREATE INDEX IF NOT EXISTS idx_perf_metric ON performance_history(metric_name);
 	`
 
-	_, err := s.db.Exec(schema)
+	_, err := s.store.Execute(context.Background(), schema)
 	return err
 }
 
@@ -110,7 +110,7 @@ func (s *SQLiteStore) SaveResult(result *BenchmarkResult) error {
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err = s.db.Exec(query,
+	_, err = s.store.Execute(context.Background(), query,
 		result.ID, result.Scenario, result.StartTime, result.EndTime, result.Passed,
 		string(metricsJSON), string(failureReasonsJSON), 
 		string(resourceUsageJSON), string(controlBehaviorJSON),
@@ -129,7 +129,7 @@ func (s *SQLiteStore) GetResults(scenario string, limit int) ([]*BenchmarkResult
 	LIMIT ?
 	`
 
-	rows, err := s.db.Query(query, scenario, scenario, limit)
+	rows, err := s.store.Query(context.Background(), query, scenario, scenario, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +171,7 @@ func (s *SQLiteStore) SaveBaseline(scenario string, metrics map[string]float64) 
 	VALUES (?, ?, CURRENT_TIMESTAMP)
 	`
 
-	_, err = s.db.Exec(query, scenario, string(metricsJSON))
+	_, err = s.store.Execute(context.Background(), query, scenario, string(metricsJSON))
 	return err
 }
 
@@ -179,11 +179,8 @@ func (s *SQLiteStore) GetBaseline(scenario string) (map[string]float64, error) {
 	var metricsJSON string
 	query := `SELECT metrics FROM benchmark_baselines WHERE scenario = ?`
 	
-	err := s.db.QueryRow(query, scenario).Scan(&metricsJSON)
+	err := s.store.QueryRow(context.Background(), query, scenario).Scan(&metricsJSON)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil // No baseline exists
-		}
 		return nil, err
 	}
 
@@ -203,7 +200,7 @@ func (s *SQLiteStore) SavePerformanceMetric(timestamp time.Time, metricName stri
 	VALUES (?, ?, ?, ?, ?)
 	`
 
-	_, err = s.db.Exec(query, timestamp, metricName, value, pipeline, string(tagsJSON))
+	_, err = s.store.Execute(context.Background(), query, timestamp, metricName, value, pipeline, string(tagsJSON))
 	return err
 }
 
@@ -219,7 +216,7 @@ func (s *SQLiteStore) GetPerformanceHistory(metricName string, since time.Time) 
 	ORDER BY timestamp ASC
 	`
 
-	rows, err := s.db.Query(query, metricName, since)
+	rows, err := s.store.Query(context.Background(), query, metricName, since)
 	if err != nil {
 		return nil, err
 	}
@@ -248,5 +245,5 @@ func (s *SQLiteStore) GetPerformanceHistory(metricName string, since time.Time) 
 }
 
 func (s *SQLiteStore) Close() error {
-	return s.db.Close()
+	return s.store.Close()
 }

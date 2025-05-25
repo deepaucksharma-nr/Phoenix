@@ -1,7 +1,18 @@
 go 1.21
 
 use (
+	./packages/contracts
 	./packages/go-common
 	./pkg
+	./projects/analytics
+	./projects/anomaly-detector
+	./projects/benchmark
+	./projects/control-actuator-go
+	./projects/loadsim-operator
+	./projects/pipeline-operator
 	./projects/platform-api
+	./services/api
+	./services/controller
+	./services/generator
+	./services/phoenix-cli
 )

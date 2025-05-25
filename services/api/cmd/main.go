@@ -21,10 +21,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/phoenix/platform/pkg/api"
-	pb "github.com/phoenix/platform/pkg/api/v1"
-	"github.com/phoenix/platform/pkg/models"
-	"github.com/phoenix/platform/pkg/store"
+	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/packages/go-common/store"
+	pb "github.com/phoenix/platform/packages/contracts/proto/v1"
+	"github.com/phoenix/platform/services/api/internal/services"
 )
 
 const (
@@ -59,7 +59,7 @@ func main() {
 	grpcServer := grpc.NewServer()
 
 	// Register services
-	experimentService := api.NewExperimentService(postgresStore, nil, logger)
+	experimentService := services.NewExperimentService(postgresStore, nil, logger)
 	pb.RegisterExperimentServiceServer(grpcServer, experimentService)
 
 	// Enable reflection
@@ -167,7 +167,7 @@ func createHTTPServer(httpPort, grpcPort int, logger *zap.Logger, db *sql.DB) *h
 	router.Mount("/api/v1", gwmux)
 
 	// Create pipeline deployment service
-	pipelineService := api.NewPipelineDeploymentService(db, logger)
+	pipelineService := services.NewPipelineDeploymentService(db, logger)
 
 	// Pipeline routes
 	router.Route("/api/v1/pipelines", func(r chi.Router) {
@@ -297,7 +297,7 @@ func validatePipeline(w http.ResponseWriter, r *http.Request) {
 }
 
 // Pipeline deployment handlers
-func createPipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+func createPipelineDeploymentHandler(service *services.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req models.CreateDeploymentRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -318,7 +318,7 @@ func createPipelineDeploymentHandler(service *api.PipelineDeploymentService, log
 	}
 }
 
-func listPipelineDeploymentsHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+func listPipelineDeploymentsHandler(service *services.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		req := models.ListDeploymentsRequest{
 			Namespace:    r.URL.Query().Get("namespace"),
@@ -348,7 +348,7 @@ func listPipelineDeploymentsHandler(service *api.PipelineDeploymentService, logg
 	}
 }
 
-func getPipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+func getPipelineDeploymentHandler(service *services.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		deploymentID := chi.URLParam(r, "id")
 		
@@ -368,7 +368,7 @@ func getPipelineDeploymentHandler(service *api.PipelineDeploymentService, logger
 	}
 }
 
-func updatePipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+func updatePipelineDeploymentHandler(service *services.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		deploymentID := chi.URLParam(r, "id")
 		
@@ -398,7 +398,7 @@ func updatePipelineDeploymentHandler(service *api.PipelineDeploymentService, log
 	}
 }
 
-func deletePipelineDeploymentHandler(service *api.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
+func deletePipelineDeploymentHandler(service *services.PipelineDeploymentService, logger *zap.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		deploymentID := chi.URLParam(r, "id")
 		
