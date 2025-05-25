@@ -9,6 +9,8 @@ mkdocs-redirects>=1.2.1
 mkdocs-git-revision-date-localized-plugin>=1.2.2
 mkdocs-awesome-pages-plugin>=2.9.2
 mkdocs-macros-plugin>=1.0.5
+mkdocs-material[imaging]>=9.5.3
+mkdocs-tags>=1.0.0
 
 # Search enhancements
 mkdocs-localsearch>=0.12.1
