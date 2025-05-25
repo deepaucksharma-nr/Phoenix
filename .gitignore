@@ -109,3 +109,5 @@ yarn-error.log*
 *.backup
 *.bk
 backup/
+# Migration state files
+.migration/

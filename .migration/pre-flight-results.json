@@ -1,107 +1,88 @@
 {
-  "timestamp": "2025-05-25T15:07:19Z",
+  "timestamp": "2025-05-25T15:07:33Z",
   "checks": {
-    "migration_lock": {
-      "status": "passed",
-      "message": "No existing migration lock",
-      "timestamp": "2025-05-25T15:07:19Z"
-    }
-,
-    "critical_files": {
-      "status": "passed",
-      "message": "All critical files present",
-      "timestamp": "2025-05-25T15:07:19Z"
-    }
-  },
-  "summary": {
-    "total_checks": 14,
-    "passed": 13,
-    "failed": 1,
-    "warnings": 0
-  }
-}
     "git_state": {
       "status": "failed",
       "message": "Uncommitted changes detected. Commit or stash changes before migration.",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:33Z"
     }
 ,
     "git_remote": {
       "status": "passed",
       "message": "Git remote 'origin' is configured",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:33Z"
     }
 ,
     "go_version": {
       "status": "passed",
       "message": "Go version 1.24.3 meets requirement (>=1.21)",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:33Z"
     }
 ,
     "node_version": {
       "status": "passed",
       "message": "Node.js version 23.11.0 meets requirement (>=18.0.0)",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:33Z"
     }
 ,
     "docker": {
       "status": "passed",
       "message": "Docker is installed and running",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "make": {
       "status": "passed",
       "message": "Make is installed",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "disk_space": {
       "status": "passed",
       "message": "15GB available (required: 10GB)",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "running_services": {
       "status": "passed",
       "message": "No Docker containers running",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "source_directory": {
       "status": "passed",
       "message": "OLD_IMPLEMENTATION exists with      545 files",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "target_directories": {
       "status": "passed",
       "message": "Target directories are empty or don't exist",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "network_npm": {
       "status": "passed",
       "message": "Can reach npm registry",
-      "timestamp": "2025-05-25T15:07:20Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "network_go": {
       "status": "passed",
       "message": "Can reach Go module proxy",
-      "timestamp": "2025-05-25T15:07:21Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "migration_lock": {
       "status": "passed",
       "message": "No existing migration lock",
-      "timestamp": "2025-05-25T15:07:21Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
 ,
     "critical_files": {
       "status": "passed",
       "message": "All critical files present",
-      "timestamp": "2025-05-25T15:07:21Z"
+      "timestamp": "2025-05-25T15:07:34Z"
     }
   },
   "summary": {
