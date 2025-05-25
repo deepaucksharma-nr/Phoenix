@@ -39,27 +39,24 @@ declare -A PHASE1_SERVICES
 PHASE1_SERVICES["anomaly-detector"]="apps/anomaly-detector go"
 PHASE1_SERVICES["control-actuator"]="apps/control-actuator-go go"
 
-declare -A PHASE2_SERVICES=(
-    ["platform-api"]="phoenix-platform/cmd/api-gateway go"
-    ["control-service"]="phoenix-platform/cmd/control-service go"
-    ["experiment-controller"]="phoenix-platform/cmd/controller go"
-    ["config-generator"]="phoenix-platform/cmd/generator go"
-    ["phoenix-cli"]="phoenix-platform/cmd/phoenix-cli go"
-    ["web-dashboard"]="phoenix-platform/dashboard react"
-)
+declare -A PHASE2_SERVICES
+PHASE2_SERVICES["platform-api"]="phoenix-platform/cmd/api-gateway go"
+PHASE2_SERVICES["control-service"]="phoenix-platform/cmd/control-service go"
+PHASE2_SERVICES["experiment-controller"]="phoenix-platform/cmd/controller go"
+PHASE2_SERVICES["config-generator"]="phoenix-platform/cmd/generator go"
+PHASE2_SERVICES["phoenix-cli"]="phoenix-platform/cmd/phoenix-cli go"
+PHASE2_SERVICES["web-dashboard"]="phoenix-platform/dashboard react"
 
-declare -A PHASE3_SERVICES=(
-    ["analytics-engine"]="services/analytics go"
-    ["benchmark-service"]="services/benchmark go"
-    ["telemetry-collector"]="services/collector node"
-    ["config-validator"]="services/validator go"
-)
+declare -A PHASE3_SERVICES
+PHASE3_SERVICES["analytics-engine"]="services/analytics go"
+PHASE3_SERVICES["benchmark-service"]="services/benchmark go"
+PHASE3_SERVICES["telemetry-collector"]="services/collector node"
+PHASE3_SERVICES["config-validator"]="services/validator go"
 
-declare -A PHASE4_SERVICES=(
-    ["loadsim-operator"]="phoenix-platform/operators/loadsim go"
-    ["pipeline-operator"]="phoenix-platform/operators/pipeline go"
-    ["process-simulator"]="phoenix-platform/cmd/simulator go"
-)
+declare -A PHASE4_SERVICES
+PHASE4_SERVICES["loadsim-operator"]="phoenix-platform/operators/loadsim go"
+PHASE4_SERVICES["pipeline-operator"]="phoenix-platform/operators/pipeline go"
+PHASE4_SERVICES["process-simulator"]="phoenix-platform/cmd/simulator go"
 
 # Functions
 log_phase() {

@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package phoenix.experiment.v1;
+
+option go_package = "github.com/phoenix-platform/api/proto/v1/experiment;experimentv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "api/proto/v1/common.proto";
+
+// Experiment represents an A/B test between baseline and candidate pipelines
+message Experiment {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  
+  // Pipeline configurations
+  string baseline_pipeline_id = 4;
+  string candidate_pipeline_id = 5;
+  
+  // Experiment configuration
+  int32 traffic_percentage = 6; // 0-100
+  google.protobuf.Duration duration = 7;
+  repeated string target_services = 8;
+  
+  // State management
+  ExperimentState state = 9;
+  string state_message = 10;
+  
+  // Timestamps
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp started_at = 12;
+  google.protobuf.Timestamp ended_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+  
+  // Results
+  ExperimentResults results = 15;
+  
+  // Metadata
+  map<string, string> labels = 16;
+  map<string, string> annotations = 17;
+}
+
+// Experiment state enum
+enum ExperimentState {
+  EXPERIMENT_STATE_UNSPECIFIED = 0;
+  EXPERIMENT_STATE_PENDING = 1;
+  EXPERIMENT_STATE_INITIALIZING = 2;
+  EXPERIMENT_STATE_RUNNING = 3;
+  EXPERIMENT_STATE_PAUSING = 4;
+  EXPERIMENT_STATE_PAUSED = 5;
+  EXPERIMENT_STATE_RESUMING = 6;
+  EXPERIMENT_STATE_COMPLETING = 7;
+  EXPERIMENT_STATE_COMPLETED = 8;
+  EXPERIMENT_STATE_FAILED = 9;
+  EXPERIMENT_STATE_CANCELLED = 10;
+}
+
+// Experiment results
+message ExperimentResults {
+  // Metrics comparison
+  MetricsComparison metrics_comparison = 1;
+  
+  // Cost analysis
+  phoenix.common.v1.CostBreakdown baseline_cost = 2;
+  phoenix.common.v1.CostBreakdown candidate_cost = 3;
+  double cost_reduction_percentage = 4;
+  
+  // Performance analysis
+  PerformanceAnalysis performance = 5;
+  
+  // Recommendation
+  Recommendation recommendation = 6;
+  
+  // Statistical significance
+  double confidence_level = 7;
+  double p_value = 8;
+}
+
+// Metrics comparison between baseline and candidate
+message MetricsComparison {
+  int64 baseline_total_metrics = 1;
+  int64 candidate_total_metrics = 2;
+  double reduction_percentage = 3;
+  
+  repeated MetricComparison by_metric = 4;
+}
+
+// Individual metric comparison
+message MetricComparison {
+  string metric_name = 1;
+  int64 baseline_count = 2;
+  int64 candidate_count = 3;
+  double reduction_percentage = 4;
+  bool is_dropped = 5;
+}
+
+// Performance analysis
+message PerformanceAnalysis {
+  double baseline_latency_p50 = 1;
+  double baseline_latency_p95 = 2;
+  double baseline_latency_p99 = 3;
+  
+  double candidate_latency_p50 = 4;
+  double candidate_latency_p95 = 5;
+  double candidate_latency_p99 = 6;
+  
+  phoenix.common.v1.ResourceUtilization baseline_resources = 7;
+  phoenix.common.v1.ResourceUtilization candidate_resources = 8;
+}
+
+// Recommendation from the experiment
+message Recommendation {
+  RecommendationType type = 1;
+  string reason = 2;
+  repeated string warnings = 3;
+  map<string, string> suggested_changes = 4;
+}
+
+// Recommendation type
+enum RecommendationType {
+  RECOMMENDATION_TYPE_UNSPECIFIED = 0;
+  RECOMMENDATION_TYPE_ADOPT_CANDIDATE = 1;
+  RECOMMENDATION_TYPE_KEEP_BASELINE = 2;
+  RECOMMENDATION_TYPE_NEEDS_TUNING = 3;
+  RECOMMENDATION_TYPE_INCONCLUSIVE = 4;
+}
+
+// Create experiment request
+message CreateExperimentRequest {
+  Experiment experiment = 1;
+  bool validate_only = 2; // Dry run validation
+}
+
+// Create experiment response
+message CreateExperimentResponse {
+  Experiment experiment = 1;
+}
+
+// Get experiment request
+message GetExperimentRequest {
+  string id = 1;
+}
+
+// Get experiment response
+message GetExperimentResponse {
+  Experiment experiment = 1;
+}
+
+// List experiments request
+message ListExperimentsRequest {
+  // Filters
+  repeated ExperimentState states = 1;
+  map<string, string> label_selector = 2;
+  
+  // Pagination
+  phoenix.common.v1.PaginationRequest pagination = 3;
+}
+
+// List experiments response
+message ListExperimentsResponse {
+  repeated Experiment experiments = 1;
+  phoenix.common.v1.PaginationResponse pagination = 2;
+}
+
+// Update experiment state request
+message UpdateExperimentStateRequest {
+  string id = 1;
+  ExperimentState target_state = 2;
+  string reason = 3;
+}
+
+// Update experiment state response
+message UpdateExperimentStateResponse {
+  Experiment experiment = 1;
+}
+
+// Get experiment metrics request
+message GetExperimentMetricsRequest {
+  string id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  repeated string metric_names = 4;
+}
+
+// Get experiment metrics response
+message GetExperimentMetricsResponse {
+  repeated phoenix.common.v1.TimeSeries baseline_metrics = 1;
+  repeated phoenix.common.v1.TimeSeries candidate_metrics = 2;
+}
+
+// Experiment service definition
+service ExperimentService {
+  // Create a new experiment
+  rpc CreateExperiment(CreateExperimentRequest) returns (CreateExperimentResponse);
+  
+  // Get an experiment by ID
+  rpc GetExperiment(GetExperimentRequest) returns (GetExperimentResponse);
+  
+  // List experiments with filters
+  rpc ListExperiments(ListExperimentsRequest) returns (ListExperimentsResponse);
+  
+  // Update experiment state (start, pause, resume, stop)
+  rpc UpdateExperimentState(UpdateExperimentStateRequest) returns (UpdateExperimentStateResponse);
+  
+  // Get real-time metrics for an experiment
+  rpc GetExperimentMetrics(GetExperimentMetricsRequest) returns (GetExperimentMetricsResponse);
+  
+  // Stream experiment updates
+  rpc StreamExperimentUpdates(GetExperimentRequest) returns (stream Experiment);
+}

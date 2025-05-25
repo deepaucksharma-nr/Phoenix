@@ -1,0 +1,283 @@
+syntax = "proto3";
+
+package phoenix.controller.v1;
+
+option go_package = "github.com/phoenix-platform/api/proto/v1/controller;controllerv1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "api/proto/v1/common.proto";
+
+// Control signal for pipeline management
+message ControlSignal {
+  string id = 1;
+  string experiment_id = 2;
+  SignalType type = 3;
+  
+  // Signal details
+  oneof action {
+    TrafficSplitAction traffic_split = 4;
+    PipelineStateAction pipeline_state = 5;
+    RollbackAction rollback = 6;
+    ConfigUpdateAction config_update = 7;
+  }
+  
+  // Metadata
+  string reason = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp executed_at = 10;
+  SignalStatus status = 11;
+  string status_message = 12;
+}
+
+// Signal type
+enum SignalType {
+  SIGNAL_TYPE_UNSPECIFIED = 0;
+  SIGNAL_TYPE_TRAFFIC_SPLIT = 1;
+  SIGNAL_TYPE_PIPELINE_STATE = 2;
+  SIGNAL_TYPE_ROLLBACK = 3;
+  SIGNAL_TYPE_CONFIG_UPDATE = 4;
+}
+
+// Signal status
+enum SignalStatus {
+  SIGNAL_STATUS_UNSPECIFIED = 0;
+  SIGNAL_STATUS_PENDING = 1;
+  SIGNAL_STATUS_EXECUTING = 2;
+  SIGNAL_STATUS_COMPLETED = 3;
+  SIGNAL_STATUS_FAILED = 4;
+  SIGNAL_STATUS_CANCELLED = 5;
+}
+
+// Traffic split action
+message TrafficSplitAction {
+  string baseline_pipeline_id = 1;
+  string candidate_pipeline_id = 2;
+  int32 candidate_percentage = 3; // 0-100
+  google.protobuf.Duration ramp_duration = 4;
+  RampStrategy ramp_strategy = 5;
+}
+
+// Ramp strategy for traffic splitting
+enum RampStrategy {
+  RAMP_STRATEGY_UNSPECIFIED = 0;
+  RAMP_STRATEGY_LINEAR = 1;
+  RAMP_STRATEGY_EXPONENTIAL = 2;
+  RAMP_STRATEGY_STEP = 3;
+}
+
+// Pipeline state action
+message PipelineStateAction {
+  string pipeline_id = 1;
+  PipelineState target_state = 2;
+}
+
+// Pipeline state
+enum PipelineState {
+  PIPELINE_STATE_UNSPECIFIED = 0;
+  PIPELINE_STATE_ACTIVE = 1;
+  PIPELINE_STATE_PAUSED = 2;
+  PIPELINE_STATE_STOPPED = 3;
+}
+
+// Rollback action
+message RollbackAction {
+  string target_pipeline_id = 1;
+  string rollback_to_pipeline_id = 2;
+  bool immediate = 3;
+}
+
+// Config update action
+message ConfigUpdateAction {
+  string pipeline_id = 1;
+  repeated ConfigChange changes = 2;
+  bool validate_before_apply = 3;
+}
+
+// Configuration change
+message ConfigChange {
+  string component_id = 1;
+  string parameter = 2;
+  string old_value = 3;
+  string new_value = 4;
+}
+
+// Drift detection result
+message DriftDetection {
+  string experiment_id = 1;
+  google.protobuf.Timestamp detected_at = 2;
+  DriftType type = 3;
+  double severity = 4; // 0.0 to 1.0
+  
+  // Drift details
+  repeated DriftMetric affected_metrics = 5;
+  string description = 6;
+  
+  // Recommended actions
+  repeated RecommendedAction recommendations = 7;
+}
+
+// Drift type
+enum DriftType {
+  DRIFT_TYPE_UNSPECIFIED = 0;
+  DRIFT_TYPE_METRIC_VOLUME = 1;
+  DRIFT_TYPE_METRIC_PATTERN = 2;
+  DRIFT_TYPE_COST_SPIKE = 3;
+  DRIFT_TYPE_PERFORMANCE_DEGRADATION = 4;
+  DRIFT_TYPE_ERROR_RATE = 5;
+}
+
+// Drift metric
+message DriftMetric {
+  string name = 1;
+  double baseline_value = 2;
+  double current_value = 3;
+  double deviation_percentage = 4;
+}
+
+// Recommended action for drift
+message RecommendedAction {
+  string id = 1;
+  ActionType type = 2;
+  string description = 3;
+  int32 priority = 4; // 1-10, higher is more urgent
+  map<string, string> parameters = 5;
+}
+
+// Action type
+enum ActionType {
+  ACTION_TYPE_UNSPECIFIED = 0;
+  ACTION_TYPE_PAUSE_EXPERIMENT = 1;
+  ACTION_TYPE_ROLLBACK = 2;
+  ACTION_TYPE_ADJUST_TRAFFIC = 3;
+  ACTION_TYPE_MODIFY_CONFIG = 4;
+  ACTION_TYPE_ALERT = 5;
+}
+
+// Control loop status
+message ControlLoopStatus {
+  string experiment_id = 1;
+  bool active = 2;
+  google.protobuf.Timestamp last_evaluation = 3;
+  google.protobuf.Duration evaluation_interval = 4;
+  
+  // Current state
+  int32 current_traffic_split = 5;
+  repeated ActiveSignal active_signals = 6;
+  
+  // Health
+  phoenix.common.v1.HealthStatus health = 7;
+  repeated phoenix.common.v1.ComponentHealth component_health = 8;
+}
+
+// Active signal
+message ActiveSignal {
+  string signal_id = 1;
+  SignalType type = 2;
+  SignalStatus status = 3;
+  google.protobuf.Timestamp started_at = 4;
+}
+
+// Execute control signal request
+message ExecuteControlSignalRequest {
+  ControlSignal signal = 1;
+  bool dry_run = 2;
+}
+
+// Execute control signal response
+message ExecuteControlSignalResponse {
+  ControlSignal signal = 1;
+  repeated ValidationError validation_errors = 2;
+}
+
+// Validation error
+message ValidationError {
+  string field = 1;
+  string message = 2;
+}
+
+// Get control loop status request
+message GetControlLoopStatusRequest {
+  string experiment_id = 1;
+}
+
+// Get control loop status response
+message GetControlLoopStatusResponse {
+  ControlLoopStatus status = 1;
+}
+
+// List control signals request
+message ListControlSignalsRequest {
+  string experiment_id = 1;
+  repeated SignalStatus statuses = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+  phoenix.common.v1.PaginationRequest pagination = 5;
+}
+
+// List control signals response
+message ListControlSignalsResponse {
+  repeated ControlSignal signals = 1;
+  phoenix.common.v1.PaginationResponse pagination = 2;
+}
+
+// Enable drift detection request
+message EnableDriftDetectionRequest {
+  string experiment_id = 1;
+  DriftDetectionConfig config = 2;
+}
+
+// Drift detection configuration
+message DriftDetectionConfig {
+  google.protobuf.Duration check_interval = 1;
+  repeated DriftThreshold thresholds = 2;
+  bool auto_remediate = 3;
+}
+
+// Drift threshold
+message DriftThreshold {
+  DriftType type = 1;
+  double warning_threshold = 2;
+  double critical_threshold = 3;
+}
+
+// Enable drift detection response
+message EnableDriftDetectionResponse {
+  bool enabled = 1;
+}
+
+// Get drift detections request
+message GetDriftDetectionsRequest {
+  string experiment_id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+}
+
+// Get drift detections response
+message GetDriftDetectionsResponse {
+  repeated DriftDetection detections = 1;
+}
+
+// Controller service
+service ControllerService {
+  // Execute a control signal
+  rpc ExecuteControlSignal(ExecuteControlSignalRequest) returns (ExecuteControlSignalResponse);
+  
+  // Get control loop status for an experiment
+  rpc GetControlLoopStatus(GetControlLoopStatusRequest) returns (GetControlLoopStatusResponse);
+  
+  // List control signals for an experiment
+  rpc ListControlSignals(ListControlSignalsRequest) returns (ListControlSignalsResponse);
+  
+  // Enable drift detection for an experiment
+  rpc EnableDriftDetection(EnableDriftDetectionRequest) returns (EnableDriftDetectionResponse);
+  
+  // Get drift detections for an experiment
+  rpc GetDriftDetections(GetDriftDetectionsRequest) returns (GetDriftDetectionsResponse);
+  
+  // Stream control signals
+  rpc StreamControlSignals(GetControlLoopStatusRequest) returns (stream ControlSignal);
+  
+  // Stream drift detections
+  rpc StreamDriftDetections(GetControlLoopStatusRequest) returns (stream DriftDetection);
+}
