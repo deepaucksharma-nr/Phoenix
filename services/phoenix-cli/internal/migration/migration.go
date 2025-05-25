@@ -1,7 +1,6 @@
 package migration
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -242,28 +241,4 @@ func (m *Manager) History() ([]Version, error) {
 	return []Version{
 		{Version: "1.0.0", UpdatedAt: time.Now()},
 	}, nil
-}
-	return backups, nil
-}
-
-// ExportConfig exports the configuration in the specified format
-func (m *Manager) ExportConfig(format string) ([]byte, error) {
-	data, err := os.ReadFile(m.configPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
-	}
-	
-	var config map[string]interface{}
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
-	}
-	
-	switch format {
-	case "json":
-		return json.MarshalIndent(config, "", "  ")
-	case "yaml":
-		return yaml.Marshal(config)
-	default:
-		return nil, fmt.Errorf("unsupported format: %s", format)
-	}
 }
