@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/phoenix/platform/cmd/phoenix-cli/internal/plugin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,7 +39,7 @@ func Execute() error {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(initConfig, loadPlugins)
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.phoenix/config.yaml)")
@@ -87,5 +88,42 @@ func initConfig() {
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil && verbose {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+// loadPlugins discovers and loads CLI plugins
+func loadPlugins() {
+	// Skip plugin loading if we're running plugin management commands
+	// to avoid circular dependencies
+	if len(os.Args) > 1 && os.Args[1] == "plugin" {
+		return
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Warning: failed to get home directory for plugins: %v\n", err)
+		}
+		return
+	}
+
+	pluginDir := filepath.Join(home, ".phoenix", "plugins")
+	pm := plugin.NewPluginManager(pluginDir)
+
+	if err := pm.LoadPlugins(); err != nil {
+		if verbose {
+			fmt.Fprintf(os.Stderr, "Warning: failed to load plugins: %v\n", err)
+		}
+		return
+	}
+
+	// Add plugin commands to root
+	pluginCommands := pm.CreatePluginCommands()
+	for _, cmd := range pluginCommands {
+		rootCmd.AddCommand(cmd)
+	}
+
+	if verbose && len(pluginCommands) > 0 {
+		fmt.Fprintf(os.Stderr, "Loaded %d plugin(s)\n", len(pluginCommands))
 	}
 }
