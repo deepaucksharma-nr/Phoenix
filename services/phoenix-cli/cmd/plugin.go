@@ -108,11 +108,11 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 	outputFormat := viper.GetString("output")
 	switch outputFormat {
 	case "json":
-		return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{
+		return output.PrintJSON(map[string]interface{}{
 			"plugins": plugins,
 		})
 	case "yaml":
-		return output.PrintYAML(cmd.OutOrStdout(), map[string]interface{}{
+		return output.PrintYAML(map[string]interface{}{
 			"plugins": plugins,
 		})
 	default:
@@ -122,7 +122,7 @@ func runPluginList(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				p.Name,
 				p.Version,
-				output.TruncateString(p.Description, 50),
+				p.Description,
 				p.Author,
 			)
 		}
@@ -185,9 +185,9 @@ func runPluginInfo(cmd *cobra.Command, args []string) error {
 	outputFormat := viper.GetString("output")
 	switch outputFormat {
 	case "json":
-		return output.PrintJSON(cmd.OutOrStdout(), plugin)
+		return output.PrintJSON(plugin)
 	case "yaml":
-		return output.PrintYAML(cmd.OutOrStdout(), plugin)
+		return output.PrintYAML(plugin)
 	default:
 		fmt.Printf("Name:        %s\n", plugin.Name)
 		fmt.Printf("Version:     %s\n", plugin.Version)

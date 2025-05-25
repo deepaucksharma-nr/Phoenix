@@ -242,3 +242,15 @@ func (m *Manager) History() ([]Version, error) {
 		{Version: "1.0.0", UpdatedAt: time.Now()},
 	}, nil
 }
+
+// ExportConfig exports the current configuration
+func (m *Manager) ExportConfig(format string) ([]byte, error) {
+	data, err := os.ReadFile(m.configPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+	
+	// For now, just return the raw YAML
+	// In a real implementation, you might convert formats
+	return data, nil
+}

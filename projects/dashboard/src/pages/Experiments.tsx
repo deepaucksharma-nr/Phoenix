@@ -34,7 +34,8 @@ import {
   Search,
   Assessment,
 } from '@mui/icons-material'
-import { useExperimentStore } from '../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { fetchExperiments, deleteExperiment } from '@store/slices/experimentSlice'
 import { ExperimentWizard } from '../components/ExperimentWizard'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -54,15 +55,8 @@ const PRIORITY_COLORS = {
 
 export const Experiments: React.FC = () => {
   const navigate = useNavigate()
-  const {
-    experiments,
-    loading,
-    error,
-    fetchExperiments,
-    deleteExperiment,
-    startExperiment,
-    stopExperiment,
-  } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const { experiments, loading, error } = useAppSelector(state => state.experiments)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -72,8 +66,8 @@ export const Experiments: React.FC = () => {
   const [wizardOpen, setWizardOpen] = useState(false)
 
   useEffect(() => {
-    fetchExperiments()
-  }, [fetchExperiments])
+    dispatch(fetchExperiments())
+  }, [dispatch])
 
   const handleCreateExperiment = () => {
     setWizardOpen(true)

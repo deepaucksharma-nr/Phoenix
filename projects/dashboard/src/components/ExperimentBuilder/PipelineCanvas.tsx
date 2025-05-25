@@ -20,8 +20,8 @@ import {
   Download as ExportIcon,
 } from '@mui/icons-material'
 
-import { ProcessorNode } from './ProcessorNode'
-import { ConfigurationPanel } from './ConfigurationPanel'
+import { ProcessorNode } from '../PipelineBuilder/ProcessorNode'
+import { ConfigurationPanel } from '../PipelineBuilder/ConfigurationPanel'
 import { usePipelineGenerator } from '@/hooks/usePipelineGenerator'
 import { ProcessorNodeData, PipelineConfig } from '@/types/pipeline'
 
