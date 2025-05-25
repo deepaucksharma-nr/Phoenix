@@ -31,7 +31,7 @@ var (
 	Int64  = zap.Int64
 	Float64 = zap.Float64
 	Bool   = zap.Bool
-	Error  = zap.Error
+	ErrorField  = zap.Error
 	Any    = zap.Any
 	Time   = zap.Time
 	Duration = zap.Duration
