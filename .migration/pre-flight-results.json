@@ -1,38 +1,38 @@
 {
-  "timestamp": "2025-05-25T15:04:43Z",
+  "timestamp": "2025-05-25T15:06:47Z",
   "checks": {
     "git_state": {
       "status": "failed",
       "message": "Uncommitted changes detected. Commit or stash changes before migration.",
-      "timestamp": "2025-05-25T15:04:43Z"
+      "timestamp": "2025-05-25T15:06:47Z"
     }
 ,
     "git_remote": {
       "status": "passed",
       "message": "Git remote 'origin' is configured",
-      "timestamp": "2025-05-25T15:04:43Z"
+      "timestamp": "2025-05-25T15:06:48Z"
     }
 ,
     "go_version": {
       "status": "passed",
       "message": "Go version 1.24.3 meets requirement (>=1.21)",
-      "timestamp": "2025-05-25T15:04:43Z"
+      "timestamp": "2025-05-25T15:06:48Z"
     }
 ,
     "node_version": {
       "status": "passed",
       "message": "Node.js version 23.11.0 meets requirement (>=18.0.0)",
-      "timestamp": "2025-05-25T15:04:43Z"
+      "timestamp": "2025-05-25T15:06:48Z"
     }
 ,
     "docker": {
-      "status": "failed",
-      "message": "Docker is installed but not running or accessible",
-      "timestamp": "2025-05-25T15:04:45Z"
+      "status": "passed",
+      "message": "Docker is installed and running",
+      "timestamp": "2025-05-25T15:06:48Z"
     }
 ,
     "make": {
       "status": "passed",
       "message": "Make is installed",
-      "timestamp": "2025-05-25T15:04:45Z"
+      "timestamp": "2025-05-25T15:06:48Z"
     }

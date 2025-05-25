@@ -1,120 +1,236 @@
-# Phoenix Documentation
+# Phoenix Platform
 
-Welcome to the Phoenix documentation! This guide will help you understand, deploy, and contribute to the Phoenix adaptive cardinality optimization system.
+<div align="center">
+  <img src="assets/phoenix-banner.png" alt="Phoenix Platform" width="800"/>
+  
+  **Automated Observability Cost Optimization Platform**
+  
+  [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+  [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go)](https://golang.org)
+  [![React Version](https://img.shields.io/badge/React-18.2+-61DAFB?logo=react)](https://reactjs.org)
+  [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-326CE5?logo=kubernetes)](https://kubernetes.io)
+  
+  [Get Started](phoenix-platform/docs/DEVELOPER_QUICK_START.md){ .md-button .md-button--primary }
+  [View Demo](https://demo.phoenix-platform.io){ .md-button }
+</div>
 
-## 📚 Documentation Index
+---
 
-### Getting Started
-- **[Project Overview](../README.md)** - Main README with quick start guide
-- **[Architecture Overview](ARCHITECTURE.md)** - System design and components
-- **[Monorepo Structure](MONOREPO_STRUCTURE.md)** - Project organization
+## 🚀 What is Phoenix?
 
-### Operations
-- **[Troubleshooting Guide](TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Pipeline Analysis](PIPELINE_ANALYSIS.md)** - Deep dive into pipeline behavior
-- **[Migration Guide](MIGRATION_GUIDE.md)** - Migrating to the monorepo structure
+Phoenix is an **intelligent observability optimization platform** that automatically reduces OpenTelemetry metrics volume by 50-80% while maintaining complete visibility for critical processes. Using advanced A/B testing between baseline and optimized configurations, Phoenix helps organizations dramatically cut their observability costs without compromising monitoring quality.
 
-### Development
-- **[CLAUDE.md](../CLAUDE.md)** - AI assistant instructions for development
+<div class="grid cards" markdown>
 
-## 🗺️ Quick Navigation
+-   :material-chart-line:{ .lg .middle } **50-80% Cost Reduction**
 
-### For New Users
-1. Start with the [Project Overview](../README.md)
-2. Understand the [Architecture](ARCHITECTURE.md)
-3. Review the [Monorepo Structure](MONOREPO_STRUCTURE.md)
+    ---
 
-### For Operators
-1. [Troubleshooting Guide](TROUBLESHOOTING.md) for issue resolution
-2. [Pipeline Analysis](PIPELINE_ANALYSIS.md) for performance tuning
-3. Monitor dashboards at http://localhost:3000
+    Dramatically reduce metrics volume and associated costs through intelligent filtering and aggregation strategies
 
-### For Developers
-1. [Monorepo Structure](MONOREPO_STRUCTURE.md) for code organization
-2. [Architecture Overview](ARCHITECTURE.md) for system understanding
-3. [CLAUDE.md](../CLAUDE.md) for AI-assisted development
+-   :material-ab-testing:{ .lg .middle } **Safe A/B Testing**
 
-## 📖 Document Summaries
+    ---
 
-### [Architecture Overview](ARCHITECTURE.md)
-Comprehensive system design covering:
-- 3-pipeline processing system (Full, Optimized, Experimental)
-- Adaptive control system with PID-like behavior
-- Component interactions and data flow
-- Performance considerations
+    Test optimizations safely with side-by-side comparison of baseline and candidate configurations
 
-### [Monorepo Structure](MONOREPO_STRUCTURE.md)
-Project organization guide covering:
-- Directory structure and conventions
-- Package management with workspaces
-- Service boundaries and interfaces
-- Build system with Turborepo
+-   :material-drag:{ .lg .middle } **Visual Pipeline Builder**
 
-### [Pipeline Analysis](PIPELINE_ANALYSIS.md)
-Detailed analysis of:
-- Pipeline-specific optimizations
-- Cardinality reduction techniques
-- Performance benchmarks
-- Configuration tuning
+    ---
 
-### [Troubleshooting Guide](TROUBLESHOOTING.md)
-Common issues and solutions:
-- Container startup problems
-- Memory and resource issues
-- Network connectivity
-- Control system debugging
+    Create and modify OpenTelemetry pipelines through an intuitive drag-and-drop interface
 
-### [Migration Guide](MIGRATION_GUIDE.md)
-Step-by-step migration:
-- From monolithic to modular structure
-- Configuration changes
-- API updates
-- Rollback procedures
+-   :material-kubernetes:{ .lg .middle } **Kubernetes Native**
 
-## 🛠️ Quick Reference
+    ---
 
-### Common Commands
-```bash
-make help          # Show all available commands
-make deploy-dev    # Deploy development environment
-make health        # Check service health
-make monitor       # Open monitoring dashboards
-make logs          # View all service logs
+    Built for Kubernetes with operators, CRDs, and GitOps-friendly deployments
+
+</div>
+
+## ✨ Key Features
+
+### 🧪 Intelligent A/B Testing
+- Run baseline and optimized collectors side-by-side
+- Compare metrics quality and cost in real-time
+- Gradual rollout with automatic rollback on anomalies
+- No service mesh required - uses dual collector pattern
+
+### 🎯 Smart Optimization Strategies
+- **Priority Filtering**: Keep only critical process metrics
+- **Top-K Selection**: Retain metrics for top resource consumers
+- **Intelligent Aggregation**: Combine similar metrics intelligently
+- **Adaptive Sampling**: Dynamic sampling based on load patterns
+
+### 📊 Comprehensive Analytics
+- Real-time cost analysis and savings projections
+- Cardinality tracking and reduction metrics
+- Side-by-side quality comparison dashboards
+- Automated recommendation engine
+
+### 🔧 Enterprise Ready
+- Multi-tenancy support with namespace isolation
+- RBAC and JWT-based authentication
+- Audit logging and compliance features
+- High availability and horizontal scaling
+
+## 🏗️ Architecture Overview
+
+```mermaid
+graph TB
+    subgraph "Phoenix Control Plane"
+        API[API Gateway]
+        EC[Experiment Controller]
+        CG[Config Generator]
+        DB[(PostgreSQL)]
+    end
+    
+    subgraph "Data Plane (Per Node)"
+        BC[Baseline Collector]
+        CC[Candidate Collector]
+        PM[Process Monitor]
+    end
+    
+    subgraph "Observability Backend"
+        NR[New Relic]
+        PROM[Prometheus]
+    end
+    
+    API --> EC
+    EC --> CG
+    EC --> DB
+    CG --> BC
+    CG --> CC
+    BC --> NR
+    BC --> PROM
+    CC --> NR
+    PM --> BC
+    PM --> CC
 ```
 
-### Service Endpoints
-- **OTLP Ingestion**: `localhost:4318`
-- **Prometheus**: `http://localhost:9090`
-- **Grafana**: `http://localhost:3000` (admin/admin)
-- **Control API**: `http://localhost:8080/api/v1`
+## 🚦 Getting Started
 
-### Configuration Files
-- **Environment**: `.env` (copy from `config/environments/dev/.env`)
-- **Collector**: `services/collector/configs/main.yaml`
-- **Control**: `config/defaults/control/optimization_mode.yaml`
-- **Prometheus**: `monitoring/prometheus/prometheus.yaml`
+### Prerequisites
 
-## 🔄 Documentation Updates
+- Kubernetes 1.28+
+- Helm 3.12+
+- PostgreSQL 15+
+- New Relic account with OTLP endpoint access
 
-To update documentation:
-1. Edit the relevant `.md` file in the `docs/` directory
-2. Follow existing formatting patterns
-3. Test any code examples
-4. Update cross-references if needed
-5. Submit a pull request
+### Quick Installation
 
-## 📞 Getting Help
+=== "Helm"
 
-- **GitHub Issues**: Report bugs or request features
-- **Discussions**: Ask questions and share ideas
-- **Slack**: Join #phoenix channel (if available)
+    ```bash
+    # Add Phoenix Helm repository
+    helm repo add phoenix https://phoenix-platform.io/helm
+    helm repo update
+    
+    # Install Phoenix
+    helm install phoenix phoenix/phoenix \
+      --namespace phoenix-system \
+      --create-namespace \
+      --set newrelic.apiKey=$NEW_RELIC_API_KEY
+    ```
 
-## 🏷️ Version Information
+=== "Kubectl"
 
-Current versions:
-- Phoenix: v1.0.0
-- OpenTelemetry Collector: v0.91.0
-- Prometheus: v2.48.0
-- Grafana: v10.2.2
+    ```bash
+    # Apply CRDs
+    kubectl apply -f https://raw.githubusercontent.com/phoenix-platform/phoenix/main/k8s/crds/
+    
+    # Deploy Phoenix
+    kubectl apply -f https://raw.githubusercontent.com/phoenix-platform/phoenix/main/k8s/phoenix.yaml
+    ```
 
-Last updated: January 2025
+### Your First Experiment
+
+```bash
+# Create an experiment using the CLI
+phoenix experiment create \
+  --name "webserver-optimization" \
+  --baseline "process-baseline-v1" \
+  --candidate "process-priority-filter-v1" \
+  --target-selector "app=webserver" \
+  --duration "24h"
+
+# Check status
+phoenix experiment status webserver-optimization
+
+# View real-time metrics
+phoenix experiment metrics webserver-optimization --follow
+```
+
+## 📚 Documentation
+
+<div class="grid cards" markdown>
+
+-   :material-rocket-launch:{ .lg .middle } **[Quick Start Guide](phoenix-platform/docs/DEVELOPER_QUICK_START.md)**
+
+    Get up and running with Phoenix in 5 minutes
+
+-   :material-book-open-variant:{ .lg .middle } **[User Guide](phoenix-platform/docs/USER_GUIDE.md)**
+
+    Comprehensive guide for platform users
+
+-   :material-api:{ .lg .middle } **[API Reference](phoenix-platform/docs/API_REFERENCE.md)**
+
+    Complete API documentation with examples
+
+-   :material-cog:{ .lg .middle } **[Configuration Guide](phoenix-platform/docs/PIPELINE_GUIDE.md)**
+
+    Learn how to configure optimization pipelines
+
+</div>
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/phoenix-platform/phoenix.git
+cd phoenix
+
+# Install dependencies
+make deps
+
+# Run tests
+make test
+
+# Start local development
+make dev
+```
+
+## 🗺️ Roadmap
+
+- [ ] Machine Learning-based optimization recommendations
+- [ ] Multi-cloud support (AWS CloudWatch, Azure Monitor)
+- [ ] Cost allocation and chargeback features
+- [ ] Advanced anomaly detection during experiments
+- [ ] Pipeline marketplace for sharing optimizations
+
+## 📄 License
+
+Phoenix is licensed under the [Apache License 2.0](LICENSE).
+
+## 🙏 Acknowledgments
+
+Built with ❤️ by the Phoenix team using:
+- [OpenTelemetry](https://opentelemetry.io)
+- [Kubernetes](https://kubernetes.io)
+- [React](https://reactjs.org)
+- [Material-UI](https://mui.com)
+
+---
+
+<div align="center">
+  <p>
+    <a href="https://github.com/phoenix-platform/phoenix">GitHub</a> •
+    <a href="https://phoenix-platform.io/docs">Documentation</a> •
+    <a href="https://phoenix-community.slack.com">Community</a> •
+    <a href="https://phoenix-platform.io/blog">Blog</a>
+  </p>
+</div>
