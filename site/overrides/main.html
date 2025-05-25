@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="{% if page.meta.description %}{{ page.meta.description }}{% else %}Phoenix Platform - Automated observability cost optimization through intelligent OpenTelemetry pipeline management{% endif %}">
+  <meta name="keywords" content="{% if page.meta.keywords %}{{ page.meta.keywords }}{% else %}observability, cost optimization, opentelemetry, kubernetes, monitoring, metrics, phoenix platform{% endif %}">
+  <meta name="author" content="Phoenix Platform Team">
+  
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="{% if page.title %}{{ page.title }} - {% endif %}Phoenix Platform Documentation">
+  <meta property="og:description" content="{% if page.meta.description %}{{ page.meta.description }}{% else %}Learn how to reduce observability costs by 50-80% with Phoenix Platform{% endif %}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ page.canonical_url }}">
+  <meta property="og:image" content="{{ config.site_url }}assets/phoenix-og-image.png">
+  <meta property="og:site_name" content="Phoenix Platform">
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{% if page.title %}{{ page.title }} - {% endif %}Phoenix Platform">
+  <meta name="twitter:description" content="{% if page.meta.description %}{{ page.meta.description }}{% else %}Automated observability cost optimization{% endif %}">
+  <meta name="twitter:image" content="{{ config.site_url }}assets/phoenix-og-image.png">
+  <meta name="twitter:site" content="@phoenixplatform">
+  
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "{{ page.title }}",
+    "description": "{% if page.meta.description %}{{ page.meta.description }}{% else %}{{ page.content | striptags | truncate(160) }}{% endif %}",
+    "author": {
+      "@type": "Organization",
+      "name": "Phoenix Platform",
+      "url": "https://phoenix-platform.io"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Phoenix Platform",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "{{ config.site_url }}assets/phoenix-logo.svg"
+      }
+    },
+    "datePublished": "{{ page.meta.date_published | default(page.meta.git_creation_date_localized) }}",
+    "dateModified": "{{ page.meta.git_revision_date_localized }}",
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "{{ page.canonical_url }}"
+    }
+  }
+  </script>
+  
+  <!-- Canonical URL -->
+  <link rel="canonical" href="{{ page.canonical_url }}">
+  
+  <!-- Preconnect to external domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+{% endblock %}
+
+{% block announce %}
+  <!-- Announcement bar for important updates -->
+  <div class="md-banner">
+    <div class="md-banner__inner md-grid md-typeset">
+      <strong>New Release!</strong> Phoenix Platform v1.0.0 is now available. 
+      <a href="{{ config.site_url }}blog/release-v1.0.0/">Read the announcement</a> →
+    </div>
+  </div>
+{% endblock %}
