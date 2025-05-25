@@ -140,22 +140,6 @@ plugins:
       separator: '[\s\-\.]'
       lang:
         - en
-  - git-revision-date-localized:
-      enable_creation_date: true
-      type: iso_datetime
-  - minify:
-      minify_html: true
-  - macros
-  - awesome-pages
-  - tags:
-      tags_file: tags.md
-  - social:
-      cards_color:
-        fill: "#0FF1CE"
-        text: "#FFFFFF"
-  - redirects:
-      redirect_maps:
-        'getting-started.md': 'phoenix-platform/docs/DEVELOPER_QUICK_START.md'
         
 # Extensions
 markdown_extensions:
@@ -179,8 +163,8 @@ markdown_extensions:
   - pymdownx.caret
   - pymdownx.details
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span

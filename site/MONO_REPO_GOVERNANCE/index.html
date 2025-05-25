@@ -1,0 +1,1618 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Automated observability cost optimization through intelligent OpenTelemetry pipeline management">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Phoenix Platform Mono-Repository Governance - Phoenix Platform</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#phoenix-platform-mono-repository-governance" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Phoenix Platform" class="md-header__button md-logo" aria-label="Phoenix Platform" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Phoenix Platform
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Phoenix Platform Mono-Repository Governance
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../docs/README.md" class="md-tabs__link">
+          
+  
+  
+  Documentation
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Phoenix Platform" class="md-nav__button md-logo" aria-label="Phoenix Platform" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Phoenix Platform
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Documentation
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Documentation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../docs/README.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Overview
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repository-governance-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Repository Governance Structure
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Repository Governance Structure">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-ownership-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Ownership Model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-code-review-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Code Review Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-decision-making-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Decision Making Process
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      Development Workflows
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-branch-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Branch Strategy
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-commit-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Commit Standards
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-pull-request-process" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Pull Request Process
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#service-boundaries" class="md-nav__link">
+    <span class="md-ellipsis">
+      Service Boundaries
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Service Boundaries">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-service-interaction-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Service Interaction Rules
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-data-ownership" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Data Ownership
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-api-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. API Contracts
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Dependency Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dependency Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-dependency-policies" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Dependency Policies
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-shared-package-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Shared Package Guidelines
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-version-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Version Management
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testing-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Testing Standards
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Standards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-test-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Test Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-test-data-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Test Data Management
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cicd-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      CI/CD Pipeline
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="CI/CD Pipeline">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-pipeline-stages" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Pipeline Stages
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-quality-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Quality Gates
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-standards" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation Standards
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Documentation Standards">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-documentation-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Documentation Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-architecture-decision-records-adrs" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Architecture Decision Records (ADRs)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#monitoring-and-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      Monitoring and Metrics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Monitoring and Metrics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-service-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Service Metrics
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-repository-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Repository Metrics
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#security-governance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Governance
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Security Governance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-security-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Security Requirements
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-incident-response" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Incident Response
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      Change Management
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Change Management">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Breaking Changes
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-feature-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Feature Flags
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance-and-auditing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compliance and Auditing
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Compliance and Auditing">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-compliance-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Compliance Checks
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-audit-trail" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Audit Trail
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#continuous-improvement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Continuous Improvement
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Continuous Improvement">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-retrospectives" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Retrospectives
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-metrics-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Metrics Review
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enforcement" class="md-nav__link">
+    <span class="md-ellipsis">
+      Enforcement
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="phoenix-platform-mono-repository-governance">Phoenix Platform Mono-Repository Governance</h1>
+<h2 id="overview">Overview</h2>
+<p>This document establishes the governance model, development workflows, and architectural decision-making processes for the Phoenix platform mono-repository. It ensures consistent development practices, maintains architectural integrity, and facilitates efficient collaboration across all services and components.</p>
+<h2 id="repository-governance-structure">Repository Governance Structure</h2>
+<h3 id="1-ownership-model">1. Ownership Model</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">ownership</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">platform_owners</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Platform</span><span class="nv"> </span><span class="s">Lead&quot;</span>
+<span class="w">      </span><span class="nt">responsibilities</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Overall architecture decisions</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Cross-service standards</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Breaking change approvals</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Dependency management strategy</span>
+
+<span class="w">  </span><span class="nt">service_owners</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">api_service</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@api-team&quot;</span>
+<span class="w">      </span><span class="nt">backup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@platform-team&quot;</span>
+
+<span class="w">    </span><span class="nt">dashboard</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@frontend-team&quot;</span>
+<span class="w">      </span><span class="nt">backup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@api-team&quot;</span>
+
+<span class="w">    </span><span class="nt">experiment_controller</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@backend-team&quot;</span>
+<span class="w">      </span><span class="nt">backup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@platform-team&quot;</span>
+
+<span class="w">    </span><span class="nt">pipeline_operator</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@infrastructure-team&quot;</span>
+<span class="w">      </span><span class="nt">backup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@backend-team&quot;</span>
+
+<span class="w">    </span><span class="nt">process_simulator</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@testing-team&quot;</span>
+<span class="w">      </span><span class="nt">backup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@backend-team&quot;</span>
+
+<span class="w">  </span><span class="nt">shared_components</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">pkg/</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@platform-team&quot;</span>
+<span class="w">      </span><span class="nt">approval_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+
+<span class="w">    </span><span class="nt">api/</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@api-team&quot;</span>
+<span class="w">      </span><span class="nt">approval_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+
+<span class="w">    </span><span class="nt">configs/</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">owner</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;@devops-team&quot;</span>
+<span class="w">      </span><span class="nt">approval_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+</code></pre></div>
+<h3 id="2-code-review-requirements">2. Code Review Requirements</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">review_requirements</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">standard_changes</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">approvals_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="w">    </span><span class="nt">must_include</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service owner OR backup</span>
+
+<span class="w">  </span><span class="nt">breaking_changes</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">approvals_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">must_include</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service owner</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Platform lead</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Affected service owners</span>
+
+<span class="w">  </span><span class="nt">shared_packages</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">approvals_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">must_include</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Package owner</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Consumer representative</span>
+
+<span class="w">  </span><span class="nt">security_sensitive</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">approvals_required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+<span class="w">    </span><span class="nt">must_include</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security team member</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Service owner</span>
+</code></pre></div>
+<h3 id="3-decision-making-process">3. Decision Making Process</h3>
+<div class="highlight"><pre><span></span><code>graph TD
+    A[Architectural Decision Needed] --&gt; B{Impact Level}
+    B --&gt;|Service-local| C[Service Owner Decides]
+    B --&gt;|Cross-service| D[RFC Process]
+    B --&gt;|Platform-wide| E[ADR Process]
+
+    D --&gt; F[RFC Review]
+    F --&gt; G[Comments Period - 3 days]
+    G --&gt; H[Platform Team Decision]
+
+    E --&gt; I[ADR Draft]
+    I --&gt; J[Review Period - 5 days]
+    J --&gt; K[Consensus or Vote]
+    K --&gt; L[ADR Approved]
+</code></pre></div>
+<h2 id="development-workflows">Development Workflows</h2>
+<h3 id="1-branch-strategy">1. Branch Strategy</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">branching</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">main</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Production-ready</span><span class="nv"> </span><span class="s">code&quot;</span>
+<span class="w">    </span><span class="nt">protection</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Require PR with approvals</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Pass all CI checks</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">No direct pushes</span>
+
+<span class="w">  </span><span class="nt">develop</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Integration</span><span class="nv"> </span><span class="s">branch&quot;</span>
+<span class="w">    </span><span class="nt">merges_to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
+<span class="w">    </span><span class="nt">frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Weekly</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">as</span><span class="nv"> </span><span class="s">needed&quot;</span>
+
+<span class="w">  </span><span class="nt">feature/*</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Feature</span><span class="nv"> </span><span class="s">development&quot;</span>
+<span class="w">    </span><span class="nt">naming</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;feature/{ticket-id}-{description}&quot;</span>
+<span class="w">    </span><span class="nt">merges_to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">develop</span>
+<span class="w">    </span><span class="nt">lifetime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;</span><span class="nv"> </span><span class="s">2</span><span class="nv"> </span><span class="s">weeks&quot;</span>
+
+<span class="w">  </span><span class="nt">fix/*</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bug</span><span class="nv"> </span><span class="s">fixes&quot;</span>
+<span class="w">    </span><span class="nt">naming</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;fix/{ticket-id}-{description}&quot;</span>
+<span class="w">    </span><span class="nt">merges_to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">develop</span>
+<span class="w">    </span><span class="nt">lifetime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;</span><span class="nv"> </span><span class="s">3</span><span class="nv"> </span><span class="s">days&quot;</span>
+
+<span class="w">  </span><span class="nt">release/*</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Release</span><span class="nv"> </span><span class="s">preparation&quot;</span>
+<span class="w">    </span><span class="nt">naming</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;release/{version}&quot;</span>
+<span class="w">    </span><span class="nt">merges_to</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
+<span class="w">    </span><span class="nt">lifetime</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&lt;</span><span class="nv"> </span><span class="s">1</span><span class="nv"> </span><span class="s">week&quot;</span>
+</code></pre></div>
+<h3 id="2-commit-standards">2. Commit Standards</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">commit_standards</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+<span class="w">    </span><span class="no">&lt;type&gt;(&lt;scope&gt;): &lt;subject&gt;</span>
+
+<span class="w">    </span><span class="no">&lt;body&gt;</span>
+
+<span class="w">    </span><span class="no">&lt;footer&gt;</span>
+
+<span class="w">  </span><span class="nt">types</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">feat</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;New</span><span class="nv"> </span><span class="s">feature&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">fix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bug</span><span class="nv"> </span><span class="s">fix&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">docs</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Documentation</span><span class="nv"> </span><span class="s">changes&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">style</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Code</span><span class="nv"> </span><span class="s">style</span><span class="nv"> </span><span class="s">changes&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">refactor</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Code</span><span class="nv"> </span><span class="s">refactoring&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">perf</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Performance</span><span class="nv"> </span><span class="s">improvements&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">test</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Test</span><span class="nv"> </span><span class="s">additions</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">corrections&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">chore</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Build</span><span class="nv"> </span><span class="s">process</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">auxiliary</span><span class="nv"> </span><span class="s">tool</span><span class="nv"> </span><span class="s">changes&quot;</span>
+
+<span class="w">  </span><span class="nt">scopes</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">api</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dashboard</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">controller</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">operator</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">simulator</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pkg</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deps</span>
+
+<span class="w">  </span><span class="nt">rules</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Subject line max 72 characters</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Use imperative mood</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Reference issues in footer</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Breaking changes marked with &quot;BREAKING CHANGE:&quot;</span>
+
+<span class="w">  </span><span class="nt">examples</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;feat(api):</span><span class="nv"> </span><span class="s">add</span><span class="nv"> </span><span class="s">experiment</span><span class="nv"> </span><span class="s">validation</span><span class="nv"> </span><span class="s">endpoint&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;fix(controller):</span><span class="nv"> </span><span class="s">resolve</span><span class="nv"> </span><span class="s">race</span><span class="nv"> </span><span class="s">condition</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">state</span><span class="nv"> </span><span class="s">machine&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;docs(operator):</span><span class="nv"> </span><span class="s">update</span><span class="nv"> </span><span class="s">deployment</span><span class="nv"> </span><span class="s">instructions&quot;</span>
+</code></pre></div>
+<h3 id="3-pull-request-process">3. Pull Request Process</h3>
+<div class="highlight"><pre><span></span><code><span class="gu">## PR Template</span>
+
+<span class="gu">### Description</span>
+Brief description of changes
+
+<span class="gu">### Type of Change</span>
+<span class="k">- [ ]</span> Bug fix (non-breaking change)
+<span class="k">- [ ]</span> New feature (non-breaking change)
+<span class="k">- [ ]</span> Breaking change
+<span class="k">- [ ]</span> Documentation update
+
+<span class="gu">### Testing</span>
+<span class="k">- [ ]</span> Unit tests pass
+<span class="k">- [ ]</span> Integration tests pass
+<span class="k">- [ ]</span> Manual testing completed
+
+<span class="gu">### Checklist</span>
+<span class="k">- [ ]</span> Code follows style guidelines
+<span class="k">- [ ]</span> Self-review completed
+<span class="k">- [ ]</span> Comments added for complex code
+<span class="k">- [ ]</span> Documentation updated
+<span class="k">- [ ]</span> No new warnings
+<span class="k">- [ ]</span> Breaking changes documented
+
+<span class="gu">### Related Issues</span>
+Fixes #(issue)
+
+<span class="gu">### Screenshots (if applicable)</span>
+</code></pre></div>
+<h2 id="service-boundaries">Service Boundaries</h2>
+<h3 id="1-service-interaction-rules">1. Service Interaction Rules</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">service_interactions</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">allowed_patterns</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Service</span><span class="nv"> </span><span class="s">A</span><span class="nv"> </span><span class="s">-&gt;</span><span class="nv"> </span><span class="s">API</span><span class="nv"> </span><span class="s">Gateway</span><span class="nv"> </span><span class="s">-&gt;</span><span class="nv"> </span><span class="s">Service</span><span class="nv"> </span><span class="s">B&quot;</span>
+<span class="w">      </span><span class="nt">via</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;REST/gRPC&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Service</span><span class="nv"> </span><span class="s">-&gt;</span><span class="nv"> </span><span class="s">Message</span><span class="nv"> </span><span class="s">Queue</span><span class="nv"> </span><span class="s">-&gt;</span><span class="nv"> </span><span class="s">Service&quot;</span>
+<span class="w">      </span><span class="nt">via</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Events&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Service</span><span class="nv"> </span><span class="s">-&gt;</span><span class="nv"> </span><span class="s">Shared</span><span class="nv"> </span><span class="s">Database&quot;</span>
+<span class="w">      </span><span class="nt">via</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Repository</span><span class="nv"> </span><span class="s">pattern&quot;</span>
+
+<span class="w">  </span><span class="nt">forbidden_patterns</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Direct</span><span class="nv"> </span><span class="s">service-to-service</span><span class="nv"> </span><span class="s">DB</span><span class="nv"> </span><span class="s">access&quot;</span>
+<span class="w">      </span><span class="nt">reason</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Violates</span><span class="nv"> </span><span class="s">service</span><span class="nv"> </span><span class="s">boundaries&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Synchronous</span><span class="nv"> </span><span class="s">circular</span><span class="nv"> </span><span class="s">dependencies&quot;</span>
+<span class="w">      </span><span class="nt">reason</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Creates</span><span class="nv"> </span><span class="s">tight</span><span class="nv"> </span><span class="s">coupling&quot;</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">pattern</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Shared</span><span class="nv"> </span><span class="s">mutable</span><span class="nv"> </span><span class="s">state&quot;</span>
+<span class="w">      </span><span class="nt">reason</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Race</span><span class="nv"> </span><span class="s">conditions</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">complexity&quot;</span>
+</code></pre></div>
+<h3 id="2-data-ownership">2. Data Ownership</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">data_ownership</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">api_service</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">owns</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">users</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipelines</span>
+<span class="w">    </span><span class="nt">exposes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;GET</span><span class="nv"> </span><span class="s">/api/v1/experiments&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;gRPC</span><span class="nv"> </span><span class="s">ExperimentService&quot;</span>
+
+<span class="w">  </span><span class="nt">controller_service</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">owns</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiment_states</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipeline_deployments</span>
+<span class="w">    </span><span class="nt">exposes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;gRPC</span><span class="nv"> </span><span class="s">ControllerService&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Metrics</span><span class="nv"> </span><span class="s">endpoints&quot;</span>
+
+<span class="w">  </span><span class="nt">operator</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">owns</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipeline_status</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">collector_instances</span>
+<span class="w">    </span><span class="nt">exposes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Kubernetes</span><span class="nv"> </span><span class="s">CRD</span><span class="nv"> </span><span class="s">status&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Metrics</span><span class="nv"> </span><span class="s">endpoints&quot;</span>
+</code></pre></div>
+<h3 id="3-api-contracts">3. API Contracts</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">api_contracts</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">versioning</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;URL</span><span class="nv"> </span><span class="s">path</span><span class="nv"> </span><span class="s">versioning&quot;</span>
+<span class="w">    </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;/api/v{major}/&quot;</span>
+<span class="w">    </span><span class="nt">deprecation_notice</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;6</span><span class="nv"> </span><span class="s">months&quot;</span>
+
+<span class="w">  </span><span class="nt">compatibility</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">backward_compatible</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Adding optional fields</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Adding new endpoints</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Adding new methods</span>
+
+<span class="w">    </span><span class="nt">breaking_changes</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Removing fields</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Changing field types</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Changing behavior</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Removing endpoints</span>
+
+<span class="w">  </span><span class="nt">documentation</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">required</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OpenAPI 3.0 spec</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gRPC proto files</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Migration guides</span>
+</code></pre></div>
+<h2 id="dependency-management">Dependency Management</h2>
+<h3 id="1-dependency-policies">1. Dependency Policies</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">dependency_policies</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">approval_required</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">New production dependencies</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Major version updates</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security-critical libraries</span>
+
+<span class="w">  </span><span class="nt">automated_updates</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Minor version updates</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Patch updates</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Development dependencies</span>
+
+<span class="w">  </span><span class="nt">review_cycle</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Monthly&quot;</span>
+<span class="w">    </span><span class="nt">actions</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security audit</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">License compliance</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Unused dependency removal</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Version consolidation</span>
+</code></pre></div>
+<h3 id="2-shared-package-guidelines">2. Shared Package Guidelines</h3>
+<p><div class="highlight"><pre><span></span><code><span class="c1">// pkg/README.md</span>
+<span class="err">#</span><span class="w"> </span><span class="nx">Shared</span><span class="w"> </span><span class="nx">Package</span><span class="w"> </span><span class="nx">Guidelines</span>
+
+<span class="err">##</span><span class="w"> </span><span class="nx">Creating</span><span class="w"> </span><span class="nx">New</span><span class="w"> </span><span class="nx">Packages</span>
+
+<span class="mf">1.</span><span class="w"> </span><span class="nx">Single</span><span class="w"> </span><span class="nx">responsibility</span><span class="w"> </span><span class="nx">principle</span>
+<span class="mf">2.</span><span class="w"> </span><span class="nx">Minimal</span><span class="w"> </span><span class="nx">external</span><span class="w"> </span><span class="nx">dependencies</span>
+<span class="mf">3.</span><span class="w"> </span><span class="nx">Comprehensive</span><span class="w"> </span><span class="nx">documentation</span>
+<span class="mf">4.</span><span class="w"> </span><span class="p">&gt;</span><span class="mi">90</span><span class="o">%</span><span class="w"> </span><span class="nx">test</span><span class="w"> </span><span class="nx">coverage</span>
+<span class="mf">5.</span><span class="w"> </span><span class="nx">Stable</span><span class="w"> </span><span class="nx">API</span><span class="w"> </span><span class="p">(</span><span class="nx">minimize</span><span class="w"> </span><span class="nx">breaking</span><span class="w"> </span><span class="nx">changes</span><span class="p">)</span>
+
+<span class="err">##</span><span class="w"> </span><span class="nx">Package</span><span class="w"> </span><span class="nx">Structure</span>
+</code></pre></div>
+pkg/
+├── auth/           # Authentication utilities
+├── errors/         # Common error types
+├── httpclient/     # HTTP client wrapper
+├── logging/        # Structured logging
+├── metrics/        # Metrics collection
+├── middleware/     # HTTP/gRPC middleware
+├── testing/        # Test helpers
+└── validation/     # Input validation
+<div class="highlight"><pre><span></span><code>## Usage Rules
+
+1. Import only from `pkg/`, never from `internal/`
+2. Don&#39;t create circular dependencies
+3. Version breaking changes properly
+4. Maintain backward compatibility
+</code></pre></div></p>
+<h3 id="3-version-management">3. Version Management</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">version_management</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Semantic</span><span class="nv"> </span><span class="s">Versioning&quot;</span>
+
+<span class="w">  </span><span class="nt">components</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">platform</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">current</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0.0&quot;</span>
+<span class="w">      </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;MAJOR.MINOR.PATCH&quot;</span>
+
+<span class="w">    </span><span class="nt">services</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">api</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.2.3&quot;</span>
+<span class="w">      </span><span class="nt">dashboard</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.1.0&quot;</span>
+<span class="w">      </span><span class="nt">controller</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.2.1&quot;</span>
+<span class="w">      </span><span class="nt">operator</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0.2&quot;</span>
+<span class="w">      </span><span class="nt">simulator</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0.0&quot;</span>
+
+<span class="w">  </span><span class="nt">release_process</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create release branch</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Update version files</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate changelog</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create git tag</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Build artifacts</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deploy to staging</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run acceptance tests</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deploy to production</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create GitHub release</span>
+</code></pre></div>
+<h2 id="testing-standards">Testing Standards</h2>
+<h3 id="1-test-requirements">1. Test Requirements</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">testing_requirements</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">unit_tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">coverage</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">minimum</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">80%</span>
+<span class="w">      </span><span class="nt">target</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">90%</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;*_test.go&quot;</span>
+<span class="w">    </span><span class="nt">framework</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;testing</span><span class="nv"> </span><span class="s">+</span><span class="nv"> </span><span class="s">testify&quot;</span>
+
+<span class="w">  </span><span class="nt">integration_tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tests/integration/&quot;</span>
+<span class="w">    </span><span class="nt">requirements</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test service interactions</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Use test containers</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Clean up resources</span>
+
+<span class="w">  </span><span class="nt">e2e_tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tests/e2e/&quot;</span>
+<span class="w">    </span><span class="nt">requirements</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test full user workflows</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run in CI pipeline</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Generate reports</span>
+
+<span class="w">  </span><span class="nt">performance_tests</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;tests/performance/&quot;</span>
+<span class="w">    </span><span class="nt">requirements</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Establish baselines</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Detect regressions</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run nightly</span>
+</code></pre></div>
+<h3 id="2-test-data-management">2. Test Data Management</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">test_data</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">fixtures</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;testdata/&quot;</span>
+<span class="w">    </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;JSON</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">YAML&quot;</span>
+
+<span class="w">  </span><span class="nt">generators</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">location</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;pkg/testing/generators/&quot;</span>
+<span class="w">    </span><span class="nt">requirements</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deterministic output</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Configurable complexity</span>
+
+<span class="w">  </span><span class="nt">cleanup</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">policy</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Always</span><span class="nv"> </span><span class="s">clean</span><span class="nv"> </span><span class="s">up&quot;</span>
+<span class="w">    </span><span class="nt">methods</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Defer statements</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Test containers auto-removal</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Transaction rollbacks</span>
+</code></pre></div>
+<h2 id="cicd-pipeline">CI/CD Pipeline</h2>
+<h3 id="1-pipeline-stages">1. Pipeline Stages</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">pipeline</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Validate&quot;</span>
+<span class="w">      </span><span class="nt">parallel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">      </span><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lint</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">security-scan</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">license-check</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Test&quot;</span>
+<span class="w">      </span><span class="nt">parallel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">      </span><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unit-tests</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integration-tests</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Build&quot;</span>
+<span class="w">      </span><span class="nt">parallel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">      </span><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">build-services</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">build-dashboard</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">build-operators</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Package&quot;</span>
+<span class="w">      </span><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">docker-images</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">helm-charts</span>
+
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Deploy&quot;</span>
+<span class="w">      </span><span class="nt">jobs</span><span class="p">:</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deploy-staging</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">run-e2e-tests</span>
+<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deploy-production</span>
+</code></pre></div>
+<h3 id="2-quality-gates">2. Quality Gates</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">quality_gates</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pre_merge</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;All</span><span class="nv"> </span><span class="s">CI</span><span class="nv"> </span><span class="s">checks</span><span class="nv"> </span><span class="s">pass&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Code</span><span class="nv"> </span><span class="s">coverage</span><span class="nv"> </span><span class="s">&gt;=</span><span class="nv"> </span><span class="s">80%&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;No</span><span class="nv"> </span><span class="s">security</span><span class="nv"> </span><span class="s">vulnerabilities&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;No</span><span class="nv"> </span><span class="s">linting</span><span class="nv"> </span><span class="s">errors&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Approved</span><span class="nv"> </span><span class="s">by</span><span class="nv"> </span><span class="s">code</span><span class="nv"> </span><span class="s">owner&quot;</span>
+
+<span class="w">  </span><span class="nt">pre_release</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;All</span><span class="nv"> </span><span class="s">integration</span><span class="nv"> </span><span class="s">tests</span><span class="nv"> </span><span class="s">pass&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Performance</span><span class="nv"> </span><span class="s">benchmarks</span><span class="nv"> </span><span class="s">pass&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Documentation</span><span class="nv"> </span><span class="s">updated&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;CHANGELOG</span><span class="nv"> </span><span class="s">updated&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Version</span><span class="nv"> </span><span class="s">bumped&quot;</span>
+
+<span class="w">  </span><span class="nt">pre_production</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Staging</span><span class="nv"> </span><span class="s">tests</span><span class="nv"> </span><span class="s">pass&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Load</span><span class="nv"> </span><span class="s">tests</span><span class="nv"> </span><span class="s">pass&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Security</span><span class="nv"> </span><span class="s">scan</span><span class="nv"> </span><span class="s">clean&quot;</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;Rollback</span><span class="nv"> </span><span class="s">plan</span><span class="nv"> </span><span class="s">documented&quot;</span>
+</code></pre></div>
+<h2 id="documentation-standards">Documentation Standards</h2>
+<h3 id="1-documentation-requirements">1. Documentation Requirements</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">documentation</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">required</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">code</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Package documentation (doc.go)</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Public API godoc comments</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Complex algorithm explanations</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Example usage</span>
+
+<span class="w">    </span><span class="nt">service</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">README.md</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TECHNICAL_SPEC.md</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">API documentation</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployment guide</span>
+
+<span class="w">    </span><span class="nt">project</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Architecture decisions (ADRs)</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Runbook</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Troubleshooting guide</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Contributing guide</span>
+</code></pre></div>
+<h3 id="2-architecture-decision-records-adrs">2. Architecture Decision Records (ADRs)</h3>
+<div class="highlight"><pre><span></span><code><span class="gh"># ADR Template</span>
+
+<span class="gu">## Title</span>
+ADR-XXX: [Decision Title]
+
+<span class="gu">## Status</span>
+[Proposed | Accepted | Deprecated | Superseded]
+
+<span class="gu">## Context</span>
+What is the issue that we&#39;re seeing that is motivating this decision?
+
+<span class="gu">## Decision</span>
+What is the change that we&#39;re proposing and/or doing?
+
+<span class="gu">## Consequences</span>
+What becomes easier or more difficult to do because of this change?
+
+<span class="gu">### Positive</span>
+<span class="k">-</span><span class="w"> </span>Pro 1
+<span class="k">-</span><span class="w"> </span>Pro 2
+
+<span class="gu">### Negative</span>
+<span class="k">-</span><span class="w"> </span>Con 1
+<span class="k">-</span><span class="w"> </span>Con 2
+
+<span class="gu">## Alternatives Considered</span>
+<span class="k">-</span><span class="w"> </span>Alternative 1: Description
+<span class="k">-</span><span class="w"> </span>Alternative 2: Description
+</code></pre></div>
+<h2 id="monitoring-and-metrics">Monitoring and Metrics</h2>
+<h3 id="1-service-metrics">1. Service Metrics</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">required_metrics</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">service_health</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uptime</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">request_rate</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">error_rate</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">response_time</span>
+
+<span class="w">  </span><span class="nt">business_metrics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">experiments_created</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pipelines_deployed</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">optimization_percentage</span>
+
+<span class="w">  </span><span class="nt">technical_metrics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cpu_usage</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">memory_usage</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">disk_usage</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">network_traffic</span>
+</code></pre></div>
+<h3 id="2-repository-metrics">2. Repository Metrics</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">repo_metrics</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">code_quality</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">test_coverage</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">technical_debt</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code_duplication</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cyclomatic_complexity</span>
+
+<span class="w">  </span><span class="nt">development_velocity</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pr_merge_time</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">deployment_frequency</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lead_time</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mttr</span>
+
+<span class="w">  </span><span class="nt">collaboration</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pr_review_time</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">contributor_count</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">issue_resolution_time</span>
+</code></pre></div>
+<h2 id="security-governance">Security Governance</h2>
+<h3 id="1-security-requirements">1. Security Requirements</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">security_requirements</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">code_scanning</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">tools</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gosec</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gitleaks</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dependency-check</span>
+<span class="w">    </span><span class="nt">frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Every</span><span class="nv"> </span><span class="s">commit&quot;</span>
+
+<span class="w">  </span><span class="nt">access_control</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">principle</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Least</span><span class="nv"> </span><span class="s">privilege&quot;</span>
+<span class="w">    </span><span class="nt">review_frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Quarterly&quot;</span>
+
+<span class="w">  </span><span class="nt">secrets_management</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">storage</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Kubernetes</span><span class="nv"> </span><span class="s">secrets&quot;</span>
+<span class="w">    </span><span class="nt">rotation</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;90</span><span class="nv"> </span><span class="s">days&quot;</span>
+<span class="w">    </span><span class="nt">audit</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Monthly&quot;</span>
+</code></pre></div>
+<h3 id="2-incident-response">2. Incident Response</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">incident_response</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">security_vulnerabilities</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">p0_critical</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">response_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1</span><span class="nv"> </span><span class="s">hour&quot;</span>
+<span class="w">      </span><span class="nt">fix_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;24</span><span class="nv"> </span><span class="s">hours&quot;</span>
+
+<span class="w">    </span><span class="nt">p1_high</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">response_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;4</span><span class="nv"> </span><span class="s">hours&quot;</span>
+<span class="w">      </span><span class="nt">fix_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;48</span><span class="nv"> </span><span class="s">hours&quot;</span>
+
+<span class="w">    </span><span class="nt">p2_medium</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">response_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;24</span><span class="nv"> </span><span class="s">hours&quot;</span>
+<span class="w">      </span><span class="nt">fix_time</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1</span><span class="nv"> </span><span class="s">week&quot;</span>
+
+<span class="w">  </span><span class="nt">process</span><span class="p">:</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">1. &quot;Assess impact&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">2. &quot;Notify stakeholders&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">3. &quot;Implement fix&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">4. &quot;Deploy patch&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">5. &quot;Post-mortem&quot;</span>
+</code></pre></div>
+<h2 id="change-management">Change Management</h2>
+<h3 id="1-breaking-changes">1. Breaking Changes</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">breaking_changes</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">process</span><span class="p">:</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">1. &quot;Document in BREAKING_CHANGES.md&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">2. &quot;Provide migration guide&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">3. &quot;Deprecation notice (min 3 months)&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">4. &quot;Support both versions temporarily&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">5. &quot;Communicate to users&quot;</span>
+<span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">6. &quot;Remove deprecated code&quot;</span>
+
+<span class="w">  </span><span class="nt">approval</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">required_approvers</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Platform lead</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Affected service owners</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Customer representative</span>
+</code></pre></div>
+<h3 id="2-feature-flags">2. Feature Flags</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">feature_flags</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">implementation</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">library</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;OpenFeature&quot;</span>
+<span class="w">    </span><span class="nt">backend</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Redis&quot;</span>
+
+<span class="w">  </span><span class="nt">lifecycle</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">stages</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">development</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Team</span><span class="nv"> </span><span class="s">only&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">beta</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Selected</span><span class="nv"> </span><span class="s">users&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">ga</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;All</span><span class="nv"> </span><span class="s">users&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">cleanup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Remove</span><span class="nv"> </span><span class="s">flag&quot;</span>
+
+<span class="w">  </span><span class="nt">requirements</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Default to disabled</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Document behavior</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Add metrics</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Plan removal</span>
+</code></pre></div>
+<h2 id="compliance-and-auditing">Compliance and Auditing</h2>
+<h3 id="1-compliance-checks">1. Compliance Checks</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">compliance</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">automated_checks</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">License compliance</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security policy adherence</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Coding standards</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Documentation completeness</span>
+
+<span class="w">  </span><span class="nt">manual_reviews</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Architecture alignment</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security review</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Performance impact</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">User experience</span>
+</code></pre></div>
+<h3 id="2-audit-trail">2. Audit Trail</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">audit_requirements</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">tracked_events</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Code changes (git)</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Deployments</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Configuration changes</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Access logs</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Security events</span>
+
+<span class="w">  </span><span class="nt">retention</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">development</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;90</span><span class="nv"> </span><span class="s">days&quot;</span>
+<span class="w">    </span><span class="nt">production</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1</span><span class="nv"> </span><span class="s">year&quot;</span>
+<span class="w">    </span><span class="nt">security</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3</span><span class="nv"> </span><span class="s">years&quot;</span>
+</code></pre></div>
+<h2 id="continuous-improvement">Continuous Improvement</h2>
+<h3 id="1-retrospectives">1. Retrospectives</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">retrospectives</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Bi-weekly&quot;</span>
+<span class="w">  </span><span class="nt">participants</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Development team</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Product owner</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Platform team representative</span>
+
+<span class="w">  </span><span class="nt">topics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What went well</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">What could improve</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Action items</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Process improvements</span>
+</code></pre></div>
+<h3 id="2-metrics-review">2. Metrics Review</h3>
+<div class="highlight"><pre><span></span><code><span class="nt">metrics_review</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">frequency</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Monthly&quot;</span>
+<span class="w">  </span><span class="nt">metrics</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Code quality trends</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Velocity metrics</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Incident metrics</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">User satisfaction</span>
+
+<span class="w">  </span><span class="nt">actions</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Identify bottlenecks</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Plan improvements</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Update processes</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Celebrate successes</span>
+</code></pre></div>
+<h2 id="enforcement">Enforcement</h2>
+<p>This governance model is enforced through:</p>
+<ol>
+<li><strong>Automated checks</strong> in CI/CD pipelines</li>
+<li><strong>Code review requirements</strong> in GitHub</li>
+<li><strong>Regular audits</strong> by platform team</li>
+<li><strong>Metrics tracking</strong> and reporting</li>
+<li><strong>Team education</strong> and onboarding</li>
+</ol>
+<p>Non-compliance results in:
+- PR blocks
+- Build failures
+- Team notifications
+- Escalation to platform lead</p>
+<p>Success is measured by:
+- Reduced incident rate
+- Faster deployment velocity
+- Higher code quality metrics
+- Team satisfaction scores</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      &copy; 2024 Phoenix Platform Contributors
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+    
+  </body>
+</html>

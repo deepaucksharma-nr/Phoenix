@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/phoenix/platform/cmd/phoenix-cli/internal/completion"
 	"github.com/phoenix/platform/cmd/phoenix-cli/internal/plugin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,6 +36,8 @@ For more information, visit: https://phoenix.example.com/docs`,
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
+	// Register completions for all commands
+	completion.RegisterCompletions(rootCmd)
 	return rootCmd.Execute()
 }
 
