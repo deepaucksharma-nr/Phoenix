@@ -42,8 +42,8 @@ migrate_package() {
         echo -e "${YELLOW}Migrating $desc...${NC}"
         cp -r "$src"/* "$dst/" 2>/dev/null || true
         
-        # Update import paths
-        find "$dst" -type f -name "*.go" -exec sed -i \
+        # Update import paths (macOS compatible)
+        find "$dst" -type f -name "*.go" -exec sed -i '' \
             -e "s|github.com/phoenix/phoenix-platform/pkg|github.com/phoenix-vnext/pkg|g" \
             -e "s|github.com/phoenix/|github.com/phoenix-vnext/|g" \
             {} +

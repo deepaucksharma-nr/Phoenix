@@ -35,10 +35,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Migration configuration
-declare -A PHASE1_SERVICES=(
-    ["anomaly-detector"]="apps/anomaly-detector go"
-    ["control-actuator"]="apps/control-actuator-go go"
-)
+declare -A PHASE1_SERVICES
+PHASE1_SERVICES["anomaly-detector"]="apps/anomaly-detector go"
+PHASE1_SERVICES["control-actuator"]="apps/control-actuator-go go"
 
 declare -A PHASE2_SERVICES=(
     ["platform-api"]="phoenix-platform/cmd/api-gateway go"
