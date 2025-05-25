@@ -1,0 +1,105 @@
+{{- if .Values.api.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "phoenix.fullname" . }}-api
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  {{- if .Values.api.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.api.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.api.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.api.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+{{- end }}
+---
+{{- if .Values.experimentController.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "phoenix.fullname" . }}-experiment-controller
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: experiment-controller
+spec:
+  {{- if .Values.experimentController.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.experimentController.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.experimentController.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.experimentController.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: experiment-controller
+{{- end }}
+---
+{{- if .Values.generator.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "phoenix.fullname" . }}-generator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: generator
+spec:
+  {{- if .Values.generator.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.generator.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.generator.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.generator.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: generator
+{{- end }}
+---
+{{- if .Values.pipelineOperator.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "phoenix.fullname" . }}-pipeline-operator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipeline-operator
+spec:
+  {{- if .Values.pipelineOperator.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.pipelineOperator.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.pipelineOperator.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.pipelineOperator.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: pipeline-operator
+{{- end }}
+---
+{{- if .Values.loadsimOperator.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "phoenix.fullname" . }}-loadsim-operator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: loadsim-operator
+spec:
+  {{- if .Values.loadsimOperator.podDisruptionBudget.minAvailable }}
+  minAvailable: {{ .Values.loadsimOperator.podDisruptionBudget.minAvailable }}
+  {{- end }}
+  {{- if .Values.loadsimOperator.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.loadsimOperator.podDisruptionBudget.maxUnavailable }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: loadsim-operator
+{{- end }}

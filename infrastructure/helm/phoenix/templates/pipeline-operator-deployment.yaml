@@ -1,0 +1,96 @@
+{{- if .Values.pipelineOperator.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "phoenix.fullname" . }}-pipeline-operator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: pipeline-operator
+    control-plane: controller-manager
+spec:
+  replicas: {{ .Values.pipelineOperator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "phoenix.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: pipeline-operator
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+        {{- with .Values.pipelineOperator.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "phoenix.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: pipeline-operator
+        control-plane: controller-manager
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "phoenix.pipelineOperatorServiceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.pipelineOperator.podSecurityContext | nindent 8 }}
+      containers:
+        - name: manager
+          securityContext:
+            {{- toYaml .Values.pipelineOperator.securityContext | nindent 12 }}
+          image: "{{ .Values.pipelineOperator.image.repository }}:{{ .Values.pipelineOperator.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.pipelineOperator.image.pullPolicy }}
+          command:
+            - /manager
+          args:
+            - --leader-elect
+            - --metrics-bind-address=:{{ .Values.pipelineOperator.metrics.port }}
+            - --health-probe-bind-address=:{{ .Values.pipelineOperator.health.port }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.pipelineOperator.metrics.port }}
+              protocol: TCP
+            - name: health
+              containerPort: {{ .Values.pipelineOperator.health.port }}
+              protocol: TCP
+          env:
+            - name: WATCH_NAMESPACE
+              value: {{ .Values.pipelineOperator.watchNamespace | default "" | quote }}
+            - name: ENABLE_WEBHOOKS
+              value: {{ .Values.pipelineOperator.webhooks.enabled | quote }}
+            - name: COLLECTOR_IMAGE
+              value: {{ .Values.pipelineOperator.collectorImage }}
+            - name: NEW_RELIC_OTLP_ENDPOINT
+              value: {{ .Values.newrelic.otlpEndpoint }}
+            - name: LOG_LEVEL
+              value: {{ .Values.pipelineOperator.logLevel }}
+            {{- with .Values.pipelineOperator.extraEnvVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.pipelineOperator.resources | nindent 12 }}
+      terminationGracePeriodSeconds: 10
+      {{- with .Values.pipelineOperator.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pipelineOperator.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.pipelineOperator.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

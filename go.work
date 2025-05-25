@@ -1,10 +1,7 @@
 go 1.21
 
 use (
+	./packages/go-common
 	./pkg
-	./projects/analytics
-	./projects/anomaly-detector
-	./projects/benchmark
-	./projects/control-actuator-go
 	./projects/platform-api
 )

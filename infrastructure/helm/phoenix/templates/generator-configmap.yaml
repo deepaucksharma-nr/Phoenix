@@ -1,0 +1,73 @@
+{{- if .Values.generator.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "phoenix.fullname" . }}-generator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: generator
+data:
+  config.yaml: |
+    server:
+      grpc_port: {{ .Values.generator.service.grpcPort }}
+      metrics_port: {{ .Values.generator.service.metricsPort }}
+    
+    log:
+      level: {{ .Values.generator.logLevel }}
+      format: json
+    
+    git:
+      branch: {{ .Values.generator.git.branch }}
+      author_name: {{ .Values.generator.git.authorName }}
+      author_email: {{ .Values.generator.git.authorEmail }}
+      commit_message_prefix: "[Phoenix] "
+    
+    pipeline:
+      catalog_path: {{ .Values.generator.pipelineCatalogPath }}
+      default_memory_limit: {{ .Values.generator.defaultMemoryLimit }}
+      default_batch_size: {{ .Values.generator.defaultBatchSize }}
+      default_timeout: {{ .Values.generator.defaultTimeout }}
+    
+    templates:
+      collector_daemonset: |
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata:
+          name: otel-collector-{{ "{{.Name}}" }}
+          namespace: {{ .Values.namespace }}
+        spec:
+          selector:
+            matchLabels:
+              app: otel-collector-{{ "{{.Name}}" }}
+          template:
+            metadata:
+              labels:
+                app: otel-collector-{{ "{{.Name}}" }}
+            spec:
+              serviceAccountName: otel-collector
+              containers:
+              - name: otel-collector
+                image: otel/opentelemetry-collector-contrib:0.91.0
+                args: ["--config=/etc/otel-collector-config.yaml"]
+                resources:
+                  limits:
+                    memory: 500Mi
+                    cpu: 200m
+                  requests:
+                    memory: 200Mi
+                    cpu: 100m
+                volumeMounts:
+                - name: config
+                  mountPath: /etc/otel-collector-config.yaml
+                  subPath: otel-collector-config.yaml
+                env:
+                - name: NEW_RELIC_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ "{{.SecretName}}" }}
+                      key: apiKey
+              volumes:
+              - name: config
+                configMap:
+                  name: otel-collector-config-{{ "{{.Name}}" }}
+{{- end }}

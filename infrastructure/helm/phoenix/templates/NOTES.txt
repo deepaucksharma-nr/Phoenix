@@ -1,0 +1,69 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.api.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "phoenix.fullname" . }}-api)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.api.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "phoenix.fullname" . }}-api'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "phoenix.fullname" . }}-api --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.api.service.port }}
+{{- else if contains "ClusterIP" .Values.api.service.type }}
+  echo "Access the API:"
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "phoenix.fullname" . }}-api 8080:{{ .Values.api.service.port }} &
+  echo "Visit http://127.0.0.1:8080 to use the API"
+  
+  echo "Access the Dashboard:"
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "phoenix.fullname" . }}-dashboard 3000:{{ .Values.dashboard.service.port }} &
+  echo "Visit http://127.0.0.1:3000 to use the Dashboard"
+{{- end }}
+
+2. Monitor the deployment:
+   kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "phoenix.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. Check operator status:
+   kubectl get phoenixprocesspipelines --all-namespaces
+   kubectl get loadsimulationjobs --all-namespaces
+
+4. View logs:
+   # API logs
+   kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/component=api" -f
+   
+   # Pipeline operator logs
+   kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/component=pipeline-operator" -f
+   
+   # LoadSim operator logs
+   kubectl logs --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/component=loadsim-operator" -f
+
+{{- if .Values.monitoring.enabled }}
+5. Access monitoring dashboards:
+   # Prometheus
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ .Release.Name }}-prometheus-server 9090:80 &
+   echo "Visit http://127.0.0.1:9090"
+   
+   # Grafana
+   kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ .Release.Name }}-grafana 3001:80 &
+   echo "Visit http://127.0.0.1:3001"
+   echo "Default credentials - Username: admin, Password: $(kubectl get secret --namespace {{ .Release.Namespace }} {{ .Release.Name }}-grafana -o jsonpath="{.data.admin-password}" | base64 -d)"
+{{- end }}
+
+6. Configure New Relic API key:
+   kubectl create secret generic {{ include "phoenix.newrelic.secretName" . }} \
+     --namespace {{ .Release.Namespace }} \
+     --from-literal=api-key=YOUR_NEW_RELIC_API_KEY
+
+{{- if .Values.generator.enabled }}
+7. Configure Git credentials for Config Generator:
+   kubectl create secret generic {{ .Values.generator.git.secretName }} \
+     --namespace {{ .Release.Namespace }} \
+     --from-literal=repo-url=YOUR_GIT_REPO_URL \
+     --from-literal=token=YOUR_GIT_TOKEN
+{{- end }}
+
+For more information, visit: https://github.com/newrelic/phoenix
