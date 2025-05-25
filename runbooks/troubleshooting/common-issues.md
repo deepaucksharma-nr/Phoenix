@@ -393,7 +393,7 @@ kubectl -n phoenix-vnext delete pods --all
 
 # Reset to defaults
 kubectl -n phoenix-vnext delete configmap --all
-kubectl apply -k k8s/base/
+docker-compose up -d
 
 # Backup before changes
 kubectl -n phoenix-vnext get all,cm,secret -o yaml > backup.yaml

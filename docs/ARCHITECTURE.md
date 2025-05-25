@@ -432,14 +432,13 @@ Prometheus + Rules
 docker-compose up -d
 ```
 
-### Production (Kubernetes)
+### Production (Docker Compose)
 ```bash
-helm install phoenix ./helm/phoenix \
-  --set-file config=configs/production.yaml
+docker-compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d
 ```
 
 ### Cloud-Native (AWS/Azure)
-- EKS/AKS deployment ready
+- ECS/ACI deployment ready
 - Terraform modules included
 - Auto-scaling configurations
 - Multi-region support

@@ -232,7 +232,7 @@ languages:
   scripts: Python           # Data processing
 
 infrastructure:
-  orchestration: Kubernetes
+  orchestration: Docker Compose
   service-mesh: Istio
   storage: VictoriaMetrics  # Better than Prometheus
   streaming: Kafka

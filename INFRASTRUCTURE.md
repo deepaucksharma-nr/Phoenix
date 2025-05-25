@@ -120,88 +120,75 @@ docker-compose -f docker-compose.yaml -f docker-compose.dev.yml up -d
 - **Managed Disks**: Premium storage
 - **RBAC**: Azure AD integration
 
-## 🚀 Kubernetes Deployment
+## ☁️ Cloud Container Deployment
 
-### Using Kustomize
+### AWS ECS Deployment
 
 ```bash
-# Deploy to AWS overlay
-kubectl apply -k infrastructure/k8s/overlays/aws
+# Deploy to AWS ECS using Docker context
+./scripts/deploy.sh aws --environment production
 
-# Deploy to Azure overlay
-kubectl apply -k infrastructure/k8s/overlays/azure
+# Create AWS Docker context manually
+docker context create ecs aws-phoenix --region us-west-2
+docker context use aws-phoenix
+docker compose up --detach
 
-# Deploy base configuration
-kubectl apply -k infrastructure/k8s/base
+# Switch back to local context
+docker context use default
 ```
 
-### Using Helm
+### Azure Container Instances
 
 ```bash
-# Install with default values
-helm install phoenix-vnext infrastructure/helm/phoenix
+# Deploy to Azure ACI using Docker context
+./scripts/deploy.sh azure --environment production
 
-# Install with custom values
-helm install phoenix-vnext infrastructure/helm/phoenix \
-  --set global.cloudProvider=aws \
-  --set global.environment=production \
-  --set monitoring.enabled=true
+# Create Azure Docker context manually
+docker context create aci azure-phoenix --resource-group phoenix-rg --location eastus
+docker context use azure-phoenix
+docker compose up --detach
 
-# Using unified script
-./scripts/deploy.sh k8s --namespace phoenix-prod
+# Switch back to local context
+docker context use default
 ```
 
-### Kubernetes Architecture
+### Cloud Architecture
 
-#### Namespaces
-- **phoenix-system**: Main application services
-- **phoenix-monitoring**: Prometheus and Grafana
+#### AWS Components
+- **ECS Service**: Container orchestration
+- **Application Load Balancer**: Traffic distribution
+- **CloudWatch**: Logging and monitoring
+- **EFS**: Persistent storage for data
 
-#### Service Accounts
-- **phoenix-collector**: RBAC for metrics collection
-- **phoenix-control**: Control plane operations
+#### Azure Components
+- **Container Instances**: Container hosting
+- **Application Gateway**: Load balancing
+- **Azure Monitor**: Logging and metrics
+- **Azure Files**: Persistent storage
 
-#### Storage
-- **Prometheus**: 50Gi persistent storage
-- **Grafana**: 10Gi persistent storage
-- **Cloud-specific storage classes** (gp3-csi for AWS, managed-csi for Azure)
+## 🔧 Infrastructure as Code
 
-## 🔧 Terraform Modules
+### Docker Compose Based Deployment
 
-### Module Structure
+Phoenix-vNext uses Docker Compose as the primary deployment method, providing:
+- **Simplified deployment**: Single command deployment across environments
+- **Portable configurations**: Same compose files work locally and in cloud
+- **Cloud integration**: Docker contexts for AWS ECS and Azure ACI
+- **Environment isolation**: Override files for different environments
 
-#### phoenix-base
-- Kubernetes namespaces and RBAC
-- Service accounts
-- ConfigMaps and Secrets
-- Persistent Volume Claims
-
-#### aws-phoenix
-- VPC and networking
-- EKS cluster and node groups
-- ECR repositories
-- IAM roles and policies
-
-#### azure-phoenix (planned)
-- VNET and networking
-- AKS cluster and node pools
-- ACR registry
-- Azure AD integration
-
-### Usage
+### Cloud Context Management
 
 ```bash
-# AWS deployment
-cd infrastructure/terraform/environments/aws
-terraform init
-terraform plan -var="environment=production"
-terraform apply -var="environment=production"
+# AWS ECS context
+docker context create ecs aws-phoenix --region us-west-2
+docker context use aws-phoenix
 
-# Azure deployment
-cd infrastructure/terraform/environments/azure
-terraform init
-terraform plan -var="environment=production"
-terraform apply -var="environment=production"
+# Azure ACI context  
+docker context create aci azure-phoenix --resource-group phoenix-rg --location eastus
+docker context use azure-phoenix
+
+# Switch back to local
+docker context use default
 ```
 
 ## 📊 Monitoring Configuration

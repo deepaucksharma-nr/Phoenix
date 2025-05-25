@@ -18,7 +18,7 @@ Phoenix-vNext is a production-ready, adaptive cardinality optimization system fo
 - **Go-Based Adaptive Control**: PID controller with hysteresis and stability management
 - **Real-time Anomaly Detection**: Multi-algorithm detection with automatic remediation
 - **Automated Benchmarking**: Performance validation with CI/CD integration
-- **Cloud-Native**: Support for AWS EKS and Azure AKS deployment
+- **Cloud-Native**: Support for AWS ECS and Azure ACI deployment
 - **Enterprise Observability**: New Relic integration with cost optimization
 
 ### Performance Metrics
@@ -389,18 +389,17 @@ cd ../../../..
 ./infrastructure/scripts/deploy-azure.sh
 ```
 
-### Kubernetes Manifests
+### Container Deployment
 
 ```bash
-# Using Helm
-helm install phoenix ./infrastructure/kubernetes/helm/phoenix \
-  --namespace phoenix \
-  --create-namespace \
-  --values ./infrastructure/kubernetes/helm/phoenix/values.yaml
+# Using Docker Compose for local development
+docker-compose up -d
 
-# Using kubectl
-kubectl create namespace phoenix
-kubectl apply -f ./infrastructure/kubernetes/
+# Using Docker contexts for cloud deployment
+docker context create ecs aws-ecs
+docker context create aci azure-aci
+docker context use aws-ecs
+docker-compose up -d
 ```
 
 ## 💻 Development

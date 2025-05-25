@@ -669,20 +669,16 @@ sha256sum configs/otel/collectors/*.yaml configs/control/*template.yaml > CHECKS
 
 ### Cloud Deployment
 ```bash
-# AWS EKS deployment
+# AWS ECS deployment
 ./deploy-aws.sh
 
-# Azure AKS deployment  
+# Azure Container Instances deployment  
 ./deploy-azure.sh
 
-# Helm deployment
-helm install phoenix ./infrastructure/helm/phoenix \
-  --namespace phoenix \
-  --values ./infrastructure/helm/phoenix/values.yaml
-
-# Terraform deployment
-cd infrastructure/terraform/environments/aws
-terraform init && terraform apply
+# Docker context deployment
+docker context create ecs aws-phoenix --region us-west-2
+docker context use aws-phoenix
+docker compose up --detach
 ```
 
 ## Configuration Architecture
@@ -834,7 +830,7 @@ go build -o control-actuator
 - **`apps/`**: Go-based microservices (control-actuator, anomaly-detector)
 - **`services/`**: Service implementations with Dockerfiles
 - **`configs/`**: Technology-grouped configurations (otel, monitoring, control)
-- **`infrastructure/`**: Cloud deployment (Terraform, Helm, K8s manifests)
+- **`infrastructure/`**: Cloud deployment configuration (Docker contexts)
 - **`packages/`**: Shared packages (managed by npm workspaces)
 - **`scripts/`**: Operational utilities and environment setup
 - **`tests/`**: Integration and performance tests

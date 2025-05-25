@@ -240,4 +240,4 @@ curl -s "http://prometheus:9090/api/v1/query?query=prometheus_tsdb_sample_append
 ## References
 - [OTel Collector Performance](https://github.com/open-telemetry/opentelemetry-collector/blob/main/docs/performance.md)
 - [Memory Limiter Processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/memorylimiterprocessor)
-- [Kubernetes Resource Management](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+- [Docker Resource Management](https://docs.docker.com/config/containers/resource_constraints/)

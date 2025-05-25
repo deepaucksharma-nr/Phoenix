@@ -10,7 +10,7 @@ Phoenix-vNext is an advanced, production-ready implementation of a multi-pipelin
 - **Anomaly Detection**: Multi-algorithm anomaly detection system with automatic remediation
 - **Benchmark Controller**: Automated performance validation and regression testing
 - **CI/CD Integration**: Complete GitHub Actions pipeline with security scanning
-- **Cloud Deployment**: Support for AWS EKS and Azure AKS deployment
+- **Cloud Deployment**: Support for AWS ECS and Azure ACI deployment
 - **New Relic Integration**: Enhanced observability with New Relic OTLP export
 
 ## Quick Start
@@ -191,11 +191,11 @@ GitHub Actions workflow (`.github/workflows/ci.yml`):
 3. **Integration**: Full stack testing with synthetic load
 4. **Performance**: Automated benchmark validation
 5. **Security**: Trivy, Gosec, OWASP dependency scanning
-6. **Deployment**: Automated deployment to K8s clusters
+6. **Deployment**: Automated deployment to container platforms
 
 ## Cloud Deployment
 
-### AWS EKS
+### AWS ECS
 
 ```bash
 cd infrastructure/terraform/environments/aws
@@ -204,7 +204,7 @@ terraform apply
 ../../../scripts/deploy-aws.sh
 ```
 
-### Azure AKS
+### Azure ACI
 
 ```bash
 cd infrastructure/terraform/environments/azure

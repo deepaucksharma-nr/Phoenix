@@ -2,7 +2,7 @@
 
 ## Overview
 
-Phoenix can be deployed to major cloud providers (AWS, Azure, GCP) using Kubernetes. This guide covers deployment to AWS EKS and Azure AKS with full production configurations.
+Phoenix can be deployed to major cloud providers (AWS, Azure) using container services. This guide covers deployment to AWS ECS and Azure Container Instances with full production configurations.
 
 ## Table of Contents
 
@@ -19,14 +19,13 @@ Phoenix can be deployed to major cloud providers (AWS, Azure, GCP) using Kuberne
 ### Required Tools
 - **Cloud CLI**: AWS CLI or Azure CLI
 - **Terraform**: >= 1.3.0
-- **kubectl**: >= 1.25.0
-- **Helm**: >= 3.10.0
-- **Docker**: For building custom images
+- **Docker**: For building and managing containers
+- **Docker Context**: For cloud deployments
 
 ### Cloud Permissions
 Ensure you have sufficient permissions to create:
 - VPCs/VNets and subnets
-- Kubernetes clusters
+- Container instances and services
 - Load balancers
 - Storage accounts/S3 buckets
 - IAM roles and policies
@@ -37,7 +36,7 @@ Ensure you have sufficient permissions to create:
 ```bash
 # Set environment variables
 export AWS_REGION=us-east-1
-export CLUSTER_NAME=phoenix-eks
+export CLUSTER_NAME=phoenix-ecs
 export ENVIRONMENT=dev
 
 # Deploy Phoenix to AWS
@@ -66,7 +65,7 @@ export ENVIRONMENT=dev
 │  │  │  Private     │  │  Private    │  │  Private    │ │   │
 │  │  │  Subnet 1    │  │  Subnet 2   │  │  Subnet 3   │ │   │
 │  │  │              │  │             │  │             │ │   │
-│  │  │  EKS Nodes   │  │  EKS Nodes  │  │  EKS Nodes  │ │   │
+│  │  │  ECS Tasks   │  │  ECS Tasks  │  │  ECS Tasks  │ │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘ │   │
 │  └─────────────────────────────────────────────────────┘   │
 │                                                             │
@@ -84,12 +83,12 @@ export ENVIRONMENT=dev
    - Cross-zone load balancing
    - Static IP addresses available
 
-2. **EBS CSI Driver**
+2. **EBS Storage**
    - GP3 volumes for better performance
    - Automatic volume expansion
    - Snapshot support
 
-3. **IRSA (IAM Roles for Service Accounts)**
+3. **IAM Task Roles**
    - Fine-grained permissions
    - No credential management
    - Automatic rotation
@@ -105,18 +104,18 @@ export ENVIRONMENT=dev
 # terraform.tfvars for production
 aws_region = "us-east-1"
 environment = "prod"
-cluster_name = "phoenix-eks-prod"
+cluster_name = "phoenix-ecs-prod"
 
 # High availability across 3 AZs
 private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 public_subnet_cidrs = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
-# Production node configuration
-node_instance_types = ["m5.xlarge", "m5.2xlarge"]
-node_capacity_type = "ON_DEMAND"
-node_group_min_size = 3
-node_group_max_size = 20
-node_group_desired_size = 6
+# Production task configuration
+task_instance_types = ["m5.xlarge", "m5.2xlarge"]
+task_capacity_type = "ON_DEMAND"
+task_min_count = 3
+task_max_count = 20
+task_desired_count = 6
 
 # Enable all monitoring
 enable_monitoring = true
@@ -129,7 +128,7 @@ enable_monitoring = true
 # Set environment variables
 export AZURE_LOCATION=eastus
 export RESOURCE_GROUP=phoenix-vnext-rg
-export CLUSTER_NAME=phoenix-aks
+export CLUSTER_NAME=phoenix-aci
 export ENVIRONMENT=dev
 
 # Deploy Phoenix to Azure
@@ -149,10 +148,10 @@ export ENVIRONMENT=dev
 │  │  │          Virtual Network (10.0.0.0/16)      │    │   │
 │  │  ├─────────────────────────────────────────────┤    │   │
 │  │  │  ┌─────────────────┐  ┌─────────────────┐  │    │   │
-│  │  │  │   AKS Subnet    │  │ Ingress Subnet  │  │    │   │
+│  │  │  │   ACI Subnet    │  │ Ingress Subnet  │  │    │   │
 │  │  │  │   10.0.1.0/24   │  │  10.0.2.0/24    │  │    │   │
 │  │  │  │                 │  │                 │  │    │   │
-│  │  │  │   AKS Nodes     │  │  Load Balancer  │  │    │   │
+│  │  │  │  ACI Containers │  │  Load Balancer  │  │    │   │
 │  │  │  └─────────────────┘  └─────────────────┘  │    │   │
 │  │  └─────────────────────────────────────────────┘    │   │
 │  │                                                      │   │
@@ -162,10 +161,10 @@ export ENVIRONMENT=dev
 │  │  └──────────────┘  └──────────────┘  └──────────┘  │   │
 │  │                                                      │   │
 │  │  ┌─────────────────────────────────────────────┐    │   │
-│  │  │          AKS Cluster (phoenix-aks)          │    │   │
+│  │  │          ACI Container Group                │    │   │
 │  │  │  ┌────────────┐  ┌────────────┐            │    │   │
 │  │  │  │  General   │  │ Monitoring │            │    │   │
-│  │  │  │ Node Pool  │  │ Node Pool  │            │    │   │
+│  │  │  │ Containers │  │ Containers │            │    │   │
 │  │  │  └────────────┘  └────────────┘            │    │   │
 │  │  └─────────────────────────────────────────────┘    │   │
 │  └─────────────────────────────────────────────────────┘   │
@@ -179,13 +178,13 @@ export ENVIRONMENT=dev
    - Health probes for reliability
    - Azure Private Link support
 
-2. **Azure Files CSI Driver**
+2. **Azure Files Storage**
    - Shared storage for control signals
    - Premium and Standard tiers
    - SMB and NFS support
 
-3. **Workload Identity**
-   - Managed identity for pods
+3. **Managed Identity**
+   - Managed identity for containers
    - Azure RBAC integration
    - Key Vault access
 
@@ -200,78 +199,67 @@ export ENVIRONMENT=dev
 # terraform.tfvars for production
 azure_location = "eastus"
 environment = "prod"
-cluster_name = "phoenix-aks-prod"
+cluster_name = "phoenix-aci-prod"
 
-# Production node configuration
-node_vm_size = "Standard_D8s_v3"
-node_count = 6
-node_min_count = 3
-node_max_count = 20
+# Production container configuration
+container_vm_size = "Standard_D8s_v3"
+container_count = 6
+container_min_count = 3
+container_max_count = 20
 
-# Enable monitoring pool
-enable_monitoring_pool = true
+# Enable monitoring containers
+enable_monitoring_containers = true
 
 # Azure AD integration
-aks_admin_group_ids = ["your-aad-group-id"]
+aci_admin_group_ids = ["your-aad-group-id"]
 ```
 
 ## Configuration Options
 
-### Helm Values Override
+### Docker Compose Override
 
-Create a custom values file for your deployment:
+Create a custom override file for your deployment:
 
 ```yaml
-# custom-values.yaml
-global:
-  cloudProvider: aws  # or azure
-  domain: your-domain.com
-
-collector:
-  replicas: 5
-  resources:
-    requests:
-      memory: "1Gi"
-      cpu: "1000m"
-    limits:
-      memory: "4Gi"
-      cpu: "4000m"
+# docker-compose.override.yaml
+version: '3.8'
+services:
+  otelcol-main:
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          memory: 4G
+          cpus: '4'
+        reservations:
+          memory: 1G
+          cpus: '1'
   
-  autoscaling:
-    enabled: true
-    minReplicas: 5
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
+  prometheus:
+    command:
+      - '--storage.tsdb.retention.time=90d'
+      - '--storage.tsdb.path=/prometheus'
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    volumes:
+      - prometheus-data:/prometheus:rw
 
-storage:
-  controlSignals:
-    size: 10Gi
-  benchmarkData:
-    size: 100Gi
+  grafana:
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=your-secure-password
+      - GF_SERVER_DOMAIN=grafana.your-domain.com
 
-prometheus:
-  server:
-    retention: "90d"
-    persistentVolume:
-      size: 500Gi
-
-grafana:
-  adminPassword: "your-secure-password"
-  ingress:
-    enabled: true
-    hosts:
-      - grafana.your-domain.com
-    tls:
-      - secretName: grafana-tls
-        hosts:
-          - grafana.your-domain.com
+volumes:
+  prometheus-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /data/prometheus
+      o: bind
 ```
 
-Deploy with custom values:
+Deploy with custom configuration:
 ```bash
-helm upgrade --install phoenix ./infrastructure/helm/phoenix \
-  --namespace phoenix-system \
-  --values custom-values.yaml
+docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
 ```
 
 ### Environment Variables
@@ -282,7 +270,7 @@ Key environment variables for cloud deployments:
 # AWS
 export AWS_REGION=us-east-1
 export AWS_PROFILE=production
-export CLUSTER_NAME=phoenix-eks-prod
+export CLUSTER_NAME=phoenix-ecs-prod
 
 # Azure
 export AZURE_SUBSCRIPTION_ID=your-subscription-id
@@ -301,43 +289,43 @@ export ENABLE_BACKUPS=true
 
 #### AWS
 ```bash
-# Port forward to access locally
-kubectl port-forward -n phoenix-system svc/phoenix-grafana 3000:80
+# Access via Load Balancer
+aws elbv2 describe-load-balancers --names phoenix-nlb
 
-# Get Load Balancer URL
-kubectl get svc phoenix-collector -n phoenix-system
+# Get service endpoints
+docker context use aws-ecs
+docker ps
 ```
 
 #### Azure
 ```bash
-# Get Ingress IP
-kubectl get svc -n ingress-nginx ingress-nginx-controller
+# Get Container Group IP
+az container show --resource-group phoenix-rg --name phoenix-containers --query ipAddress.ip
 
-# Access via domain
-open http://phoenix.<INGRESS_IP>.nip.io
+# Access via public IP
+open http://<CONTAINER_IP>:3000
 ```
 
 ### Operational Tasks
 
 #### Scaling
 ```bash
-# Scale collector replicas
-kubectl scale deployment phoenix-collector -n phoenix-system --replicas=10
+# Scale collector instances (AWS)
+aws ecs update-service --cluster phoenix-ecs --service phoenix-collector --desired-count 10
 
-# Enable autoscaling
-kubectl autoscale deployment phoenix-collector -n phoenix-system \
-  --min=3 --max=20 --cpu-percent=80
+# Scale container group (Azure)
+az container-instances update --resource-group phoenix-rg --name phoenix-containers --cpu 4 --memory 8
 ```
 
 #### Backup Control Signals
 ```bash
 # AWS - Backup to S3
-kubectl exec -n phoenix-system deployment/phoenix-actuator -- \
+docker exec phoenix-actuator \
   aws s3 cp /etc/phoenix/control/optimization_mode.yaml \
   s3://phoenix-backups/control/$(date +%Y%m%d-%H%M%S).yaml
 
 # Azure - Backup to Blob Storage
-kubectl exec -n phoenix-system deployment/phoenix-actuator -- \
+docker exec phoenix-actuator \
   az storage blob upload \
     --account-name $STORAGE_ACCOUNT \
     --container-name backups \
@@ -348,22 +336,22 @@ kubectl exec -n phoenix-system deployment/phoenix-actuator -- \
 ## Cost Optimization
 
 ### AWS Cost Savings
-1. **Use Spot Instances** for non-critical workloads
-2. **Reserved Instances** for production nodes
+1. **Use Spot Instances** for non-critical tasks
+2. **Reserved Capacity** for production workloads
 3. **S3 Lifecycle Policies** for old metrics
-4. **GP3 volumes** instead of GP2
+4. **GP3 volumes** for storage
 5. **Single NAT Gateway** for dev environments
 
 ### Azure Cost Savings
-1. **Reserved Instances** for AKS nodes
-2. **Spot Node Pools** for batch workloads
+1. **Reserved Instances** for container instances
+2. **Spot Instances** for batch workloads
 3. **Standard tier** storage for archives
-4. **Autoscaling** to match demand
+4. **Auto-scaling** to match demand
 5. **Azure Hybrid Benefit** if applicable
 
 ### Resource Recommendations
 
-| Environment | Nodes | Instance Type | Storage | Cost/Month |
+| Environment | Tasks | Instance Type | Storage | Cost/Month |
 |-------------|-------|---------------|---------|------------|
 | Dev | 3 | t3.large / D2s_v3 | 100GB | ~$300 |
 | Staging | 6 | t3.xlarge / D4s_v3 | 500GB | ~$800 |
@@ -373,59 +361,60 @@ kubectl exec -n phoenix-system deployment/phoenix-actuator -- \
 
 ### Common Issues
 
-#### Pods Not Starting
+#### Containers Not Starting
 ```bash
-# Check pod status
-kubectl get pods -n phoenix-system
-kubectl describe pod <pod-name> -n phoenix-system
+# Check container status
+docker ps -a
+docker logs <container-name>
 
-# Check events
-kubectl get events -n phoenix-system --sort-by='.lastTimestamp'
+# Check service logs
+docker-compose logs -f <service-name>
 ```
 
-#### Load Balancer Not Getting IP
+#### Load Balancer Issues
 ```bash
-# AWS - Check service
-kubectl describe svc phoenix-collector -n phoenix-system
+# AWS - Check load balancer
+aws elbv2 describe-load-balancers --names phoenix-nlb
+aws ecs describe-services --cluster phoenix-ecs --services phoenix-collector
 
-# Azure - Check ingress controller
-kubectl get svc -n ingress-nginx
-kubectl logs -n ingress-nginx deployment/ingress-nginx-controller
+# Azure - Check container group
+az container show --resource-group phoenix-rg --name phoenix-containers
 ```
 
 #### Storage Issues
 ```bash
-# Check PVC status
-kubectl get pvc -n phoenix-system
-kubectl describe pvc <pvc-name> -n phoenix-system
+# Check volume mounts
+docker volume ls
+docker volume inspect <volume-name>
 
-# Check storage class
-kubectl get storageclass
+# Check disk space
+df -h
+docker system df
 ```
 
 ### Debug Commands
 
 ```bash
-# Get all Phoenix resources
-kubectl get all -n phoenix-system
+# Get all Phoenix containers
+docker-compose ps
 
 # Check collector logs
-kubectl logs -n phoenix-system -l app.kubernetes.io/name=phoenix-collector
+docker-compose logs -f otelcol-main
 
 # Check control loop
-kubectl logs -n phoenix-system deployment/phoenix-actuator
+docker-compose logs -f control-loop-actuator
 
-# Exec into pod
-kubectl exec -it -n phoenix-system deployment/phoenix-collector -- sh
+# Exec into container
+docker exec -it phoenix-collector sh
 ```
 
 ## Security Best Practices
 
-1. **Network Policies**: Restrict pod-to-pod communication
-2. **RBAC**: Use least-privilege service accounts
+1. **Network Isolation**: Restrict container communication
+2. **IAM Roles**: Use least-privilege access
 3. **Secrets Management**: Use cloud KMS for sensitive data
 4. **Image Scanning**: Scan containers for vulnerabilities
-5. **Audit Logging**: Enable cluster audit logs
+5. **Audit Logging**: Enable container audit logs
 6. **Encryption**: Enable encryption at rest and in transit
 
 ## Disaster Recovery
@@ -438,7 +427,7 @@ kubectl exec -it -n phoenix-system deployment/phoenix-collector -- sh
 
 ### Recovery Procedures
 1. Restore infrastructure with Terraform
-2. Deploy Phoenix with Helm
+2. Deploy Phoenix with Docker Compose
 3. Restore control signals from backup
 4. Import Prometheus snapshots
 5. Verify system functionality

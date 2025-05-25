@@ -39,13 +39,12 @@ Usage: $0 [OPTIONS] TARGET
 
 Targets:
   local     Deploy to local Docker environment
-  aws       Deploy to AWS EKS
-  azure     Deploy to Azure AKS
-  k8s       Deploy to existing Kubernetes cluster
+  aws       Deploy to AWS with Docker Swarm
+  azure     Deploy to Azure with Container Instances
 
 Options:
   -e, --environment ENV     Deployment environment (default: development)
-  -n, --namespace NS        Kubernetes namespace (default: phoenix-system)
+  -n, --network NS          Docker network name (default: phoenix-network)
   -d, --dry-run            Show what would be deployed without executing
   -v, --verbose            Enable verbose output
   -s, --skip-build         Skip building Docker images
@@ -54,13 +53,12 @@ Options:
 
 Examples:
   $0 local                          # Deploy locally with Docker Compose
-  $0 aws -e production             # Deploy to AWS EKS in production
-  $0 k8s -n phoenix-test          # Deploy to existing cluster in custom namespace
+  $0 aws -e production             # Deploy to AWS with Docker Swarm
   $0 azure --dry-run               # Show what would be deployed to Azure
 
 Environment Variables:
-  AWS_REGION                       # AWS region for EKS deployment
-  AZURE_REGION                     # Azure region for AKS deployment
+  AWS_REGION                       # AWS region for deployment
+  AZURE_REGION                     # Azure region for deployment
   PHOENIX_IMAGE_TAG                # Image tag to deploy (default: latest)
   NEW_RELIC_LICENSE_KEY           # New Relic license key (optional)
 
@@ -99,7 +97,7 @@ parse_args() {
                 show_usage
                 exit 0
                 ;;
-            local|aws|azure|k8s)
+            local|aws|azure)
                 DEPLOYMENT_TARGET="$1"
                 shift
                 ;;
@@ -123,19 +121,11 @@ check_prerequisites() {
             ;;
         aws)
             command -v aws >/dev/null 2>&1 || { log_error "AWS CLI is required but not installed"; exit 1; }
-            command -v kubectl >/dev/null 2>&1 || { log_error "kubectl is required but not installed"; exit 1; }
-            command -v helm >/dev/null 2>&1 || { log_error "Helm is required but not installed"; exit 1; }
-            command -v terraform >/dev/null 2>&1 || { log_error "Terraform is required but not installed"; exit 1; }
+            command -v docker >/dev/null 2>&1 || { log_error "Docker is required but not installed"; exit 1; }
             ;;
         azure)
             command -v az >/dev/null 2>&1 || { log_error "Azure CLI is required but not installed"; exit 1; }
-            command -v kubectl >/dev/null 2>&1 || { log_error "kubectl is required but not installed"; exit 1; }
-            command -v helm >/dev/null 2>&1 || { log_error "Helm is required but not installed"; exit 1; }
-            command -v terraform >/dev/null 2>&1 || { log_error "Terraform is required but not installed"; exit 1; }
-            ;;
-        k8s)
-            command -v kubectl >/dev/null 2>&1 || { log_error "kubectl is required but not installed"; exit 1; }
-            command -v helm >/dev/null 2>&1 || { log_error "Helm is required but not installed"; exit 1; }
+            command -v docker >/dev/null 2>&1 || { log_error "Docker is required but not installed"; exit 1; }
             ;;
     esac
     
@@ -222,120 +212,96 @@ deploy_local() {
 
 # Function to deploy to AWS
 deploy_aws() {
-    log_info "Deploying Phoenix to AWS EKS..."
+    log_info "Deploying Phoenix to AWS with Docker Swarm..."
     
     local region="${AWS_REGION:-us-west-2}"
-    local cluster_name="phoenix-${ENVIRONMENT}-eks"
-    
-    cd "$PROJECT_ROOT/infrastructure/terraform/environments/aws"
+    local stack_name="phoenix-${ENVIRONMENT}-stack"
     
     if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would execute Terraform plan"
-        terraform plan -var="environment=$ENVIRONMENT" -var="aws_region=$region"
+        log_info "Dry run - would create AWS CloudFormation stack"
+        log_info "Stack name: $stack_name"
+        log_info "Region: $region"
         return
     fi
     
-    # Initialize Terraform
-    terraform init
+    # Create Docker context for AWS
+    if ! docker context ls | grep -q "aws-phoenix"; then
+        log_info "Creating AWS Docker context..."
+        docker context create ecs aws-phoenix --region "$region"
+    fi
     
-    # Plan and apply
-    log_info "Creating AWS infrastructure..."
-    terraform plan -var="environment=$ENVIRONMENT" -var="aws_region=$region"
+    # Use AWS context
+    docker context use aws-phoenix
+    
+    log_info "Deploying Phoenix stack to AWS..."
     
     if [ "$FORCE" = false ]; then
-        read -p "Continue with deployment? [y/N] " -n 1 -r
+        read -p "Continue with AWS deployment? [y/N] " -n 1 -r
         echo
         [[ ! $REPLY =~ ^[Yy]$ ]] && { log_info "Deployment cancelled"; exit 0; }
     fi
     
-    terraform apply -auto-approve -var="environment=$ENVIRONMENT" -var="aws_region=$region"
+    # Deploy using Docker Compose for AWS ECS
+    docker compose --project-name "$stack_name" up --detach
     
-    # Update kubeconfig
-    aws eks update-kubeconfig --region "$region" --name "$cluster_name"
+    # Switch back to default context
+    docker context use default
     
     log_success "AWS deployment completed"
-    log_info "Cluster: $cluster_name"
+    log_info "Stack: $stack_name"
     log_info "Region: $region"
 }
 
 # Function to deploy to Azure
 deploy_azure() {
-    log_info "Deploying Phoenix to Azure AKS..."
+    log_info "Deploying Phoenix to Azure Container Instances..."
     
     local region="${AZURE_REGION:-eastus}"
-    local cluster_name="phoenix-${ENVIRONMENT}-aks"
     local resource_group="phoenix-${ENVIRONMENT}-rg"
-    
-    cd "$PROJECT_ROOT/infrastructure/terraform/environments/azure"
+    local container_group="phoenix-${ENVIRONMENT}-group"
     
     if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would execute Terraform plan"
-        terraform plan -var="environment=$ENVIRONMENT" -var="azure_region=$region"
+        log_info "Dry run - would create Azure Container Instances"
+        log_info "Resource Group: $resource_group"
+        log_info "Container Group: $container_group"
+        log_info "Region: $region"
         return
     fi
     
-    # Initialize Terraform
-    terraform init
+    # Create resource group if it doesn't exist
+    if ! az group show --name "$resource_group" >/dev/null 2>&1; then
+        log_info "Creating resource group: $resource_group"
+        az group create --name "$resource_group" --location "$region"
+    fi
     
-    # Plan and apply
-    log_info "Creating Azure infrastructure..."
-    terraform plan -var="environment=$ENVIRONMENT" -var="azure_region=$region"
+    # Create Docker context for Azure
+    if ! docker context ls | grep -q "azure-phoenix"; then
+        log_info "Creating Azure Docker context..."
+        docker context create aci azure-phoenix --resource-group "$resource_group" --location "$region"
+    fi
+    
+    # Use Azure context
+    docker context use azure-phoenix
+    
+    log_info "Deploying Phoenix to Azure Container Instances..."
     
     if [ "$FORCE" = false ]; then
-        read -p "Continue with deployment? [y/N] " -n 1 -r
+        read -p "Continue with Azure deployment? [y/N] " -n 1 -r
         echo
         [[ ! $REPLY =~ ^[Yy]$ ]] && { log_info "Deployment cancelled"; exit 0; }
     fi
     
-    terraform apply -auto-approve -var="environment=$ENVIRONMENT" -var="azure_region=$region"
+    # Deploy using Docker Compose for Azure Container Instances
+    docker compose --project-name "$container_group" up --detach
     
-    # Update kubeconfig
-    az aks get-credentials --resource-group "$resource_group" --name "$cluster_name"
+    # Switch back to default context
+    docker context use default
     
     log_success "Azure deployment completed"
-    log_info "Cluster: $cluster_name"
+    log_info "Container Group: $container_group"
     log_info "Resource Group: $resource_group"
 }
 
-# Function to deploy to Kubernetes
-deploy_k8s() {
-    log_info "Deploying Phoenix to Kubernetes cluster..."
-    
-    # Check cluster connectivity
-    if ! kubectl cluster-info >/dev/null 2>&1; then
-        log_error "Cannot connect to Kubernetes cluster"
-        exit 1
-    fi
-    
-    local current_context
-    current_context=$(kubectl config current-context)
-    log_info "Deploying to cluster: $current_context"
-    
-    if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would install Helm chart"
-        helm template phoenix-vnext "$PROJECT_ROOT/infrastructure/helm/phoenix" \
-            --namespace "$NAMESPACE" \
-            --set global.environment="$ENVIRONMENT"
-        return
-    fi
-    
-    # Create namespace if it doesn't exist
-    kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-    
-    # Install or upgrade Phoenix
-    helm upgrade --install phoenix-vnext "$PROJECT_ROOT/infrastructure/helm/phoenix" \
-        --namespace "$NAMESPACE" \
-        --set global.environment="$ENVIRONMENT" \
-        --set global.cloudProvider="kubernetes" \
-        --wait --timeout=10m
-    
-    # Check deployment status
-    kubectl get pods -n "$NAMESPACE"
-    
-    log_success "Kubernetes deployment completed"
-    log_info "Namespace: $NAMESPACE"
-    log_info "Check status: kubectl get pods -n $NAMESPACE"
-}
 
 # Function to show deployment status
 show_status() {
@@ -345,9 +311,8 @@ show_status() {
         local)
             docker-compose ps
             ;;
-        aws|azure|k8s)
-            kubectl get pods -n "$NAMESPACE"
-            kubectl get services -n "$NAMESPACE"
+        aws|azure)
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
             ;;
     esac
 }
@@ -380,9 +345,6 @@ main() {
             ;;
         azure)
             deploy_azure
-            ;;
-        k8s)
-            deploy_k8s
             ;;
         *)
             log_error "Unknown deployment target: $DEPLOYMENT_TARGET"

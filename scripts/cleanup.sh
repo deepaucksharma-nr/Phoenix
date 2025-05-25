@@ -38,13 +38,12 @@ Usage: $0 [OPTIONS] TARGET
 
 Targets:
   local     Clean up local Docker environment
-  aws       Clean up AWS EKS resources
-  azure     Clean up Azure AKS resources
-  k8s       Clean up Kubernetes resources
+  aws       Clean up AWS resources
+  azure     Clean up Azure resources
 
 Options:
   -e, --environment ENV     Environment to clean up (default: development)
-  -n, --namespace NS        Kubernetes namespace (default: phoenix-system)
+  -n, --network NS          Docker network name (default: phoenix-network)
   -d, --dry-run            Show what would be cleaned without executing
   -f, --force              Force cleanup without confirmation
   -k, --keep-data          Keep persistent data volumes
@@ -52,8 +51,7 @@ Options:
 
 Examples:
   $0 local                          # Clean up local Docker environment
-  $0 aws -e production             # Clean up AWS EKS in production
-  $0 k8s -n phoenix-test          # Clean up custom namespace
+  $0 aws -e production             # Clean up AWS resources in production
   $0 azure --dry-run               # Show what would be cleaned in Azure
 
 EOF
@@ -87,7 +85,7 @@ parse_args() {
                 show_usage
                 exit 0
                 ;;
-            local|aws|azure|k8s)
+            local|aws|azure)
                 CLEANUP_TARGET="$1"
                 shift
                 ;;
@@ -153,107 +151,81 @@ cleanup_local() {
 
 # Function to cleanup AWS resources
 cleanup_aws() {
-    log_info "Cleaning up AWS EKS resources..."
+    log_info "Cleaning up AWS resources..."
     
     local region="${AWS_REGION:-us-west-2}"
-    local cluster_name="phoenix-${ENVIRONMENT}-eks"
+    local stack_name="phoenix-${ENVIRONMENT}-stack"
     
     if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would execute Terraform destroy"
-        cd "$PROJECT_ROOT/infrastructure/terraform/environments/aws"
-        terraform plan -destroy -var="environment=$ENVIRONMENT" -var="aws_region=$region"
+        log_info "Dry run - would remove AWS CloudFormation stack"
+        log_info "Stack name: $stack_name"
+        log_info "Region: $region"
         return
     fi
     
-    # First, clean up Helm releases if cluster exists
-    if kubectl cluster-info >/dev/null 2>&1; then
-        log_info "Removing Helm releases..."
-        helm uninstall phoenix-vnext -n "$NAMESPACE" || true
-        helm uninstall aws-load-balancer-controller -n kube-system || true
-        helm uninstall aws-ebs-csi-driver -n kube-system || true
+    # Switch to AWS context if it exists
+    if docker context ls | grep -q "aws-phoenix"; then
+        log_info "Switching to AWS context..."
+        docker context use aws-phoenix
         
-        # Remove namespaces
-        kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
-        kubectl delete namespace phoenix-monitoring --ignore-not-found=true
+        # Stop and remove stack
+        log_info "Removing AWS stack: $stack_name"
+        docker compose --project-name "$stack_name" down --volumes || true
+        
+        # Switch back to default context
+        docker context use default
+        
+        # Remove AWS context
+        docker context rm aws-phoenix --force || true
+    else
+        log_warning "AWS context not found, skipping stack cleanup"
     fi
-    
-    # Destroy infrastructure with Terraform
-    cd "$PROJECT_ROOT/infrastructure/terraform/environments/aws"
-    terraform destroy -auto-approve -var="environment=$ENVIRONMENT" -var="aws_region=$region"
     
     log_success "AWS cleanup completed"
 }
 
 # Function to cleanup Azure resources
 cleanup_azure() {
-    log_info "Cleaning up Azure AKS resources..."
+    log_info "Cleaning up Azure resources..."
     
     local region="${AZURE_REGION:-eastus}"
     local resource_group="phoenix-${ENVIRONMENT}-rg"
+    local container_group="phoenix-${ENVIRONMENT}-group"
     
     if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would execute Terraform destroy"
-        cd "$PROJECT_ROOT/infrastructure/terraform/environments/azure"
-        terraform plan -destroy -var="environment=$ENVIRONMENT" -var="azure_region=$region"
+        log_info "Dry run - would remove Azure Container Instances"
+        log_info "Resource Group: $resource_group"
+        log_info "Container Group: $container_group"
         return
     fi
     
-    # First, clean up Helm releases if cluster exists
-    if kubectl cluster-info >/dev/null 2>&1; then
-        log_info "Removing Helm releases..."
-        helm uninstall phoenix-vnext -n "$NAMESPACE" || true
+    # Switch to Azure context if it exists
+    if docker context ls | grep -q "azure-phoenix"; then
+        log_info "Switching to Azure context..."
+        docker context use azure-phoenix
         
-        # Remove namespaces
-        kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
-        kubectl delete namespace phoenix-monitoring --ignore-not-found=true
+        # Stop and remove container group
+        log_info "Removing Azure container group: $container_group"
+        docker compose --project-name "$container_group" down --volumes || true
+        
+        # Switch back to default context
+        docker context use default
+        
+        # Remove Azure context
+        docker context rm azure-phoenix --force || true
+    else
+        log_warning "Azure context not found, skipping container cleanup"
     fi
     
-    # Destroy infrastructure with Terraform
-    cd "$PROJECT_ROOT/infrastructure/terraform/environments/azure"
-    terraform destroy -auto-approve -var="environment=$ENVIRONMENT" -var="azure_region=$region"
+    # Optionally remove resource group (commented out for safety)
+    # if [ "$KEEP_DATA" = false ]; then
+    #     log_info "Removing resource group: $resource_group"
+    #     az group delete --name "$resource_group" --yes --no-wait || true
+    # fi
     
     log_success "Azure cleanup completed"
 }
 
-# Function to cleanup Kubernetes resources
-cleanup_k8s() {
-    log_info "Cleaning up Kubernetes resources..."
-    
-    if ! kubectl cluster-info >/dev/null 2>&1; then
-        log_error "Cannot connect to Kubernetes cluster"
-        exit 1
-    fi
-    
-    local current_context
-    current_context=$(kubectl config current-context)
-    log_info "Cleaning up from cluster: $current_context"
-    
-    if [ "$DRY_RUN" = true ]; then
-        log_info "Dry run - would execute:"
-        log_info "  helm uninstall phoenix-vnext -n $NAMESPACE"
-        log_info "  kubectl delete namespace $NAMESPACE"
-        return
-    fi
-    
-    # Remove Helm release
-    helm uninstall phoenix-vnext -n "$NAMESPACE" || true
-    
-    # Remove persistent volumes if not keeping data
-    if [ "$KEEP_DATA" = false ]; then
-        log_info "Removing persistent volumes..."
-        kubectl delete pvc --all -n "$NAMESPACE" || true
-    fi
-    
-    # Remove namespace
-    kubectl delete namespace "$NAMESPACE" --ignore-not-found=true
-    
-    # Remove monitoring namespace if it exists and is empty
-    if kubectl get namespace phoenix-monitoring >/dev/null 2>&1; then
-        kubectl delete namespace phoenix-monitoring --ignore-not-found=true || true
-    fi
-    
-    log_success "Kubernetes cleanup completed"
-}
 
 # Function to cleanup configuration files
 cleanup_configs() {
@@ -301,9 +273,6 @@ main() {
             ;;
         azure)
             cleanup_azure
-            ;;
-        k8s)
-            cleanup_k8s
             ;;
         *)
             log_error "Unknown cleanup target: $CLEANUP_TARGET"

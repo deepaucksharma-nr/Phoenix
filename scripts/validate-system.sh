@@ -212,10 +212,8 @@ run_test "Validation script exists and is executable" "[ -x scripts/validate-sys
 # 10. Infrastructure Validation
 echo -e "\n${YELLOW}🏗️ Infrastructure Validation${NC}"
 
-run_test "Terraform AWS module exists" "[ -d infrastructure/terraform/modules/aws-phoenix ]"
-run_test "Terraform environments exist" "[ -d infrastructure/terraform/environments/aws ]"
-run_test "Kubernetes base manifests exist" "[ -d infrastructure/k8s/base ]"
-run_test "Helm chart exists" "[ -d infrastructure/helm/phoenix ]"
+run_test "Infrastructure directory exists" "[ -d infrastructure ]"
+run_test "Docker infrastructure exists" "[ -d infrastructure/docker ]"
 
 # 11. Environment Configuration Validation
 echo -e "\n${YELLOW}🌍 Environment Configuration Validation${NC}"
