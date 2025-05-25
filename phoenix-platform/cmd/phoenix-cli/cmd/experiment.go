@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/phoenix/platform/cmd/phoenix-cli/internal/completion"
 	"github.com/spf13/cobra"
 )
 
