@@ -89,7 +89,7 @@ nav:
     - REST API: api/rest.md
     - gRPC API: api/grpc.md
     - WebSocket API: api/websocket.md
-    - CLI Reference: api/cli.md
+    - CLI Reference: phoenix-platform/docs/CLI_REFERENCE.md
     - API Playground: api/playground.md
     
   - Configuration:
