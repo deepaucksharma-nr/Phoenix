@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/client"
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/config"
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/output"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 

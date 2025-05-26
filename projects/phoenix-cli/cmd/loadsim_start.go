@@ -6,10 +6,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/loadsim-operator/api/v1alpha1"
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/output"
 )
 
@@ -50,30 +48,32 @@ Examples:
 			return fmt.Errorf("invalid experiment ID format: %s (expected: exp-XXXXXXXX)", experimentID)
 		}
 
-		// Create Kubernetes client
-		k8sClient, err := client.GetKubernetesClient()
+		// Get API client configuration
+		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		// Create LoadSimulationJob resource
-		loadSimJob := &phoenixv1alpha1.LoadSimulationJob{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("loadsim-%s", experimentID[4:]), // Remove "exp-" prefix
-				Namespace: "phoenix-system",
-			},
-			Spec: phoenixv1alpha1.LoadSimulationJobSpec{
-				ExperimentID: experimentID,
-				Profile:      loadSimProfile,
-				Duration:     loadSimDuration,
-				ProcessCount: loadSimProcessCount,
-				NodeSelector: loadSimNodeSelector,
-			},
+		if cfg.Token == "" {
+			return fmt.Errorf("not authenticated. Please run 'phoenix auth login' first")
 		}
 
-		// Create the resource
+		// Create API client
+		apiClient := client.NewAPIClient(cfg.APIEndpoint, cfg.Token)
+		loadSimClient := client.NewLoadSimulationClient(apiClient)
+
+		// Create load simulation request
+		req := client.CreateLoadSimulationRequest{
+			ExperimentID: experimentID,
+			Profile:      loadSimProfile,
+			Duration:     loadSimDuration,
+			ProcessCount: loadSimProcessCount,
+			NodeSelector: loadSimNodeSelector,
+		}
+
+		// Create the load simulation
 		ctx := context.Background()
-		createdJob, err := k8sClient.PhoenixV1alpha1().LoadSimulationJobs("phoenix-system").Create(ctx, loadSimJob, metav1.CreateOptions{})
+		loadSim, err := loadSimClient.Start(ctx, req)
 		if err != nil {
 			return fmt.Errorf("failed to create load simulation: %w", err)
 		}
@@ -82,17 +82,17 @@ Examples:
 		output.Success("Load simulation started successfully")
 		
 		data := [][]string{
-			{"Name", createdJob.Name},
-			{"Experiment ID", createdJob.Spec.ExperimentID},
-			{"Profile", createdJob.Spec.Profile},
-			{"Duration", createdJob.Spec.Duration},
-			{"Process Count", fmt.Sprintf("%d", createdJob.Spec.ProcessCount)},
-			{"Status", string(createdJob.Status.Phase)},
+			{"Name", loadSim.Name},
+			{"Experiment ID", loadSim.ExperimentID},
+			{"Profile", loadSim.Profile},
+			{"Duration", loadSim.Duration},
+			{"Process Count", fmt.Sprintf("%d", loadSim.ProcessCount)},
+			{"Status", string(loadSim.Status)},
 		}
 		
 		output.Table([]string{"Field", "Value"}, data)
 		
-		fmt.Fprintf(os.Stdout, "\nMonitor status with: phoenix loadsim status %s\n", createdJob.Name)
+		fmt.Fprintf(os.Stdout, "\nMonitor status with: phoenix loadsim status %s\n", loadSim.Name)
 
 		return nil
 	},

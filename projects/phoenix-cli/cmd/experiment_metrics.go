@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/client"
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/config"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

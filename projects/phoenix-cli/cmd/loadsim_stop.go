@@ -5,9 +5,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/output"
 )
 
@@ -15,7 +14,7 @@ import (
 var loadsimStopCmd = &cobra.Command{
 	Use:   "stop <name>",
 	Short: "Stop a running load simulation",
-	Long: `Stop a running load simulation by deleting its LoadSimulationJob resource.
+	Long: `Stop a running load simulation by name.
 
 This will gracefully terminate all simulated processes and clean up resources.
 
@@ -34,21 +33,29 @@ Examples:
 			name = fmt.Sprintf("loadsim-%s", name[4:])
 		}
 
-		// Create Kubernetes client
-		k8sClient, err := client.GetKubernetesClient()
+		// Get API client configuration
+		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		// Get the current job to show its status
+		if cfg.Token == "" {
+			return fmt.Errorf("not authenticated. Please run 'phoenix auth login' first")
+		}
+
+		// Create API client
+		apiClient := client.NewAPIClient(cfg.APIEndpoint, cfg.Token)
+		loadSimClient := client.NewLoadSimulationClient(apiClient)
+
+		// Get the current status before stopping
 		ctx := context.Background()
-		job, err := k8sClient.PhoenixV1alpha1().LoadSimulationJobs("phoenix-system").Get(ctx, name, metav1.GetOptions{})
+		loadSim, err := loadSimClient.Get(ctx, name)
 		if err != nil {
 			return fmt.Errorf("failed to get load simulation: %w", err)
 		}
 
-		// Delete the LoadSimulationJob
-		err = k8sClient.PhoenixV1alpha1().LoadSimulationJobs("phoenix-system").Delete(ctx, name, metav1.DeleteOptions{})
+		// Stop the load simulation
+		err = loadSimClient.Stop(ctx, name)
 		if err != nil {
 			return fmt.Errorf("failed to stop load simulation: %w", err)
 		}
@@ -56,11 +63,10 @@ Examples:
 		output.Success("Load simulation stop initiated")
 		
 		data := [][]string{
-			{"Name", job.Name},
-			{"Experiment ID", job.Spec.ExperimentID},
-			{"Profile", job.Spec.Profile},
-			{"Previous Status", string(job.Status.Phase)},
-			{"Active Processes", fmt.Sprintf("%d", job.Status.ActiveProcesses)},
+			{"Name", loadSim.Name},
+			{"Experiment ID", loadSim.ExperimentID},
+			{"Profile", loadSim.Profile},
+			{"Previous Status", string(loadSim.Status)},
 		}
 		
 		output.Table([]string{"Field", "Value"}, data)

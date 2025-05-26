@@ -6,9 +6,8 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/output"
 )
 
@@ -34,17 +33,25 @@ Examples:
   phoenix loadsim status loadsim-12345678 --watch`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Create Kubernetes client
-		k8sClient, err := client.GetKubernetesClient()
+		// Get API client configuration
+		cfg, err := config.Load()
 		if err != nil {
-			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+			return fmt.Errorf("failed to load config: %w", err)
 		}
+
+		if cfg.Token == "" {
+			return fmt.Errorf("not authenticated. Please run 'phoenix auth login' first")
+		}
+
+		// Create API client
+		apiClient := client.NewAPIClient(cfg.APIEndpoint, cfg.Token)
+		loadSimClient := client.NewLoadSimulationClient(apiClient)
 
 		ctx := context.Background()
 
 		if len(args) == 0 {
 			// List all load simulations
-			return listLoadSimulations(ctx, k8sClient)
+			return listLoadSimulations(ctx, loadSimClient)
 		}
 
 		// Show specific load simulation
@@ -56,37 +63,40 @@ Examples:
 		}
 
 		if loadSimWatch {
-			return watchLoadSimulation(ctx, k8sClient, name)
+			return watchLoadSimulation(ctx, loadSimClient, name)
 		}
 
-		return showLoadSimulation(ctx, k8sClient, name)
+		return showLoadSimulation(ctx, loadSimClient, name)
 	},
 }
 
-func listLoadSimulations(ctx context.Context, k8sClient client.Interface) error {
-	list, err := k8sClient.PhoenixV1alpha1().LoadSimulationJobs("phoenix-system").List(ctx, metav1.ListOptions{})
+func listLoadSimulations(ctx context.Context, loadSimClient *client.LoadSimulationClient) error {
+	list, err := loadSimClient.List(ctx, "")
 	if err != nil {
 		return fmt.Errorf("failed to list load simulations: %w", err)
 	}
 
-	if len(list.Items) == 0 {
+	if len(list) == 0 {
 		output.Info("No load simulations found")
 		return nil
 	}
 
-	headers := []string{"Name", "Experiment", "Profile", "Duration", "Status", "Active", "Age"}
+	headers := []string{"Name", "Experiment", "Profile", "Duration", "Status", "Started"}
 	var data [][]string
 
-	for _, job := range list.Items {
-		age := time.Since(job.CreationTimestamp.Time).Round(time.Second).String()
+	for _, sim := range list {
+		started := "Not started"
+		if sim.StartTime != nil {
+			started = sim.StartTime.Format("2006-01-02 15:04:05")
+		}
+		
 		data = append(data, []string{
-			job.Name,
-			job.Spec.ExperimentID,
-			job.Spec.Profile,
-			job.Spec.Duration,
-			string(job.Status.Phase),
-			fmt.Sprintf("%d", job.Status.ActiveProcesses),
-			age,
+			sim.Name,
+			sim.ExperimentID,
+			sim.Profile,
+			sim.Duration,
+			string(sim.Status),
+			started,
 		})
 	}
 
@@ -94,57 +104,54 @@ func listLoadSimulations(ctx context.Context, k8sClient client.Interface) error 
 	return nil
 }
 
-func showLoadSimulation(ctx context.Context, k8sClient client.Interface, name string) error {
-	job, err := k8sClient.PhoenixV1alpha1().LoadSimulationJobs("phoenix-system").Get(ctx, name, metav1.GetOptions{})
+func showLoadSimulation(ctx context.Context, loadSimClient *client.LoadSimulationClient, name string) error {
+	sim, err := loadSimClient.Get(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get load simulation: %w", err)
 	}
 
-	output.Success(fmt.Sprintf("Load Simulation: %s", job.Name))
+	output.Success(fmt.Sprintf("Load Simulation: %s", sim.Name))
 	
 	data := [][]string{
-		{"Experiment ID", job.Spec.ExperimentID},
-		{"Profile", job.Spec.Profile},
-		{"Duration", job.Spec.Duration},
-		{"Process Count", fmt.Sprintf("%d", job.Spec.ProcessCount)},
-		{"Status", string(job.Status.Phase)},
-		{"Active Processes", fmt.Sprintf("%d", job.Status.ActiveProcesses)},
-		{"Message", job.Status.Message},
+		{"Experiment ID", sim.ExperimentID},
+		{"Profile", sim.Profile},
+		{"Duration", sim.Duration},
+		{"Process Count", fmt.Sprintf("%d", sim.ProcessCount)},
+		{"Status", string(sim.Status)},
 	}
 
-	if job.Status.StartTime != nil {
-		data = append(data, []string{"Start Time", job.Status.StartTime.Format(time.RFC3339)})
-		elapsed := time.Since(job.Status.StartTime.Time).Round(time.Second)
-		data = append(data, []string{"Elapsed", elapsed.String()})
+	if sim.Message != "" {
+		data = append(data, []string{"Message", sim.Message})
 	}
 
-	if job.Status.CompletionTime != nil {
-		data = append(data, []string{"Completion Time", job.Status.CompletionTime.Format(time.RFC3339)})
-	}
-
-	if len(job.Spec.NodeSelector) > 0 {
-		selectors := ""
-		for k, v := range job.Spec.NodeSelector {
-			if selectors != "" {
-				selectors += ", "
-			}
-			selectors += fmt.Sprintf("%s=%s", k, v)
+	if sim.StartTime != nil {
+		data = append(data, []string{"Start Time", sim.StartTime.Format(time.RFC3339)})
+		if sim.EndTime == nil {
+			elapsed := time.Since(*sim.StartTime).Round(time.Second)
+			data = append(data, []string{"Elapsed", elapsed.String()})
 		}
-		data = append(data, []string{"Node Selectors", selectors})
+	}
+
+	if sim.EndTime != nil {
+		data = append(data, []string{"End Time", sim.EndTime.Format(time.RFC3339)})
+		if sim.StartTime != nil {
+			duration := sim.EndTime.Sub(*sim.StartTime).Round(time.Second)
+			data = append(data, []string{"Total Duration", duration.String()})
+		}
 	}
 
 	output.Table([]string{"Field", "Value"}, data)
 	return nil
 }
 
-func watchLoadSimulation(ctx context.Context, k8sClient client.Interface, name string) error {
+func watchLoadSimulation(ctx context.Context, loadSimClient *client.LoadSimulationClient, name string) error {
 	output.Info(fmt.Sprintf("Watching load simulation %s (press Ctrl+C to stop)...\n", name))
 
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
 	// Show initial status
-	if err := showLoadSimulation(ctx, k8sClient, name); err != nil {
+	if err := showLoadSimulation(ctx, loadSimClient, name); err != nil {
 		return err
 	}
 
@@ -155,7 +162,7 @@ func watchLoadSimulation(ctx context.Context, k8sClient client.Interface, name s
 		case <-ticker.C:
 			fmt.Print("\033[H\033[2J") // Clear screen
 			fmt.Println()
-			if err := showLoadSimulation(ctx, k8sClient, name); err != nil {
+			if err := showLoadSimulation(ctx, loadSimClient, name); err != nil {
 				return err
 			}
 		}
