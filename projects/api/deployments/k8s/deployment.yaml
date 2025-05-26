@@ -5,6 +5,8 @@ metadata:
   labels:
     app.kubernetes.io/name: api
     app.kubernetes.io/part-of: phoenix-platform
+    app.kubernetes.io/component: api
+    app.kubernetes.io/managed-by: kustomize
 spec:
   replicas: 3
   selector:
@@ -14,12 +16,48 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: api
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"
+        prometheus.io/path: "/metrics"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: api
         image: ghcr.io/phoenix/api:latest
         ports:
-        - containerPort: 8080
+        - name: http
+          containerPort: 8080
+        - name: metrics
+          containerPort: 8081
+        securityContext:
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
           name: http
         env:
         - name: ENVIRONMENT

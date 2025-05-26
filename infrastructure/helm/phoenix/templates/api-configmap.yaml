@@ -9,36 +9,52 @@ data:
   config.yaml: |
     server:
       grpc:
-        port: 5050
-        maxConnectionAge: 5m
+        port: {{ .Values.api.grpc.port | default 5050 }}
+        maxConnectionAge: {{ .Values.api.grpc.maxConnectionAge | default "5m" }}
       http:
-        port: 8080
-        readTimeout: 30s
-        writeTimeout: 30s
+        port: {{ .Values.api.service.httpPort | default 8080 }}
+        readTimeout: {{ .Values.api.http.readTimeout | default "30s" }}
+        writeTimeout: {{ .Values.api.http.writeTimeout | default "30s" }}
       metrics:
-        port: 9090
-        path: /metrics
+        port: {{ .Values.api.metrics.port | default 9090 }}
+        path: {{ .Values.api.metrics.path | default "/metrics" }}
     
     database:
-      maxOpenConns: 25
-      maxIdleConns: 5
-      connMaxLifetime: 5m
+      maxOpenConns: {{ .Values.api.database.maxOpenConns | default 25 }}
+      maxIdleConns: {{ .Values.api.database.maxIdleConns | default 5 }}
+      connMaxLifetime: {{ .Values.api.database.connMaxLifetime | default "5m" }}
     
     auth:
-      tokenExpiry: 24h
-      refreshExpiry: 7d
+      {{- if .Values.api.auth.useSecretRef }}
+      jwtSecret: ${JWT_SECRET}
+      {{- else }}
+      jwtSecret: {{ .Values.api.auth.jwtSecret | default "changeme" }}
+      {{- end }}
+      tokenExpiry: {{ .Values.api.auth.tokenExpiry | default "24h" }}
+      refreshExpiry: {{ .Values.api.auth.refreshExpiry | default "7d" }}
     
     eventBus:
-      bufferSize: 1000
-      workers: 10
+      type: {{ .Values.eventBus.type | default "internal" }}
+      bufferSize: {{ .Values.eventBus.bufferSize | default 1000 }}
+      workers: {{ .Values.eventBus.workers | default 10 }}
+      {{- if eq (.Values.eventBus.type | default "internal") "nats" }}
+      nats:
+        url: {{ .Values.eventBus.nats.url | default "nats://nats:4222" }}
+      {{- end }}
     
     experiments:
-      defaultTimeout: 24h
-      maxDuration: 7d
-      reconcileInterval: 1m
+      defaultTimeout: {{ .Values.api.experiments.defaultTimeout | default "24h" }}
+      maxDuration: {{ .Values.api.experiments.maxDuration | default "7d" }}
+      reconcileInterval: {{ .Values.api.experiments.reconcileInterval | default "1m" }}
+      maxConcurrent: {{ .Values.api.experiments.maxConcurrent | default 10 }}
     
     telemetry:
-      serviceName: phoenix-api
-      exportInterval: 10s
+      enabled: {{ .Values.telemetry.enabled | default true }}
+      serviceName: {{ .Values.telemetry.serviceName | default "phoenix-api" }}
+      exportInterval: {{ .Values.telemetry.exportInterval | default "10s" }}
       sampling:
-        probability: 0.1
+        probability: {{ .Values.telemetry.sampling.probability | default 0.1 }}
+      {{- if .Values.telemetry.otel.enabled }}
+      otel:
+        endpoint: {{ .Values.telemetry.otel.endpoint | default "otel-collector:4317" }}
+      {{- end }}
