@@ -1,4 +1,4 @@
-module github.com/phoenix/platform/services/api
+module github.com/phoenix-vnext/platform/services/api
 
 go 1.21
 
@@ -6,8 +6,8 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0
-	github.com/phoenix/platform/packages/contracts v0.0.0
-	github.com/phoenix/platform/packages/go-common v0.0.0
+	github.com/phoenix-vnext/platform/packages/contracts v0.0.0
+	github.com/phoenix-vnext/platform/packages/go-common v0.0.0
 	github.com/prometheus/client_golang v1.19.0
 	go.uber.org/zap v1.26.0
 	google.golang.org/grpc v1.64.0
@@ -30,6 +30,6 @@ require (
 )
 
 replace (
-	github.com/phoenix/platform/packages/contracts => ../../packages/contracts
-	github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+	github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts
+	github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
 )

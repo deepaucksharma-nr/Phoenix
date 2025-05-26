@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { checkAuth } from '@store/slices/authSlice'
 import { Box, CircularProgress, Typography } from '@mui/material'
 
 interface AuthContextType {
@@ -20,13 +21,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
   children, 
   showLoadingScreen = true 
 }) => {
-  const { isAuthenticated, user, loading, error, checkAuth } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const { isAuthenticated, user, loading, error } = useAppSelector(state => state.auth)
   const [isInitialized, setIsInitialized] = useState(false)
 
   useEffect(() => {
     const initAuth = async () => {
       try {
-        await checkAuth()
+        await dispatch(checkAuth())
       } finally {
         setIsInitialized(true)
       }
@@ -35,7 +37,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({
     if (!isInitialized && !loading) {
       initAuth()
     }
-  }, [checkAuth, isInitialized, loading])
+  }, [dispatch, isInitialized, loading])
 
   // Show loading screen during initial authentication check
   if (!isInitialized && showLoadingScreen) {

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { Alert, Snackbar, IconButton } from '@mui/material'
 import { Close, Wifi, WifiOff } from '@mui/icons-material'
 import { useGlobalWebSocket } from '../../hooks/useWebSocket'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector } from '@hooks/redux'
 
 interface WebSocketContextType {
   connected: boolean
@@ -25,7 +25,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({
   autoReconnect = true,
 }) => {
   const { connected, connect, disconnect, subscribe } = useGlobalWebSocket()
-  const { isAuthenticated } = useAuthStore()
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated)
   const [reconnecting, setReconnecting] = useState(false)
   const [lastConnected, setLastConnected] = useState<Date | null>(null)
   const [connectionAttempts, setConnectionAttempts] = useState(0)

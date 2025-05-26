@@ -2,7 +2,7 @@ import React from 'react'
 import { Box, Typography, Button, Alert } from '@mui/material'
 import { Security, ArrowBack } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector } from '@hooks/redux'
 
 interface RoleGuardProps {
   children: React.ReactNode

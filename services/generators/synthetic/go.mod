@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/services/generators/synthetic
+module github.com/phoenix/platform/services/generators/synthetic
 
 go 1.22.3
 

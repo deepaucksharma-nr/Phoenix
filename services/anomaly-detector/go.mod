@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/services/anomaly-detector
+module github.com/phoenix/platform/services/anomaly-detector
 
 go 1.21
 

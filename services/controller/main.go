@@ -17,11 +17,11 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/phoenix/platform/cmd/controller/internal/clients"
-	"github.com/phoenix/platform/cmd/controller/internal/controller"
-	grpcserver "github.com/phoenix/platform/cmd/controller/internal/grpc"
-	"github.com/phoenix/platform/cmd/controller/internal/store"
-	pb "github.com/phoenix/platform/pkg/api/v1"
+	"github.com/phoenix-vnext/platform/cmd/controller/internal/clients"
+	"github.com/phoenix-vnext/platform/cmd/controller/internal/controller"
+	grpcserver "github.com/phoenix-vnext/platform/cmd/controller/internal/grpc"
+	"github.com/phoenix-vnext/platform/cmd/controller/internal/store"
+	pb "github.com/phoenix-vnext/platform/pkg/api/v1"
 )
 
 const (

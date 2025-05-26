@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/services/validator
+module github.com/phoenix/platform/services/validator
 
 go 1.21
 
@@ -26,6 +26,6 @@ require (
 )
 
 replace (
-	github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
-	github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts
+	github.com/phoenix/platform/packages/go-common => ../../packages/go-common
+	github.com/phoenix/platform/packages/contracts => ../../packages/contracts
 )

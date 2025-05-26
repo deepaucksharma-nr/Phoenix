@@ -21,10 +21,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/phoenix/platform/packages/go-common/models"
-	"github.com/phoenix/platform/packages/go-common/store"
-	pb "github.com/phoenix/platform/packages/contracts/proto/v1"
-	"github.com/phoenix/platform/services/api/internal/services"
+	"github.com/phoenix-vnext/platform/packages/go-common/models"
+	"github.com/phoenix-vnext/platform/packages/go-common/store"
+	pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
+	"github.com/phoenix-vnext/platform/services/api/internal/services"
 )
 
 const (
