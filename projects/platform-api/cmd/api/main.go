@@ -15,8 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/packages/go-common/models"
-	"github.com/phoenix-vnext/platform/packages/go-common/store"
+github.com/phoenix-vnext/platform/packages/go-common/store
 	"github.com/phoenix-vnext/platform/projects/platform-api/internal/services"
 )
 
@@ -74,7 +73,7 @@ func main() {
 			r.Post("/", createExperiment(experimentService))
 			r.Get("/{id}", getExperiment(experimentService))
 			r.Delete("/{id}", deleteExperiment(experimentService))
-			r.Put("/{id}/state", updateExperimentState(experimentService))
+			r.Put("/{id}/status", updateExperimentStatus(experimentService))
 		})
 	})
 
@@ -119,12 +118,11 @@ func listExperiments(svc *services.ExperimentService) http.HandlerFunc {
 func createExperiment(svc *services.ExperimentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Name              string   `json:"name"`
-			Description       string   `json:"description"`
-			BaselinePipeline  string   `json:"baseline_pipeline"`
-			CandidatePipeline string   `json:"candidate_pipeline"`
-			TargetNodes       []string `json:"target_nodes"`
-			TrafficPercentage float64  `json:"traffic_percentage"`
+			Name              string            `json:"name"`
+			Description       string            `json:"description"`
+			BaselinePipeline  string            `json:"baseline_pipeline"`
+			CandidatePipeline string            `json:"candidate_pipeline"`
+			TargetNodes       map[string]string `json:"target_nodes"`
 		}
 		
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -133,7 +131,7 @@ func createExperiment(svc *services.ExperimentService) http.HandlerFunc {
 		}
 
 		experiment, err := svc.CreateExperiment(r.Context(), req.Name, req.Description, 
-			req.BaselinePipeline, req.CandidatePipeline, req.TargetNodes, req.TrafficPercentage)
+			req.BaselinePipeline, req.CandidatePipeline, req.TargetNodes)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -169,11 +167,11 @@ func deleteExperiment(svc *services.ExperimentService) http.HandlerFunc {
 	}
 }
 
-func updateExperimentState(svc *services.ExperimentService) http.HandlerFunc {
+func updateExperimentStatus(svc *services.ExperimentService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		var req struct {
-			State string `json:"state"`
+			Status string `json:"status"`
 		}
 		
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -181,8 +179,7 @@ func updateExperimentState(svc *services.ExperimentService) http.HandlerFunc {
 			return
 		}
 
-		state := models.ExperimentState(req.State)
-		if err := svc.UpdateExperimentState(r.Context(), id, state); err != nil {
+		if err := svc.UpdateExperimentStatus(r.Context(), id, req.Status); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

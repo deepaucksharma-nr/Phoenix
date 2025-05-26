@@ -11,7 +11,8 @@ import {
   IconButton,
 } from '@mui/material'
 import { Warning, Close } from '@mui/icons-material'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { logout, checkAuth } from '@store/slices/authSlice'
 import { useNavigate } from 'react-router-dom'
 
 interface SessionTimeoutProps {

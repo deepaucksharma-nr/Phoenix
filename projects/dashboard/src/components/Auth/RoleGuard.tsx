@@ -18,7 +18,7 @@ export const RoleGuard: React.FC<RoleGuardProps> = ({
   showFallback = true,
 }) => {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const user = useAppSelector(state => state.auth.user)
 
   // If user is not logged in, this should be handled by PrivateRoute
   if (!user) {
