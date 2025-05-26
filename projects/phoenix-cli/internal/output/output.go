@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"gopkg.in/yaml.v3"
 )
 
@@ -119,9 +119,39 @@ func PrintSuccess(message string) {
 	fmt.Printf("✅ %s\n", message)
 }
 
+// Success prints a success message (alias for PrintSuccess)
+func Success(message string) {
+	PrintSuccess(message)
+}
+
 // PrintInfo prints an info message
 func PrintInfo(message string) {
 	fmt.Printf("ℹ️  %s\n", message)
+}
+
+// Info prints an info message (alias for PrintInfo)
+func Info(message string) {
+	PrintInfo(message)
+}
+
+// Table prints data in a table format
+func Table(headers []string, data [][]string) {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	
+	// Print headers
+	fmt.Fprintln(w, strings.Join(headers, "\t"))
+	
+	// Print data rows
+	for _, row := range data {
+		fmt.Fprintln(w, strings.Join(row, "\t"))
+	}
+	
+	w.Flush()
+}
+
+// Bold returns text formatted in bold (for terminals that support it)
+func Bold(text string) string {
+	return fmt.Sprintf("\033[1m%s\033[0m", text)
 }
 
 // PrintWarning prints a warning message
