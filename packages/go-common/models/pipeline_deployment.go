@@ -109,3 +109,13 @@ type ListDeploymentsResponse struct {
 	PerPage       int                   `json:"per_page"`
 	NextPageToken string                `json:"next_page_token,omitempty"`
 }
+
+// DeploymentStatus represents the current status of a deployment
+type DeploymentStatus struct {
+	DeploymentID string                `json:"deployment_id"`
+	Status       string                `json:"status"`
+	Phase        string                `json:"phase"`
+	Instances    *DeploymentInstances  `json:"instances,omitempty"`
+	Metrics      *DeploymentMetrics    `json:"metrics,omitempty"`
+	LastUpdated  time.Time             `json:"last_updated"`
+}
