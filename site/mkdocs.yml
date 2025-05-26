@@ -1,0 +1,34 @@
+# Add plugins for interactive examples
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+  - git-revision-date-localized:
+      enable_creation_date: true
+  - social
+
+# Add JavaScript libraries for interactive examples
+extra_javascript:
+  - js/react-live-runner.js
+  - js/playground.js
+  - https://unpkg.com/react@17/umd/react.production.min.js
+  - https://unpkg.com/react-dom@17/umd/react-dom.production.min.js
+  - https://unpkg.com/@babel/standalone/babel.min.js
+  - js/interactive-examples.js
+
+extra_css:
+  - css/interactive-examples.css
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: interactive
+          class: interactive-example
+          format: !!python/name:custom_extensions.interactive_example
+  - admonition
+  - tables
+  - footnotes

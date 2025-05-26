@@ -1,0 +1,113 @@
+/* Interactive Examples Styling */
+
+.interactive-example {
+  margin: 2rem 0;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8f9fa;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.dark-mode .interactive-example {
+  background: #2d333b;
+  border-color: #444c56;
+}
+
+.example-editor {
+  height: 200px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dark-mode .example-editor {
+  border-color: #444c56;
+}
+
+.example-buttons {
+  display: flex;
+  padding: 8px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.dark-mode .example-buttons {
+  background: #373e47;
+  border-color: #444c56;
+}
+
+.example-buttons button {
+  padding: 6px 12px;
+  margin-right: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.run-button {
+  background: #4051b5;
+  color: white;
+}
+
+.run-button:hover {
+  background: #303f9f;
+}
+
+.reset-button {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.reset-button:hover {
+  background: #d0d0d0;
+}
+
+.example-preview {
+  padding: 16px;
+  min-height: 100px;
+  max-height: 300px;
+  overflow: auto;
+  background: white;
+}
+
+.dark-mode .example-preview {
+  background: #22272e;
+  color: #adbac7;
+}
+
+.example-preview .error {
+  color: #d32f2f;
+  padding: 8px;
+  background: #ffebee;
+  border-radius: 4px;
+}
+
+.dark-mode .example-preview .error {
+  background: #442726;
+  color: #f85149;
+}
+
+.example-preview .loading {
+  color: #666;
+  font-style: italic;
+}
+
+.example-preview pre.result {
+  background: #f5f7f9;
+  padding: 12px;
+  border-radius: 4px;
+  overflow: auto;
+  margin: 0;
+}
+
+.dark-mode .example-preview pre.result {
+  background: #272c33;
+}
+
+/* CodeMirror Customization */
+.CodeMirror {
+  height: 100%;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+}
