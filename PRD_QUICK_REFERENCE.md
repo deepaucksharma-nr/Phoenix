@@ -53,7 +53,7 @@ phoenix pipeline delete my-pipeline
 
 2. **Complete Pipeline Deployer Service**
    ```go
-   // /services/api/internal/services/pipeline_deployment_service.go
+   // /projects/platform-api/internal/services/pipeline_deployment_service.go
    // Remove TODO comments and implement CRUD operations
    ```
 

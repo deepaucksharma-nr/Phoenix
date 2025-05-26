@@ -15,7 +15,7 @@ This implementation plan addresses the gaps identified in the PRD Alignment Repo
 
 #### 1. Complete Pipeline Deployer Service
 **Owner**: Control Plane Team  
-**Location**: `/services/api/internal/services/pipeline_deployment_service.go`
+**Location**: `/projects/platform-api/internal/services/pipeline_deployment_service.go`
 
 ```go
 // Required implementations:
