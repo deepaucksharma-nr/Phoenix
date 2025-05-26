@@ -8,7 +8,7 @@ import { CircularProgress, Box } from '@mui/material';
 const Dashboard = lazy(() => import('@pages/Dashboard'));
 const Experiments = lazy(() => import('@pages/Experiments'));
 const ExperimentDetails = lazy(() => import('@pages/ExperimentDetails'));
-const PipelineBuilder = lazy(() => import('@pages/PipelineBuilder'));
+const Pipelines = lazy(() => import('@pages/Pipelines'));
 const DeployedPipelines = lazy(() => import('@pages/DeployedPipelines'));
 const PipelineCatalog = lazy(() => import('@pages/PipelineCatalog'));
 const Analysis = lazy(() => import('@pages/Analysis'));
@@ -107,10 +107,10 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            path: 'pipeline-builder',
+            path: 'pipeline-viewer',
             element: (
               <SuspenseWrapper>
-                <PipelineBuilder />
+                <Pipelines />
               </SuspenseWrapper>
             ),
           },

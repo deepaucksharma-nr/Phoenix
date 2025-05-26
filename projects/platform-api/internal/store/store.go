@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/pkg/common/models"
 )
 
 // PipelineDeploymentStore defines the interface for pipeline deployment storage

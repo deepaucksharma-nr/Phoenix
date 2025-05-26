@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/pkg/common/models"
 )
 
 func TestNewPostgresStore(t *testing.T) {

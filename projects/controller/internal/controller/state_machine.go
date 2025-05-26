@@ -8,7 +8,7 @@ import (
 
 	"go.uber.org/zap"
 	"github.com/phoenix-vnext/platform/projects/controller/internal/clients"
-	"github.com/phoenix-vnext/platform/packages/go-common/analysis"
+	"github.com/phoenix/platform/pkg/common/analysis"
 )
 
 // StateMachine manages experiment state transitions

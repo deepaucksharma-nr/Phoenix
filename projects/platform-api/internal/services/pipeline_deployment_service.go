@@ -6,7 +6,7 @@ import (
 	"time"
 	
 	"github.com/google/uuid"
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/pkg/common/models"
 	"github.com/phoenix/platform/projects/platform-api/internal/store"
 	"go.uber.org/zap"
 )

@@ -9,7 +9,7 @@ import (
 
 	"github.com/lib/pq"
 	_ "github.com/lib/pq" // PostgreSQL driver
-	"github.com/phoenix-vnext/platform/packages/go-common/store"
+	"github.com/phoenix/platform/pkg/common/store"
 	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
 	"go.uber.org/zap"
 )

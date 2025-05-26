@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/pkg/common/models"
 	"github.com/phoenix/platform/projects/platform-api/internal/store"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"

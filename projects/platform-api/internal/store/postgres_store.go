@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 	
-	"github.com/phoenix/platform/packages/go-common/models"
-	commonstore "github.com/phoenix/platform/packages/go-common/store"
+	"github.com/phoenix/platform/pkg/common/models"
+	commonstore "github.com/phoenix/platform/pkg/common/store"
 )
 
 // PostgresPipelineDeploymentStore implements PipelineDeploymentStore using PostgreSQL

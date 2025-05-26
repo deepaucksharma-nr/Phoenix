@@ -16,8 +16,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/phoenix/platform/packages/go-common/models"
-	commonstore "github.com/phoenix/platform/packages/go-common/store"
+	"github.com/phoenix/platform/pkg/common/models"
+	commonstore "github.com/phoenix/platform/pkg/common/store"
 	"github.com/phoenix/platform/projects/platform-api/internal/services"
 	"github.com/phoenix/platform/projects/platform-api/internal/store"
 	ws "github.com/phoenix/platform/projects/platform-api/internal/websocket"

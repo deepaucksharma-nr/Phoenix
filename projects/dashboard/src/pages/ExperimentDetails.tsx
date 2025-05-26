@@ -48,7 +48,7 @@ import {
   promoteVariant,
 } from '@store/slices/experimentSlice'
 import { format, formatDistanceToNow } from 'date-fns'
-import { PipelineViewer } from '../components/PipelineBuilder/PipelineViewer'
+import { PipelineViewer } from '../components/Pipeline/PipelineViewer'
 import { ExperimentMonitor } from '../components/ExperimentMonitor'
 import { useExperimentUpdates } from '../hooks/useExperimentUpdates'
 

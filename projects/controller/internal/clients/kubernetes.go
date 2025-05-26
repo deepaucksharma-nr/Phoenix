@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	// TODO: Move pipeline API types to packages/contracts/k8s/
-	// pipelinev1alpha1 "github.com/phoenix-vnext/platform/packages/contracts/k8s/pipeline/v1alpha1"
+	// pipelinev1alpha1 "github.com/phoenix/platform/pkg/contracts/k8s/pipeline/v1alpha1"
 )
 
 // PipelineDeployment represents a pipeline deployment request
