@@ -3,6 +3,8 @@ package interfaces
 import (
 	"context"
 	"time"
+	
+	"github.com/phoenix/platform/pkg/common/websocket"
 )
 
 // ServiceRegistry provides service discovery capabilities
@@ -292,4 +294,69 @@ type MeshMetrics struct {
 	P50Latency      float64 `json:"p50_latency_ms"`
 	P95Latency      float64 `json:"p95_latency_ms"`
 	P99Latency      float64 `json:"p99_latency_ms"`
+}
+
+// RealtimeService provides real-time updates via WebSocket
+type RealtimeService interface {
+	// GetHub returns the WebSocket hub for managing connections
+	GetHub() *websocket.Hub
+	
+	// SendAgentUpdate broadcasts agent status update
+	SendAgentUpdate(update websocket.AgentStatusUpdate) error
+	
+	// SendExperimentUpdate broadcasts experiment update
+	SendExperimentUpdate(update websocket.ExperimentUpdateEvent) error
+	
+	// SendMetricFlow broadcasts metric flow update
+	SendMetricFlow(update websocket.MetricFlowUpdate) error
+	
+	// SendTaskProgress broadcasts task progress update
+	SendTaskProgress(update websocket.TaskProgressUpdate) error
+	
+	// SendAlert broadcasts an alert
+	SendAlert(alert websocket.AlertEvent) error
+}
+
+// CostCalculator provides real-time cost calculation
+type CostCalculator interface {
+	// CalculateMetricCost calculates cost for a specific metric
+	CalculateMetricCost(metric string, cardinality int64) float64
+	
+	// GetCostBreakdown returns cost breakdown by metric
+	GetCostBreakdown() map[string]float64
+	
+	// GetMetricFlow returns current metric flow data
+	GetMetricFlow() websocket.MetricFlowUpdate
+	
+	// ProjectMonthlySavings projects savings based on current vs optimized
+	ProjectMonthlySavings(current, optimized float64) float64
+}
+
+// AgentRegistry manages agent status and information
+type AgentRegistry interface {
+	// RegisterAgent registers a new agent
+	RegisterAgent(ctx context.Context, agent *Agent) error
+	
+	// UpdateAgentStatus updates agent status
+	UpdateAgentStatus(ctx context.Context, hostID string, status websocket.AgentStatusUpdate) error
+	
+	// GetAgentStatus returns current agent status
+	GetAgentStatus(ctx context.Context, hostID string) (*websocket.AgentStatusUpdate, error)
+	
+	// GetFleetStatus returns status of all agents
+	GetFleetStatus(ctx context.Context) ([]websocket.AgentStatusUpdate, error)
+	
+	// GetAgentsByGroup returns agents in a specific group
+	GetAgentsByGroup(ctx context.Context, group string) ([]websocket.AgentStatusUpdate, error)
+}
+
+// Agent represents a Phoenix agent
+type Agent struct {
+	HostID       string            `json:"host_id"`
+	Hostname     string            `json:"hostname"`
+	Group        string            `json:"group"`
+	Tags         map[string]string `json:"tags"`
+	Capabilities []string          `json:"capabilities"`
+	Version      string            `json:"version"`
+	StartedAt    time.Time         `json:"started_at"`
 }

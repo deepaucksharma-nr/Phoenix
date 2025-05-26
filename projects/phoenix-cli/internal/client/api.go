@@ -12,16 +12,16 @@ import (
 
 // APIClient handles communication with the Phoenix API
 type APIClient struct {
-	baseURL    string
-	token      string
+	BaseURL    string
+	Token      string
 	httpClient *http.Client
 }
 
 // NewAPIClient creates a new API client
 func NewAPIClient(baseURL, token string) *APIClient {
 	return &APIClient{
-		baseURL: baseURL,
-		token:   token,
+		BaseURL: baseURL,
+		Token:   token,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -39,12 +39,12 @@ func (c *APIClient) doRequest(method, path string, body interface{}) (*http.Resp
 		bodyReader = bytes.NewReader(jsonBody)
 	}
 
-	req, err := http.NewRequest(method, c.baseURL+path, bodyReader)
+	req, err := http.NewRequest(method, c.BaseURL+path, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Authorization", "Bearer "+c.Token)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -57,26 +57,62 @@ func (c *APIClient) doRequest(method, path string, body interface{}) (*http.Resp
 	return resp, nil
 }
 
-// parseResponse parses the HTTP response into the provided interface
+// parseResponse parses the HTTP response into the given interface
 func (c *APIClient) parseResponse(resp *http.Response, v interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		var errorResp ErrorResponse
-		if err := json.Unmarshal(body, &errorResp); err == nil && errorResp.Error != "" {
-			return fmt.Errorf("API error: %s", errorResp.Error)
-		}
-		return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+		return c.parseAPIError(resp)
 	}
 
-	if v != nil {
-		if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
-			return fmt.Errorf("failed to decode response: %w", err)
-		}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return fmt.Errorf("failed to parse response: %w", err)
 	}
 
 	return nil
+}
+
+// Login authenticates with the API
+func (c *APIClient) Login(username, password string) (*LoginResponse, error) {
+	req := LoginRequest{
+		Username: username,
+		Password: password,
+	}
+
+	resp, err := c.doRequest("POST", "/api/v1/auth/login", req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, c.parseAPIError(resp)
+	}
+
+	var loginResp LoginResponse
+	if err := json.NewDecoder(resp.Body).Decode(&loginResp); err != nil {
+		return nil, fmt.Errorf("failed to decode login response: %w", err)
+	}
+
+	return &loginResp, nil
+}
+
+// parseAPIError parses an API error response
+func (c *APIClient) parseAPIError(resp *http.Response) error {
+	var errorResp ErrorResponse
+	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
+		return &APIError{
+			StatusCode: resp.StatusCode,
+			Message:    "Unknown error",
+			Details:    fmt.Sprintf("Failed to decode error response: %v", err),
+		}
+	}
+
+	return &APIError{
+		StatusCode: resp.StatusCode,
+		Message:    errorResp.Message,
+		Details:    errorResp.Error,
+	}
 }
 
 // CreateExperiment creates a new experiment
@@ -86,25 +122,25 @@ func (c *APIClient) CreateExperiment(req CreateExperimentRequest) (*Experiment, 
 		return nil, err
 	}
 
-	var result struct {
-		Experiment Experiment `json:"experiment"`
-	}
-	if err := c.parseResponse(resp, &result); err != nil {
+	var experiment Experiment
+	if err := c.parseResponse(resp, &experiment); err != nil {
 		return nil, err
 	}
 
-	return &result.Experiment, nil
+	return &experiment, nil
 }
 
 // ListExperiments lists experiments with optional filters
-func (c *APIClient) ListExperiments(req ListExperimentsRequest) ([]Experiment, error) {
-	// Build query parameters
+func (c *APIClient) ListExperiments(req ListExperimentsRequest) (*ListExperimentsResponse, error) {
 	params := url.Values{}
 	if req.Status != "" {
 		params.Add("status", req.Status)
 	}
 	if req.PageSize > 0 {
 		params.Add("page_size", fmt.Sprintf("%d", req.PageSize))
+	}
+	if req.Page > 0 {
+		params.Add("page", fmt.Sprintf("%d", req.Page))
 	}
 
 	path := "/api/v1/experiments"
@@ -117,14 +153,12 @@ func (c *APIClient) ListExperiments(req ListExperimentsRequest) ([]Experiment, e
 		return nil, err
 	}
 
-	var result struct {
-		Experiments []Experiment `json:"experiments"`
-	}
+	var result ListExperimentsResponse
 	if err := c.parseResponse(resp, &result); err != nil {
 		return nil, err
 	}
 
-	return result.Experiments, nil
+	return &result, nil
 }
 
 // GetExperiment gets a single experiment by ID

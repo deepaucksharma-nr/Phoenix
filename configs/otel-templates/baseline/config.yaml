@@ -1,0 +1,88 @@
+# Baseline OTel Collector Configuration
+# This configuration collects all metrics without any filtering
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  
+  # Collect host metrics
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+      paging:
+      processes:
+  
+  # Prometheus receiver for app metrics
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['localhost:8888']
+
+processors:
+  # Add experiment metadata to all metrics
+  attributes:
+    actions:
+      - key: experiment_id
+        value: ${EXPERIMENT_ID}
+        action: insert
+      - key: variant
+        value: ${VARIANT}
+        action: insert
+      - key: host
+        value: ${HOST_ID}
+        action: insert
+  
+  # Batch metrics for efficiency
+  batch:
+    timeout: ${BATCH_TIMEOUT}
+    send_batch_size: ${BATCH_SIZE}
+  
+  # Add resource detection
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 2s
+    override: false
+
+exporters:
+  # Push to Prometheus Pushgateway
+  prometheusremotewrite:
+    endpoint: ${METRICS_PUSHGATEWAY_URL}/metrics/job/phoenix-baseline/instance/${HOST_ID}
+    external_labels:
+      experiment_id: ${EXPERIMENT_ID}
+      variant: baseline
+    resource_to_telemetry_conversion:
+      enabled: true
+    add_metric_suffixes: false
+  
+  # Debug logging (optional)
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics, prometheus]
+      processors: [attributes, resourcedetection, batch]
+      exporters: [prometheusremotewrite]
+  
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888

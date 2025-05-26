@@ -17,6 +17,7 @@ type Store interface {
 	GetExperiment(ctx context.Context, id string) (*models.Experiment, error)
 	ListExperiments(ctx context.Context, limit, offset int) ([]*models.Experiment, error)
 	UpdateExperiment(ctx context.Context, exp *models.Experiment) error
+	DeleteExperiment(ctx context.Context, id string) error
 	Close() error
 }
 
@@ -45,7 +46,7 @@ func NewPostgresStore(dbURL string) (*PostgresStore, error) {
 	}
 
 	store := &PostgresStore{db: db}
-	
+
 	// Create tables if they don't exist
 	if err := store.createTables(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to create tables: %w", err)
@@ -183,13 +184,16 @@ func (s *PostgresStore) UpdateExperiment(ctx context.Context, exp *models.Experi
 	}
 
 	query := `
-		UPDATE experiments SET 
-			name = $2, description = $3, baseline_pipeline = $4, candidate_pipeline = $5,
-			status = $6, target_nodes = $7, updated_at = $8, started_at = $9, completed_at = $10
+		UPDATE experiments
+		SET name = $2, description = $3, baseline_pipeline = $4, candidate_pipeline = $5,
+		    status = $6, target_nodes = $7, updated_at = $8, started_at = $9, completed_at = $10
 		WHERE id = $1
 	`
 
-	exp.UpdatedAt = time.Now()
+	// Set updated_at if not provided
+	if exp.UpdatedAt.IsZero() {
+		exp.UpdatedAt = time.Now()
+	}
 
 	_, err = s.db.ExecContext(ctx, query,
 		exp.ID, exp.Name, exp.Description, exp.BaselinePipeline, exp.CandidatePipeline,
@@ -197,6 +201,27 @@ func (s *PostgresStore) UpdateExperiment(ctx context.Context, exp *models.Experi
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update experiment: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteExperiment deletes an experiment by ID
+func (s *PostgresStore) DeleteExperiment(ctx context.Context, id string) error {
+	query := `DELETE FROM experiments WHERE id = $1`
+
+	result, err := s.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete experiment: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("experiment not found: %s", id)
 	}
 
 	return nil

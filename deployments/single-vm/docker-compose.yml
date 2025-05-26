@@ -1,0 +1,193 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: phoenix-db
+    environment:
+      POSTGRES_DB: phoenix
+      POSTGRES_USER: phoenix
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U phoenix"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: ${DB_MEMORY_LIMIT:-1g}
+          cpus: '1'
+        reservations:
+          memory: 512m
+
+  # Prometheus Pushgateway
+  pushgateway:
+    image: prom/pushgateway:v1.7.0
+    container_name: phoenix-pushgateway
+    command:
+      - --web.listen-address=:9091
+      - --web.telemetry-path=/metrics
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
+    ports:
+      - "9091:9091"
+    restart: always
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: phoenix-prometheus
+    deploy:
+      resources:
+        limits:
+          memory: ${PROMETHEUS_MEMORY_LIMIT:-2g}
+          cpus: '1.5'
+        reservations:
+          memory: 1g
+          cpus: '0.5'
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/prometheus:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    depends_on:
+      - pushgateway
+    restart: always
+
+  # Phoenix API (monolith with embedded UI)
+  api:
+    image: ghcr.io/phoenix-observability/api:latest
+    container_name: phoenix-api
+    build:
+      context: ../../projects/phoenix-api
+      dockerfile: Dockerfile
+    deploy:
+      resources:
+        limits:
+          memory: ${API_MEMORY_LIMIT:-2g}
+          cpus: '2.0'
+        reservations:
+          memory: 1g
+          cpus: '1.0'
+    environment:
+      # Database
+      DATABASE_URL: "postgres://phoenix:${POSTGRES_PASSWORD}@db:5432/phoenix?sslmode=disable"
+      
+      # Security
+      JWT_SECRET: ${PHX_JWT_SECRET}
+      
+      # Public configuration
+      PUBLIC_URL: ${PHX_PUBLIC_URL}
+      
+      # Metrics configuration
+      PUSHGATEWAY_URL: http://pushgateway:9091
+      PROMETHEUS_URL: http://prometheus:9090
+      
+      # Cost calculation
+      PRICE_PER_SERIES: ${PHX_PRICE_PER_SERIES:-0.00011}
+      
+      # Service ports
+      HTTP_PORT: 8080
+      GRPC_PORT: 6700
+      
+      # Feature flags
+      ENABLE_TLS: ${ENABLE_TLS:-true}
+      ENABLE_METRICS: "true"
+      ENABLE_TRACING: "false"
+      
+      # Agent configuration
+      AGENT_POLL_INTERVAL: "15s"
+      AGENT_HEARTBEAT_TIMEOUT: "60s"
+    volumes:
+      - ./tls:/etc/phoenix/tls:ro
+      - ./data/uploads:/app/uploads
+    ports:
+      - "80:8080"     # HTTP
+      - "443:8443"    # HTTPS
+      - "6700:6700"   # gRPC for agents
+      - "8081:8081"   # WebSocket
+    depends_on:
+      db:
+        condition: service_healthy
+      pushgateway:
+        condition: service_started
+      prometheus:
+        condition: service_started
+    command: >
+      sh -c "
+        if [ -f /etc/phoenix/tls/fullchain.pem ] && [ -f /etc/phoenix/tls/privkey.pem ]; then
+          phoenix-api --tls-cert /etc/phoenix/tls/fullchain.pem --tls-key /etc/phoenix/tls/privkey.pem
+        else
+          echo 'Warning: TLS certificates not found, running in HTTP mode'
+          phoenix-api
+        fi
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # Grafana (optional but recommended)
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: phoenix-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${PHX_PUBLIC_URL}/grafana
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Nginx reverse proxy (optional - for production with proper SSL termination)
+  nginx:
+    image: nginx:alpine
+    container_name: phoenix-nginx
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tls:/etc/nginx/ssl:ro
+      - ./data/nginx/logs:/var/log/nginx
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - api
+      - grafana
+    restart: always
+    profiles:
+      - production
+
+networks:
+  default:
+    name: phoenix-network
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  uploads_data:

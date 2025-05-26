@@ -80,7 +80,7 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 		}
 
 		// Filter by status if specified
-		for _, exp := range experiments {
+		for _, exp := range experiments.Experiments {
 			if statusFilter == "" || exp.Status == statusFilter {
 				// Skip running experiments
 				if exp.Status == "running" || exp.Status == "initializing" {

@@ -1,3 +1,5 @@
+// +build proto
+
 package server
 
 import (

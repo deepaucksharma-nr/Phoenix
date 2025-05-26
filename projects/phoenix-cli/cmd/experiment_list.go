@@ -72,12 +72,12 @@ func runListExperiments(cmd *cobra.Command, args []string) error {
 	}
 
 	// Display results
-	if len(experiments) == 0 {
+	if len(experiments.Experiments) == 0 {
 		fmt.Println("No experiments found.")
 		return nil
 	}
 
-	output.PrintExperimentList(experiments, outputFormat)
+	output.PrintExperimentList(experiments.Experiments, outputFormat)
 
 	return nil
 }

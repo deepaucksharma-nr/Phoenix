@@ -30,9 +30,12 @@ YELLOW := \033[0;33m
 NC := \033[0m # No Color
 
 # Projects
-ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null)
+ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null | grep -v dashboard)
 GO_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/go.mod \; -print 2>/dev/null | xargs -n1 basename)
 NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/package.json \; -print 2>/dev/null | xargs -n1 basename)
+
+# Core Projects
+CORE_PROJECTS := phoenix-api phoenix-agent phoenix-cli dashboard
 
 # Include shared makefiles
 -include $(BUILD_DIR)/makefiles/*.mk
@@ -47,7 +50,7 @@ NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -e
 
 all: validate build test ## Run validate, build, and test
 
-help: ## Display this help message
+help-extended: ## Display extended help message
 	@echo -e "$(CYAN)Phoenix Platform - Monorepo Makefile$(NC)"
 	@echo -e "$(CYAN)=====================================$(NC)"
 	@echo ""
@@ -61,7 +64,7 @@ help: ## Display this help message
 	@echo -e "$(GREEN)Available projects:$(NC)"
 	@for project in $(ALL_PROJECTS); do echo "  - $$project"; done
 
-clean: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
+clean-all: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
 	@echo -e "$(GREEN)✓ All projects cleaned$(NC)"
 
 ##@ Development
@@ -96,7 +99,7 @@ dev-reset: dev-down ## Reset development environment
 
 ##@ Building
 
-build: $(GO_PROJECTS:%=build-%) $(NODE_PROJECTS:%=build-node-%) ## Build all projects
+build: $(ALL_PROJECTS:%=build-%) build-dashboard ## Build all projects
 	@echo -e "$(GREEN)✓ All projects built$(NC)"
 
 build-%: ## Build specific project
@@ -108,6 +111,11 @@ build-node-%: ## Build Node.js project
 	@echo -e "$(CYAN)Building $*...$(NC)"
 	@$(MAKE) -C $(PROJECTS_DIR)/$* build
 	@echo -e "$(GREEN)✓ $* built$(NC)"
+
+build-dashboard: ## Build dashboard
+	@echo -e "$(CYAN)Building dashboard...$(NC)"
+	@cd $(PROJECTS_DIR)/dashboard && npm install && npm run build
+	@echo -e "$(GREEN)✓ dashboard built$(NC)"
 
 build-changed: ## Build only changed projects
 	@echo -e "$(CYAN)Building changed projects...$(NC)"
@@ -187,7 +195,7 @@ docker-%: ## Build Docker image for specific project
 	@$(MAKE) -C $(PROJECTS_DIR)/$* docker-build
 	@echo -e "$(GREEN)✓ $* Docker image built$(NC)"
 
-docker-push: $(ALL_PROJECTS:%=docker-push-%) ## Push all Docker images
+docker-push-all: $(ALL_PROJECTS:%=docker-push-%) ## Push all Docker images
 	@echo -e "$(GREEN)✓ All Docker images pushed$(NC)"
 
 docker-push-%: ## Push Docker image for specific project
@@ -214,7 +222,7 @@ k8s-deploy-dev: ## Deploy to development cluster
 
 ##@ Release
 
-version: ## Display current version
+show-version: ## Display current version
 	@echo $(VERSION)
 
 changelog: ## Generate changelog
@@ -256,6 +264,23 @@ tools: ## Install development tools
 	@$(TOOLS_DIR)/install-tools.sh
 	@echo -e "$(GREEN)✓ Development tools installed$(NC)"
 
+##@ Phoenix UI (Revolutionary Experience)
+
+ui-up: dev-up ## Start Phoenix with full UI experience
+	@echo -e "$(CYAN)Starting Phoenix UI Experience...$(NC)"
+	@./scripts/start-phoenix-ui.sh
+
+ui-dev: ## Start UI development environment
+	@echo -e "$(CYAN)Starting UI development mode...$(NC)"
+	@docker-compose up -d postgres redis phoenix-api
+	@cd projects/dashboard && npm install && npm run dev
+
+ui-build: build-phoenix-api build-dashboard ## Build UI components
+	@echo -e "$(GREEN)✓ UI components built$(NC)"
+
+ui-test: test-phoenix-api test-dashboard ## Test UI components
+	@echo -e "$(GREEN)✓ UI tests passed$(NC)"
+
 ##@ Dashboard
 
 build-dashboard: ## Build dashboard
@@ -270,6 +295,19 @@ run-dashboard: ## Run dashboard in development mode
 test-dashboard: ## Test dashboard
 	@echo -e "$(CYAN)Testing dashboard...$(NC)"
 	@cd projects/dashboard && npm test
+
+##@ Phoenix Core Services
+
+run-phoenix-api: ## Run Phoenix API with WebSocket support
+	@echo -e "$(CYAN)Starting Phoenix API...$(NC)"
+	@cd projects/phoenix-api && go run cmd/api/main.go
+
+run-phoenix-agent: ## Run Phoenix Agent
+	@echo -e "$(CYAN)Starting Phoenix Agent...$(NC)"
+	@cd projects/phoenix-agent && go run cmd/phoenix-agent/main.go
+
+run-phoenix: dev-up run-phoenix-api ## Run Phoenix platform (API + dependencies)
+	@echo -e "$(GREEN)✓ Phoenix platform running$(NC)"
 
 # Project-specific targets
 $(foreach project,$(ALL_PROJECTS),$(eval $(call PROJECT_TARGET,$(project))))

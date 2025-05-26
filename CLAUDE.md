@@ -230,4 +230,27 @@ CODEOWNERS enforces review requirements:
 - GitOps workflow with manifest generation
 - Production requires multi-team approval
 
+## Recent Architecture Updates
+
+### WebSocket Integration
+- Phoenix API now includes WebSocket support on port 8081
+- Real-time updates for experiments, metrics, and agent status
+- Hub pattern implementation in `pkg/common/websocket/`
+
+### UI-First Experience
+- New UI handlers in `projects/phoenix-api/internal/api/ui_handlers.go`
+- Dashboard components for live cost monitoring and agent visualization
+- React 18 with TypeScript and Vite for development
+
+### Task Queue Pattern
+- PostgreSQL-based task queue for agent communication
+- Long-polling design for security (agents only make outbound connections)
+- Atomic task assignment and status tracking
+
+### Model Extensions
+- Added `Variant` field to PipelineDeployment for A/B testing
+- DeploymentMetrics includes `MetricsPerSecond` and `CardinalityReduction`
+- UpdateDeploymentRequest supports `StatusMessage` and `UpdatedBy` fields
+- New deployment statuses: `degraded` and `healthy`
+
 Remember: The structure is designed to be self-validating. When in doubt, run `make validate` to check if your changes follow the architectural rules.

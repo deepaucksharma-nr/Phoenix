@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 

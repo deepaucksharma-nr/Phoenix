@@ -12,10 +12,8 @@ data:
   metrics-port: "8081"
   health-port: "8082"
   
-  # Service discovery
-  api-gateway-url: "http://api-gateway:8080"
-  experiment-controller-url: "experiment-controller:50051"
-  config-generator-url: "config-generator:50052"
+  # Phoenix API configuration
+  phoenix-api-url: "http://phoenix-api:8080"
   
   # Database configuration (non-sensitive)
   db-host: "postgres"
@@ -23,7 +21,7 @@ data:
   db-name: "phoenix"
   db-ssl-mode: "require"
   
-  # Feature flags
+  # Observability configuration
   enable-auth: "true"
   enable-metrics: "true"
   enable-tracing: "false"

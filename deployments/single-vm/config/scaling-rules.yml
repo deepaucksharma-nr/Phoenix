@@ -1,0 +1,107 @@
+# Phoenix Single-VM Scaling Rules
+# These thresholds trigger scaling recommendations
+
+scaling_triggers:
+  # CPU thresholds
+  cpu:
+    warning: 70    # Alert when CPU > 70%
+    critical: 85   # Immediate action needed
+    duration: 5m   # Sustained for this duration
+    
+  # Memory thresholds  
+  memory:
+    warning: 80    # Alert when memory > 80%
+    critical: 90   # Immediate action needed
+    duration: 5m
+    
+  # API latency (milliseconds)
+  api_latency:
+    warning: 200   # Degraded performance
+    critical: 500  # Unacceptable latency
+    duration: 2m
+    
+  # Metrics ingestion rate
+  metrics_rate:
+    warning: 800000   # 800K metrics/sec
+    critical: 1000000 # 1M metrics/sec (max for single VM)
+    
+  # Agent count
+  agent_count:
+    warning: 150   # Approaching limit
+    critical: 200  # Max recommended for single VM
+    
+  # Database size
+  database_size:
+    warning: 20    # 20GB
+    critical: 25   # 25GB
+    
+  # Disk usage
+  disk_usage:
+    warning: 80    # 80% full
+    critical: 90   # 90% full
+
+# Scaling recommendations
+scaling_actions:
+  vertical_scaling:
+    trigger: "cpu.warning OR memory.warning"
+    recommendation: |
+      Upgrade VM to next tier:
+      - Current: t3.medium (2 vCPU, 4GB)
+      - Next: t3.large (2 vCPU, 8GB) or t3.xlarge (4 vCPU, 16GB)
+      
+  component_separation:
+    trigger: "cpu.critical OR agent_count.warning"
+    recommendation: |
+      Move components to separate VMs:
+      1. Move PostgreSQL to RDS
+      2. Move Prometheus to dedicated instance
+      3. Keep API/UI on original VM
+      
+  horizontal_scaling:
+    trigger: "agent_count.critical OR metrics_rate.critical"
+    recommendation: |
+      Full horizontal scaling needed:
+      1. Deploy Kubernetes cluster
+      2. Use Phoenix Kubernetes deployment
+      3. Implement multi-region setup
+      
+  immediate_actions:
+    high_cpu:
+      - "Reduce Prometheus retention to 7 days"
+      - "Increase scrape interval to 30s"
+      - "Enable adaptive sampling on non-critical metrics"
+      
+    high_memory:
+      - "Restart API service to clear memory"
+      - "Reduce PostgreSQL shared_buffers"
+      - "Add swap space (4-8GB)"
+      
+    high_latency:
+      - "Check for slow database queries"
+      - "Enable API response caching"
+      - "Reduce concurrent agent connections"
+      
+    disk_full:
+      - "Run database VACUUM FULL"
+      - "Delete old backups"
+      - "Move Prometheus data to larger disk"
+
+# Monitoring queries for Prometheus
+monitoring_queries:
+  cpu_usage: |
+    100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+    
+  memory_usage: |
+    (1 - (node_memory_AvailableBytes / node_memory_MemTotal)) * 100
+    
+  api_latency: |
+    histogram_quantile(0.95, phoenix_api_request_duration_seconds_bucket)
+    
+  metrics_rate: |
+    sum(rate(phoenix_processed_series[1m]))
+    
+  active_agents: |
+    count(time() - phoenix_agent_last_heartbeat < 60)
+    
+  database_size: |
+    pg_database_size_bytes{datname="phoenix"} / 1024 / 1024 / 1024
