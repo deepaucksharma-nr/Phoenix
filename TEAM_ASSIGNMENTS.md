@@ -2,10 +2,10 @@
 
 ## 👥 Team Structure
 
-### Senior Developers (3)
-- **Alex Chen** - Principal Engineer, Platform Architecture
-- **Sarah Martinez** - Senior Engineer, Infrastructure & DevOps
-- **Michael Kumar** - Senior Engineer, Core Services
+
+- **Palash** - Principal Engineer, Platform Architecture
+- **Abhinav** - Senior Engineer, Infrastructure & DevOps
+- **Srikanth** - Senior Engineer, Core Services
 
 ---
 
