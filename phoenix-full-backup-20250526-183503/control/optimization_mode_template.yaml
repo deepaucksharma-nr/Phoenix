@@ -1,0 +1,62 @@
+# Phoenix Optimization Mode Control Template
+# This file defines the schema for the dynamic control file that governs
+# the OpenTelemetry collector's adaptive cardinality optimization behavior.
+
+# Meta information
+meta:
+  schema_version: "v1.0"
+  last_updated: "${TIMESTAMP}"
+  config_version: 1
+  correlation_id: "${CORRELATION_ID}"
+
+# Current optimization mode - one of: conservative, balanced, aggressive
+optimization_mode: "balanced"
+
+# Mode-specific configuration parameters
+mode_config:
+  conservative:
+    cardinality_reduction_target: 0.15  # 15% reduction
+    aggregation_window: "30s"
+    sample_rate: 1.0
+    topk_limit: 10000
+    memory_limit_factor: 0.8
+    
+  balanced:
+    cardinality_reduction_target: 0.25  # 25% reduction
+    aggregation_window: "60s" 
+    sample_rate: 0.9
+    topk_limit: 7500
+    memory_limit_factor: 0.9
+    
+  aggressive:
+    cardinality_reduction_target: 0.40  # 40% reduction
+    aggregation_window: "120s"
+    sample_rate: 0.8
+    topk_limit: 5000
+    memory_limit_factor: 1.0
+
+# Control loop parameters
+control:
+  pid_coefficients:
+    proportional: 0.5
+    integral: 0.1
+    derivative: 0.05
+  stability_threshold: 120  # seconds
+  hysteresis_factor: 0.1
+  max_changes_per_hour: 6
+
+# Thresholds for mode switching (time series count)
+thresholds:
+  conservative_max: 15000
+  balanced_min: 15000
+  balanced_max: 25000
+  aggressive_min: 25000
+
+# Current system state (populated by control actuator)
+current_state:
+  timestamp: "${TIMESTAMP}"
+  cardinality_estimate: 0
+  memory_usage_mb: 0
+  stability_score: 1.0
+  last_mode_change: "${TIMESTAMP}"
+  mode_change_reason: "initialization"

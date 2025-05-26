@@ -1,0 +1,160 @@
+sequenceDiagram
+    participant CLI as Phoenix CLI
+    participant REST as REST API
+    participant GRPC as gRPC Server
+    participant WS as WebSocket
+    participant EH as Experiment Handler
+    participant ES as Experiment Service
+    participant ESTORE as Experiment Store
+    participant DB as PostgreSQL
+    participant EB as Event Bus
+    participant REDIS as Redis
+    participant CTRL as Controller
+    participant SM as State Machine
+    participant GC as Generator Client
+    participant GS as Generator Service
+    participant KC as K8s Client
+    participant K8S as Kubernetes
+    participant PO as Pipeline Operator
+    participant OTEL as OTEL Collector
+    participant PROM as Prometheus
+    participant WH as WebSocket Hub
+
+    Note over CLI,K8S: Experiment Creation Flow
+    
+    CLI->>GRPC: CreateExperiment(name, baseline, candidate)
+    GRPC->>EH: Handle CreateExperiment
+    EH->>ES: CreateExperiment(request)
+    
+    activate ES
+    ES->>ES: Validate request
+    ES->>ES: Generate experiment ID
+    ES->>ESTORE: CreateExperiment(experiment)
+    ESTORE->>DB: INSERT INTO experiments
+    DB-->>ESTORE: Success
+    ESTORE-->>ES: Experiment created
+    
+    ES->>EB: PublishEvent(ExperimentCreated)
+    EB->>REDIS: PUBLISH experiment.created
+    deactivate ES
+    
+    ES-->>EH: Experiment response
+    EH-->>GRPC: Experiment created
+    GRPC-->>CLI: Success + Experiment ID
+
+    Note over REDIS,K8S: Controller Processing Flow
+    
+    REDIS-->>CTRL: experiment.created event
+    CTRL->>SM: ProcessExperiment(experimentID)
+    
+    activate SM
+    SM->>SM: Check current state (Pending)
+    SM->>SM: Transition to Initializing
+    SM->>ESTORE: UpdateExperimentState(Initializing)
+    ESTORE->>DB: UPDATE experiments
+    
+    SM->>GC: GeneratePipeline(baseline)
+    GC->>GS: GenerateConfig(request)
+    
+    activate GS
+    GS->>GS: Load template
+    GS->>GS: Apply variables
+    GS->>GS: Build YAML
+    GS-->>GC: Pipeline config
+    deactivate GS
+    
+    GC-->>SM: Baseline config
+    
+    SM->>KC: DeployPipeline(baseline)
+    KC->>K8S: Create PhoenixProcessPipeline
+    K8S->>PO: Reconcile pipeline
+    
+    activate PO
+    PO->>PO: Create Deployment
+    PO->>PO: Create Service
+    PO->>PO: Create ConfigMap
+    PO->>K8S: Apply resources
+    K8S-->>PO: Resources created
+    PO->>K8S: Update CRD status
+    deactivate PO
+    
+    K8S-->>KC: Pipeline deployed
+    KC-->>SM: Deployment success
+    
+    SM->>GC: GeneratePipeline(candidate)
+    Note right of GC: Same flow as baseline
+    GC-->>SM: Candidate config
+    SM->>KC: DeployPipeline(candidate)    
+    KC->>K8S: Create PhoenixProcessPipeline
+    K8S-->>KC: Pipeline deployed
+    KC-->>SM: Deployment success
+    
+    SM->>SM: Transition to Running
+    SM->>ESTORE: UpdateExperimentState(Running)
+    SM->>EB: PublishEvent(ExperimentRunning)
+    deactivate SM
+    
+    EB->>REDIS: PUBLISH experiment.running
+
+    Note over REDIS,WS: Real-time Update Flow
+    
+    REDIS-->>WH: experiment.running event
+    WH->>WH: Broadcast to clients
+    WH->>WS: Send update
+    WS-->>CLI: Status update (via WebSocket)
+
+    Note over K8S,PROM: Metrics Collection Flow
+    
+    K8S->>OTEL: Export metrics (OTLP)
+    
+    activate OTEL
+    OTEL->>OTEL: Batch processor
+    OTEL->>OTEL: Filter processor
+    OTEL->>OTEL: Transform processor
+    OTEL->>PROM: Write metrics
+    deactivate OTEL
+    
+    PROM-->>PROM: Store time-series
+
+    Note over SM,PROM: Analysis Flow
+    
+    SM->>SM: Schedule analysis
+    
+    activate SM
+    SM->>SM: Transition to Analyzing
+    SM->>ESTORE: UpdateExperimentState(Analyzing)
+    
+    SM->>SM: Run Analysis Engine
+    SM->>PROM: Query baseline metrics
+    PROM-->>SM: Baseline data
+    SM->>PROM: Query candidate metrics
+    PROM-->>SM: Candidate data
+    
+    SM->>SM: Statistical analysis
+    SM->>SM: Calculate significance
+    SM->>SM: Decision Engine
+    
+    SM->>SM: Transition to Completed
+    SM->>ESTORE: UpdateExperimentState(Completed)
+    SM->>ESTORE: StoreResults(analysis)
+    ESTORE->>DB: UPDATE experiments
+    
+    SM->>EB: PublishEvent(ExperimentCompleted)
+    deactivate SM
+    
+    EB->>REDIS: PUBLISH experiment.completed
+    REDIS-->>WH: experiment.completed event
+    WH->>WS: Send final update
+
+    Note over CLI,WS: Result Retrieval Flow
+    
+    CLI->>REST: GET /experiments/{id}/results
+    REST->>EH: GetExperimentResults
+    EH->>ES: GetExperiment(id)
+    ES->>ESTORE: GetExperiment(id)
+    ESTORE->>DB: SELECT FROM experiments
+    DB-->>ESTORE: Experiment data
+    ESTORE-->>ES: Experiment
+    ES-->>EH: Experiment with results
+    EH-->>REST: JSON response
+    REST-->>CLI: Experiment results

@@ -1,0 +1,23 @@
+{{- if .Values.generator.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "phoenix.fullname" . }}-generator
+  labels:
+    {{- include "phoenix.labels" . | nindent 4 }}
+    app.kubernetes.io/component: generator
+spec:
+  type: {{ .Values.generator.service.type }}
+  ports:
+    - port: {{ .Values.generator.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+    - port: {{ .Values.generator.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "phoenix.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: generator
+{{- end }}

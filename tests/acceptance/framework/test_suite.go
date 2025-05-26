@@ -15,7 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/phoenix-operator/api/v1alpha1"
+	phoenixv1alpha1 "github.com/phoenix/platform/projects/phoenix-operator/api/v1alpha1"
 )
 
 // AcceptanceTestSuite provides the base test suite for Phoenix acceptance tests

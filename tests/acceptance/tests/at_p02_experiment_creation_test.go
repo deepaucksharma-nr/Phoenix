@@ -10,8 +10,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/phoenix-operator/api/v1alpha1"
-	"github.com/phoenix-vnext/platform/tests/acceptance/framework"
+	phoenixv1alpha1 "github.com/phoenix/platform/projects/phoenix-operator/api/v1alpha1"
+	"github.com/phoenix/platform/tests/acceptance/framework"
 )
 
 // AT_P02_ExperimentCreationTestSuite tests experiment creation and management

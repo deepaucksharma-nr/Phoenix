@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/tests/acceptance/framework"
+	"github.com/phoenix/platform/tests/acceptance/framework"
 )
 
 // AT_P01_PipelineDeploymentTestSuite tests pipeline deployment functionality

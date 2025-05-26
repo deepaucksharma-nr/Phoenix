@@ -18,10 +18,10 @@ import (
     "google.golang.org/grpc"
 
     // Phoenix platform imports
-    "github.com/phoenix-vnext/platform/projects/controller/internal/clients"
-    "github.com/phoenix-vnext/platform/projects/controller/internal/controller"
-    controllergrpc "github.com/phoenix-vnext/platform/projects/controller/internal/grpc"
-    "github.com/phoenix-vnext/platform/projects/controller/internal/store"
+    "github.com/phoenix/platform/projects/controller/internal/clients"
+    "github.com/phoenix/platform/projects/controller/internal/controller"
+    controllergrpc "github.com/phoenix/platform/projects/controller/internal/grpc"
+    "github.com/phoenix/platform/projects/controller/internal/store"
 )
 
 func main() {
@@ -45,7 +45,7 @@ func main() {
     dbPort := getEnvInt("DB_PORT", 5432)
     dbUser := getEnv("DB_USER", "phoenix")
     dbPassword := getEnv("DB_PASSWORD", "phoenix")
-    dbName := getEnv("DB_NAME", "phoenix")
+    dbName := getEnv("DB_NAME", "experiments_db")
     dbSSLMode := getEnv("DB_SSL_MODE", "disable")
 
     // Initialize experiment store with connection string

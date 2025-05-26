@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/cmd/phoenix-cli/internal/client"
 	"github.com/spf13/cobra"
 )
 

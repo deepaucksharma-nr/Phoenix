@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/phoenix-vnext/platform/pkg/models"
+	"github.com/phoenix/platform/pkg/models"
 )
 
 func TestNewPostgresStore(t *testing.T) {

@@ -1,0 +1,250 @@
+# Process Adaptive Filter Pipeline Configuration
+# This pipeline dynamically adjusts filtering thresholds based on system load
+# to maintain optimal cardinality while preserving critical visibility
+
+receivers:
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      process:
+        include:
+          match_type: regexp
+          names: [".*"]  # Collect all processes initially
+        exclude:
+          names: []
+        mute_process_name_error: true
+        mute_process_exe_error: true
+        mute_process_io_error: true
+        resource_attributes:
+          process.executable.path:
+            enabled: true
+          process.executable.name:
+            enabled: true
+          process.command_line:
+            enabled: false  # Reduce cardinality
+          process.owner:
+            enabled: true
+
+  # Collect system metrics for adaptive thresholds
+  hostmetrics/system:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      memory:
+        metrics:
+          system.memory.utilization:
+            enabled: true
+      load:
+        metrics:
+          system.cpu.load_average.1m:
+            enabled: true
+
+processors:
+  # Add resource attributes
+  resource:
+    attributes:
+      - key: phoenix.pipeline
+        value: process-adaptive-filter-v1
+        action: upsert
+      - key: phoenix.strategy
+        value: adaptive-filter
+        action: upsert
+
+  # Batch for efficiency
+  batch:
+    timeout: 10s
+    send_batch_size: 1000
+
+  # Calculate system load metrics for adaptive thresholds
+  transform/system_load:
+    metric_statements:
+      - context: datapoint
+        statements:
+          # Store system metrics in attributes for later use
+          - set(attributes["system.cpu.load"], value) where metric.name == "system.cpu.utilization"
+          - set(attributes["system.memory.load"], value) where metric.name == "system.memory.utilization"
+
+  # Phoenix adaptive filter processor
+  phoenix/adaptive_filter:
+    # Base thresholds (adjusted based on system load)
+    base_thresholds:
+      cpu_percent: 5.0      # Base CPU threshold
+      memory_mb: 100        # Base memory threshold
+    
+    # Adaptive scaling factors
+    load_scaling:
+      # When system load is high, increase thresholds to reduce data
+      high_load_multiplier: 2.0    # Double thresholds when load > 80%
+      medium_load_multiplier: 1.5  # 1.5x thresholds when load > 60%
+      low_load_multiplier: 1.0     # Normal thresholds when load < 60%
+    
+    # Always keep these critical processes regardless of thresholds
+    critical_processes:
+      - "systemd"
+      - "kernel"
+      - "dockerd"
+      - "kubelet"
+      - "containerd"
+      - "prometheus"
+      - "otelcol"
+      - "phoenix-*"
+    
+    # Cardinality limits
+    max_cardinality: 1000  # Maximum number of unique process names
+    
+    # Filtering rules
+    filter_rules:
+      - name: "idle_processes"
+        condition: "cpu_percent < adaptive_threshold AND memory_mb < adaptive_threshold"
+        action: "drop"
+      - name: "short_lived"
+        condition: "uptime < 60s AND cpu_percent < 10"
+        action: "drop"
+      - name: "system_noise"
+        condition: "process_name matches '.*[0-9]{5,}.*' AND cpu_percent < 5"
+        action: "drop"
+
+  # Group and aggregate
+  groupbyattrs:
+    keys:
+      - process.executable.name
+      - process.owner
+
+  # Filter based on adaptive thresholds
+  filter/adaptive:
+    metrics:
+      # This would be implemented by the Phoenix processor
+      # Showing configuration for documentation
+      process.cpu.utilization:
+        exclude:
+          match_type: expr
+          expressions:
+            - 'attributes["phoenix.below_threshold"] == true'
+      process.memory.usage:
+        exclude:
+          match_type: expr
+          expressions:
+            - 'attributes["phoenix.below_threshold"] == true'
+
+  # Add filtering metadata
+  attributes/metadata:
+    actions:
+      - key: phoenix.filtered
+        value: true
+        action: upsert
+      - key: phoenix.filter_type
+        value: adaptive
+        action: upsert
+      - key: phoenix.adaptive_mode
+        action: upsert  # Set by phoenix processor based on load
+
+  # Memory limiter
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Metrics transform for reporting
+  transform/metrics:
+    metric_statements:
+      - context: datapoint
+        statements:
+          # Add cardinality tracking
+          - set(attributes["phoenix.cardinality"], attributes["process.count"])
+
+exporters:
+  # Primary metrics destination
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: phoenix
+    const_labels:
+      pipeline: process-adaptive-filter-v1
+    resource_to_telemetry_conversion:
+      enabled: true
+    enable_open_metrics: true
+
+  # Metrics about filtering effectiveness
+  prometheus/internal:
+    endpoint: "0.0.0.0:8890"
+    namespace: phoenix_internal
+    const_labels:
+      component: adaptive_filter
+
+  # Forward to downstream collectors
+  otlp:
+    endpoint: otelcol:4317
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  # Debug logging (disabled in production)
+  logging:
+    loglevel: info
+    sampling_initial: 5
+    sampling_thereafter: 20
+
+service:
+  pipelines:
+    # Process metrics pipeline
+    metrics/process:
+      receivers: [hostmetrics]
+      processors: 
+        - memory_limiter
+        - resource
+        - batch
+        - groupbyattrs
+        - phoenix/adaptive_filter
+        - filter/adaptive
+        - attributes/metadata
+        - transform/metrics
+      exporters: [prometheus, otlp]
+    
+    # System metrics pipeline (for adaptive thresholds)
+    metrics/system:
+      receivers: [hostmetrics/system]
+      processors:
+        - memory_limiter
+        - batch
+        - transform/system_load
+      exporters: [prometheus/internal]
+
+  telemetry:
+    logs:
+      level: info
+      initial_fields:
+        service: phoenix-process-adaptive
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+      readers:
+        - periodic:
+            interval: 10s
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8891
+
+  extensions: [health_check, pprof, zpages]
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: "/health"
+    check_collector_pipeline:
+      enabled: true
+      interval: 10s
+      exporter_failure_threshold: 5
+    
+  pprof:
+    endpoint: 0.0.0.0:1777
+    save_to_file: /var/log/phoenix/pprof/
+    
+  zpages:
+    endpoint: 0.0.0.0:55679

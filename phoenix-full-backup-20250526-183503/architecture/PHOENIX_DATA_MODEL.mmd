@@ -1,0 +1,178 @@
+erDiagram
+    EXPERIMENTS {
+        uuid id PK
+        string name
+        string description
+        string baseline_pipeline_id
+        string candidate_pipeline_id
+        int traffic_percentage
+        jsonb target_nodes
+        string status
+        string state_message
+        timestamp created_at
+        timestamp started_at
+        timestamp ended_at
+        timestamp updated_at
+        string created_by
+        jsonb metadata
+        jsonb results
+    }
+    
+    PIPELINE_DEPLOYMENTS {
+        uuid id PK
+        string deployment_name
+        string pipeline_name
+        string namespace
+        jsonb target_nodes
+        jsonb parameters
+        jsonb resources
+        string status
+        string phase
+        string error_message
+        jsonb instances
+        timestamp created_at
+        timestamp updated_at
+        string created_by
+        jsonb annotations
+        jsonb labels
+    }
+    
+    EXPERIMENT_METRICS {
+        uuid id PK
+        uuid experiment_id FK
+        string metric_name
+        string metric_type
+        string pipeline_type
+        float value
+        jsonb labels
+        timestamp timestamp
+        timestamp created_at
+    }
+    
+    EXPERIMENT_EVENTS {
+        uuid id PK
+        uuid experiment_id FK
+        string event_type
+        string event_source
+        jsonb event_data
+        timestamp timestamp
+        timestamp created_at
+    }
+    
+    PIPELINE_TEMPLATES {
+        uuid id PK
+        string name
+        string version
+        string type
+        text template_content
+        jsonb variables
+        jsonb defaults
+        boolean active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    ANALYSIS_RESULTS {
+        uuid id PK
+        uuid experiment_id FK
+        string analysis_type
+        jsonb baseline_metrics
+        jsonb candidate_metrics
+        float improvement_percentage
+        float confidence_level
+        string recommendation
+        jsonb detailed_results
+        timestamp analyzed_at
+        timestamp created_at
+    }
+    
+    ALERTS {
+        uuid id PK
+        uuid experiment_id FK
+        string alert_type
+        string severity
+        string title
+        text description
+        jsonb metadata
+        boolean acknowledged
+        timestamp triggered_at
+        timestamp acknowledged_at
+        timestamp created_at
+    }
+    
+    AUDIT_LOGS {
+        uuid id PK
+        string entity_type
+        uuid entity_id
+        string action
+        string user_id
+        jsonb changes
+        string ip_address
+        string user_agent
+        timestamp created_at
+    }
+    
+    BENCHMARK_RESULTS {
+        uuid id PK
+        string benchmark_type
+        string pipeline_name
+        float latency_p50
+        float latency_p95
+        float latency_p99
+        float throughput
+        float error_rate
+        float cost_per_hour
+        jsonb resource_usage
+        timestamp measured_at
+        timestamp created_at
+    }
+    
+    SYSTEM_CONFIG {
+        uuid id PK
+        string config_key
+        jsonb config_value
+        string description
+        boolean active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    USER_SESSIONS {
+        uuid id PK
+        string user_id
+        string session_token
+        timestamp expires_at
+        jsonb metadata
+        timestamp created_at
+        timestamp last_accessed
+    }
+    
+    WEBHOOKS {
+        uuid id PK
+        string name
+        string url
+        string secret
+        jsonb events
+        jsonb headers
+        boolean active
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    EXPERIMENT_PIPELINES ||--o{ EXPERIMENTS : "has baseline"
+    EXPERIMENT_PIPELINES ||--o{ EXPERIMENTS : "has candidate"
+    EXPERIMENTS ||--o{ EXPERIMENT_METRICS : "generates"
+    EXPERIMENTS ||--o{ EXPERIMENT_EVENTS : "produces"
+    EXPERIMENTS ||--o{ ANALYSIS_RESULTS : "has"
+    EXPERIMENTS ||--o{ ALERTS : "triggers"
+    EXPERIMENTS ||--o{ AUDIT_LOGS : "logs"
+    PIPELINE_DEPLOYMENTS ||--o{ EXPERIMENT_PIPELINES : "implements"
+    PIPELINE_TEMPLATES ||--o{ PIPELINE_DEPLOYMENTS : "uses"
+    BENCHMARK_RESULTS }o--|| PIPELINE_DEPLOYMENTS : "benchmarks"
+    
+    EXPERIMENT_PIPELINES {
+        uuid experiment_id FK
+        uuid deployment_id FK
+        string pipeline_type
+        timestamp created_at
+    }

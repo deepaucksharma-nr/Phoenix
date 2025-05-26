@@ -8,7 +8,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/phoenix-vnext/platform/pkg/models"
+	"github.com/phoenix/platform/pkg/models"
 )
 
 // Store interface defines data access methods

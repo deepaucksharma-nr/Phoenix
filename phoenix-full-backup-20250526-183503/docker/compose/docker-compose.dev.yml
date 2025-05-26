@@ -1,0 +1,111 @@
+# Phoenix Development Override Configuration
+# This file is automatically loaded by docker-compose for local development
+# It provides debug settings, faster feedback loops, and development tools
+
+version: '3.8'
+
+services:
+  # Main OpenTelemetry Collector - Development Settings
+  otelcol-main:
+    environment:
+      - OTEL_LOG_LEVEL=debug
+      - LOG_LEVEL=debug
+      - OTELCOL_MAIN_MEMORY_LIMIT_MIB=2048  # More memory for dev
+    volumes:
+      - ./configs/otel/collectors/main.yaml:/etc/otelcol/config.yaml:ro
+      - ./configs/otel/processors:/etc/otelcol/processors:ro  # Hot reload processors
+      - ./configs:/etc/otelcol/configs:ro  # All configs accessible
+      - ./data/otelcol_main:/data
+    ports:
+      - "1777:1777"  # pprof endpoint for profiling
+    healthcheck:
+      interval: 10s  # Faster health checks in dev
+
+  # Observer Collector - Development Settings
+  otelcol-observer:
+    environment:
+      - OTEL_LOG_LEVEL=debug
+      - LOG_LEVEL=debug
+    volumes:
+      - ./configs:/etc/otelcol/configs:ro
+    ports:
+      - "1778:1777"  # pprof endpoint for observer
+    healthcheck:
+      interval: 10s
+
+  # Control Actuator - Development Settings
+  control-actuator-go:
+    environment:
+      - LOG_LEVEL=debug
+      - ADAPTIVE_CONTROLLER_INTERVAL_SECONDS=30  # Faster updates in dev
+    volumes:
+      - ./apps/control-actuator-go:/app:cached  # Source code mount for hot reload
+      - ./configs/control:/configs/control
+
+  # Anomaly Detector - Development Settings
+  anomaly-detector:
+    environment:
+      - LOG_LEVEL=debug
+      - CHECK_INTERVAL_SECONDS=30  # Faster anomaly checks
+    volumes:
+      - ./apps/anomaly-detector:/app:cached
+
+  # Benchmark Controller - Development Settings
+  benchmark-controller:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - ./services/benchmark:/app:cached
+
+  # Prometheus - Development Settings
+  prometheus:
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'  # Shorter retention for dev
+      - '--web.enable-lifecycle'  # Enable config reload via API
+      - '--web.enable-admin-api'  # Enable admin API for debugging
+      - '--log.level=debug'
+    volumes:
+      - ./configs/monitoring/prometheus:/etc/prometheus:ro
+      - ./data/prometheus:/prometheus
+    ports:
+      - "9090:9090"
+
+  # Grafana - Development Settings
+  grafana:
+    environment:
+      - GF_LOG_LEVEL=debug
+      - GF_AUTH_ANONYMOUS_ENABLED=true  # No login required for dev
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=true
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+    volumes:
+      - ./configs/monitoring/grafana:/etc/grafana/provisioning:ro
+      - ./configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./data/grafana:/var/lib/grafana
+
+  # Synthetic Generator - Development Settings
+  synthetic-metrics-generator:
+    profiles: []  # Always enabled in dev (no profile required)
+    environment:
+      - SYNTHETIC_PROCESS_COUNT_PER_HOST=50  # Lighter load for dev
+      - SYNTHETIC_HOST_COUNT=2
+      - SYNTHETIC_METRIC_EMIT_INTERVAL_S=10  # More frequent for faster feedback
+      - LOG_LEVEL=debug
+
+  # Analytics Service - Development Settings (if present)
+  analytics:
+    environment:
+      - LOG_LEVEL=debug
+    volumes:
+      - ./services/analytics:/app:cached
+    profiles: []  # Enable in dev
+
+# Development volumes with local driver
+volumes:
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local

@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 	"github.com/google/uuid"
 	
-	"github.com/phoenix-vnext/platform/pkg/interfaces"
+	"github.com/phoenix/platform/pkg/interfaces"
 )
 
 // Ensure time is used

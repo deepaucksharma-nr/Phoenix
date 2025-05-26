@@ -27,8 +27,8 @@ check_violations() {
         fi
     fi
     
-    # Check that packages don't import from projects
-    if [[ "$file" =~ packages/ ]]; then
+    # Check that pkg doesn't import from projects
+    if [[ "$file" =~ pkg/ ]]; then
         if grep -E "github\.com/phoenix/platform/projects/" "$file" > /dev/null 2>&1; then
             violations=$(grep -E "github\.com/phoenix/platform/projects/" "$file" | head -3)
             echo "❌ VIOLATION in $file:"
@@ -54,9 +54,9 @@ find projects -name "*.go" -type f | while read -r file; do
     check_violations "$file"
 done
 
-# Validate Go files in packages
-echo "Checking package boundaries..."
-find packages -name "*.go" -type f | while read -r file; do
+# Validate Go files in pkg
+echo "Checking pkg boundaries..."
+find pkg -name "*.go" -type f 2>/dev/null | while read -r file; do
     check_violations "$file"
 done
 
@@ -67,15 +67,15 @@ for mod_file in projects/*/go.mod; do
     if [[ -f "$mod_file" ]]; then
         project=$(dirname "$mod_file")
         
-        # Check for go-common replace directive
-        if ! grep -q "replace github.com/phoenix/platform/packages/go-common" "$mod_file"; then
-            echo "⚠️  WARNING: $mod_file missing go-common replace directive"
+        # Check for pkg/common replace directive
+        if ! grep -q "replace github.com/phoenix/platform/pkg/common" "$mod_file"; then
+            echo "⚠️  WARNING: $mod_file missing pkg/common replace directive"
             ((WARNINGS++))
         fi
         
-        # Check for contracts replace directive
-        if ! grep -q "replace github.com/phoenix/platform/packages/contracts" "$mod_file"; then
-            echo "⚠️  WARNING: $mod_file missing contracts replace directive"  
+        # Check for pkg/contracts replace directive
+        if ! grep -q "replace github.com/phoenix/platform/pkg/contracts" "$mod_file"; then
+            echo "⚠️  WARNING: $mod_file missing pkg/contracts replace directive"  
             ((WARNINGS++))
         fi
     fi
@@ -93,8 +93,8 @@ if [[ $VIOLATIONS -gt 0 ]]; then
     echo ""
     echo "Rules:"
     echo "1. Projects in /projects/* cannot import from other projects"
-    echo "2. Packages in /packages/* cannot import from /projects/*"
-    echo "3. All shared code must be in /packages/*"
+    echo "2. Packages in /pkg/* cannot import from /projects/*"
+    echo "3. All shared code must be in /pkg/*"
     exit 1
 elif [[ $WARNINGS -gt 0 ]]; then
     echo ""
