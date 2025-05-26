@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosError } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 import { 
   Experiment, 
   ExperimentSpec, 
@@ -20,71 +20,6 @@ class ApiService {
         'Content-Type': 'application/json',
       },
     })
-
-    // Request interceptor for auth
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('auth_token')
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
-        return config
-      },
-      (error) => Promise.reject(error)
-    )
-
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Handle unauthorized
-          localStorage.removeItem('auth_token')
-          window.location.href = '/login'
-        }
-        return Promise.reject(error)
-      }
-    )
-  }
-
-  // Authentication
-  async login(email: string, password: string) {
-    const response = await this.client.post('/auth/login', { email, password })
-    return response.data
-  }
-
-  async register(data: {
-    name: string
-    email: string
-    password: string
-    organization: string
-  }) {
-    const response = await this.client.post('/auth/register', data)
-    return response.data
-  }
-
-  async logout() {
-    await this.client.post('/auth/logout')
-    localStorage.removeItem('auth_token')
-  }
-
-  async getCurrentUser() {
-    const response = await this.client.get('/auth/me')
-    return response.data
-  }
-
-  async requestPasswordReset(email: string) {
-    const response = await this.client.post('/auth/password-reset/request', { email })
-    return response.data
-  }
-
-  async resetPassword(email: string, code: string, newPassword: string) {
-    const response = await this.client.post('/auth/password-reset/confirm', {
-      email,
-      code,
-      newPassword,
-    })
-    return response.data
   }
 
   // Experiments
@@ -203,6 +138,11 @@ class ApiService {
         config: PipelineConfig
       }>
     }>('/pipelines/templates')
+    return response.data
+  }
+
+  async getPipelineDeployments() {
+    const response = await this.client.get('/pipelines/deployments')
     return response.data
   }
 
