@@ -2,6 +2,8 @@
 
 Get Phoenix Platform up and running in 5 minutes!
 
+For a walkthrough of the entire deployment and experiment lifecycle see the [Operations Guide](./docs/operations/OPERATIONS_GUIDE_COMPLETE.md).
+
 ## Prerequisites
 
 - Docker & Docker Compose
@@ -143,6 +145,7 @@ curl -X POST http://localhost:8080/api/v1/experiments \
 ./scripts/test-system.sh
 ```
 
+
 ## 🖥️ Running Collectors on a VM
 
 Generate a static collector config and run it with systemd:
@@ -157,6 +160,26 @@ phoenix pipeline vm-config process-topk-v1 \
 sudo systemctl daemon-reload
 sudo systemctl enable --now otelcol
 ```
+=======
+## 🌐 Full Workflow
+
+1. **Deploy a pipeline**
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/pipeline-deployments \
+     -H "Content-Type: application/json" \
+     -d '{"name":"demo","namespace":"default","template":"process-baseline-v1"}'
+   ```
+2. **Create an experiment**
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/experiments \
+     -H "Content-Type: application/json" \
+     -d '{"name":"cost-opt","baseline_pipeline":"process-baseline-v1","candidate_pipeline":"process-intelligent-v1","target_namespaces":["default"]}'
+   ```
+3. **Analyze results**
+   ```bash
+   curl http://localhost:8080/api/v1/experiments/<id>/results | jq .
+   ```
+
 
 ## 🏗️ Architecture
 

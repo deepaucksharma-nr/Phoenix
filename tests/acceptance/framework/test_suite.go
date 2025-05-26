@@ -226,7 +226,7 @@ func (s *AcceptanceTestSuite) CleanupExperiment(name string) {
 	}
 	
 	err := s.K8sClient.Delete(s.ctx, experiment)
-	if err != nil && !client.IgnoreNotFound(err) != nil {
+	if err != nil && client.IgnoreNotFound(err) != nil {
 		s.Logger.Error("Failed to delete experiment", zap.Error(err))
 	}
 	
