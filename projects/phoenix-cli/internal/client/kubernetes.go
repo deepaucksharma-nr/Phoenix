@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,7 +16,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/loadsim-operator/api/v1alpha1"
 )
 
 var (
@@ -30,9 +28,9 @@ var (
 
 // LoadSimulationJobInterface provides operations for LoadSimulationJob resources
 type LoadSimulationJobInterface interface {
-	Create(ctx context.Context, job *phoenixv1alpha1.LoadSimulationJob, opts metav1.CreateOptions) (*phoenixv1alpha1.LoadSimulationJob, error)
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*phoenixv1alpha1.LoadSimulationJob, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*phoenixv1alpha1.LoadSimulationJobList, error)
+	Create(ctx context.Context, job *LoadSimulationJob, opts metav1.CreateOptions) (*LoadSimulationJob, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*LoadSimulationJob, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*LoadSimulationJobList, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 }
 
@@ -83,7 +81,7 @@ func (c *phoenixV1alpha1Client) LoadSimulationJobs(namespace string) LoadSimulat
 }
 
 // Create creates a new LoadSimulationJob
-func (c *loadSimJobClient) Create(ctx context.Context, job *phoenixv1alpha1.LoadSimulationJob, opts metav1.CreateOptions) (*phoenixv1alpha1.LoadSimulationJob, error) {
+func (c *loadSimJobClient) Create(ctx context.Context, job *LoadSimulationJob, opts metav1.CreateOptions) (*LoadSimulationJob, error) {
 	unstructuredObj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(job)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to unstructured: %w", err)
@@ -94,7 +92,7 @@ func (c *loadSimJobClient) Create(ctx context.Context, job *phoenixv1alpha1.Load
 		return nil, err
 	}
 
-	var resultJob phoenixv1alpha1.LoadSimulationJob
+	var resultJob LoadSimulationJob
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(result.Object, &resultJob); err != nil {
 		return nil, fmt.Errorf("failed to convert from unstructured: %w", err)
 	}
@@ -103,13 +101,13 @@ func (c *loadSimJobClient) Create(ctx context.Context, job *phoenixv1alpha1.Load
 }
 
 // Get retrieves a LoadSimulationJob by name
-func (c *loadSimJobClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*phoenixv1alpha1.LoadSimulationJob, error) {
+func (c *loadSimJobClient) Get(ctx context.Context, name string, opts metav1.GetOptions) (*LoadSimulationJob, error) {
 	result, err := c.client.Namespace(c.namespace).Get(ctx, name, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	var job phoenixv1alpha1.LoadSimulationJob
+	var job LoadSimulationJob
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(result.Object, &job); err != nil {
 		return nil, fmt.Errorf("failed to convert from unstructured: %w", err)
 	}
@@ -118,13 +116,13 @@ func (c *loadSimJobClient) Get(ctx context.Context, name string, opts metav1.Get
 }
 
 // List retrieves a list of LoadSimulationJobs
-func (c *loadSimJobClient) List(ctx context.Context, opts metav1.ListOptions) (*phoenixv1alpha1.LoadSimulationJobList, error) {
+func (c *loadSimJobClient) List(ctx context.Context, opts metav1.ListOptions) (*LoadSimulationJobList, error) {
 	result, err := c.client.Namespace(c.namespace).List(ctx, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	var jobList phoenixv1alpha1.LoadSimulationJobList
+	var jobList LoadSimulationJobList
 	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(result.Object, &jobList); err != nil {
 		return nil, fmt.Errorf("failed to convert from unstructured: %w", err)
 	}

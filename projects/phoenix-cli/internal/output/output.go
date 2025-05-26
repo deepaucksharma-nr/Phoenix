@@ -195,3 +195,80 @@ func truncate(s string, maxLen int) string {
 	}
 	return s[:maxLen-3] + "..."
 }
+
+// Warning prints a warning message (alias for PrintWarning)
+func Warning(message string) {
+	PrintWarning(message)
+}
+
+// Error prints an error message (alias for PrintError)
+func Error(message string) {
+	fmt.Fprintf(os.Stderr, "❌ %s\n", message)
+}
+
+// Confirm prompts the user for confirmation and returns true if they confirm
+func Confirm(prompt string) (bool, error) {
+	fmt.Printf("%s [y/N]: ", prompt)
+	
+	var response string
+	_, err := fmt.Scanln(&response)
+	if err != nil && err.Error() != "unexpected newline" {
+		return false, err
+	}
+	
+	response = strings.ToLower(strings.TrimSpace(response))
+	return response == "y" || response == "yes", nil
+}
+
+// PrintJSON prints data as JSON to the specified writer
+func PrintJSON(writer interface{}, data interface{}) error {
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	
+	if w, ok := writer.(interface{ Write([]byte) (int, error) }); ok {
+		_, err = w.Write(jsonData)
+		return err
+	}
+	
+	fmt.Print(string(jsonData))
+	return nil
+}
+
+// PrintYAML prints data as YAML to the specified writer
+func PrintYAML(writer interface{}, data interface{}) error {
+	yamlData, err := yaml.Marshal(data)
+	if err != nil {
+		return err
+	}
+	
+	if w, ok := writer.(interface{ Write([]byte) (int, error) }); ok {
+		_, err = w.Write(yamlData)
+		return err
+	}
+	
+	fmt.Print(string(yamlData))
+	return nil
+}
+
+// FormatBytes formats byte counts in human readable form
+func FormatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// TruncateString truncates a string to the specified length
+func TruncateString(s string, maxLen int) string {
+	return truncate(s, maxLen)
+}

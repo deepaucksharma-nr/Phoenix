@@ -2,11 +2,7 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/loadsim-operator/api/v1alpha1"
 )
 
 // LoadSimulationClient provides operations for load simulations
@@ -28,7 +24,7 @@ type LoadSimulation struct {
 	Profile      string                           `json:"profile"`
 	Duration     string                           `json:"duration"`
 	ProcessCount int32                            `json:"process_count"`
-	Status       phoenixv1alpha1.LoadSimPhases    `json:"status"`
+	Status       string                           `json:"status"`
 	StartTime    *time.Time                       `json:"start_time,omitempty"`
 	EndTime      *time.Time                       `json:"end_time,omitempty"`
 	Message      string                           `json:"message,omitempty"`

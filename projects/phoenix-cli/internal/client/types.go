@@ -110,7 +110,9 @@ type Pipeline struct {
 // PipelineDeployment represents a direct pipeline deployment
 type PipelineDeployment struct {
 	ID             string                 `json:"id"`
+	Name           string                 `json:"name"`
 	DeploymentName string                 `json:"deployment_name"`
+	Pipeline       string                 `json:"pipeline"`
 	PipelineName   string                 `json:"pipeline_name"`
 	Namespace      string                 `json:"namespace"`
 	TargetNodes    map[string]string      `json:"target_nodes"`
@@ -148,9 +150,12 @@ type DeploymentInstances struct {
 
 // DeploymentMetrics contains the latest metrics for a deployment
 type DeploymentMetrics struct {
-	Cardinality int64   `json:"cardinality"`
-	Throughput  string  `json:"throughput"`
-	ErrorRate   float64 `json:"error_rate"`
+	Cardinality    int64   `json:"cardinality"`
+	Throughput     string  `json:"throughput"`
+	ErrorRate      float64 `json:"error_rate"`
+	CPUUsage       float64 `json:"cpu_usage"`
+	MemoryUsage    float64 `json:"memory_usage"`
+	LastUpdated    time.Time `json:"last_updated"`
 }
 
 // ResourceRequirements defines resource requirements and limits
@@ -163,4 +168,9 @@ type ResourceRequirements struct {
 type ResourceList struct {
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
+}
+
+// RollbackPipelineRequest represents a request to rollback a pipeline
+type RollbackPipelineRequest struct {
+	Version string `json:"version,omitempty"`
 }

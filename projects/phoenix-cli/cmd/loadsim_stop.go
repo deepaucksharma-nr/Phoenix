@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/client"
-	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/config"
-	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/output"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 )
 
 // loadsimStopCmd represents the loadsim stop command

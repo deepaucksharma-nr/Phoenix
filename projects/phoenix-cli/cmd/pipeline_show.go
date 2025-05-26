@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/phoenix-vnext/platform/projects/phoenix-cli/internal/output"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 )
 
 // pipelineShowCmd represents the pipeline show command
@@ -29,9 +29,6 @@ Examples:
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pipelineName := args[0]
-
-		// Define the catalog location
-		catalogPath := "/configs/pipelines/catalog/process"
 		
 		// Try multiple possible locations
 		possiblePaths := []string{

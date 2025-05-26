@@ -19,4 +19,15 @@ This includes:
 
 func init() {
 	rootCmd.AddCommand(pipelineCmd)
+	
+	// Add subcommands
+	pipelineCmd.AddCommand(pipelineListCmd)
+	pipelineCmd.AddCommand(pipelineDeployCmd)
+	pipelineCmd.AddCommand(pipelineListDeploymentsCmd)
+	pipelineCmd.AddCommand(pipelineShowCmd)
+	pipelineCmd.AddCommand(pipelineValidateCmd)
+	pipelineCmd.AddCommand(pipelineStatusCmd)
+	pipelineCmd.AddCommand(pipelineGetConfigCmd)
+	pipelineCmd.AddCommand(pipelineRollbackCmd)
+	pipelineCmd.AddCommand(pipelineDeleteCmd)
 }

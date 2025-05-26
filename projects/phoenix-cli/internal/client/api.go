@@ -277,6 +277,63 @@ func (c *APIClient) ListPipelineDeployments(req ListPipelineDeploymentsRequest) 
 	return result.Deployments, nil
 }
 
+// GetPipelineDeployment gets a single pipeline deployment
+func (c *APIClient) GetPipelineDeployment(deploymentID string) (*PipelineDeployment, error) {
+	resp, err := c.doRequest("GET", "/api/v1/pipelines/deployments/"+deploymentID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var deployment PipelineDeployment
+	if err := c.parseResponse(resp, &deployment); err != nil {
+		return nil, err
+	}
+
+	return &deployment, nil
+}
+
+// GetPipelineConfig retrieves the active configuration from a deployment
+func (c *APIClient) GetPipelineConfig(deploymentID string) (string, error) {
+	resp, err := c.doRequest("GET", "/api/v1/pipelines/deployments/"+deploymentID+"/config", nil)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp ErrorResponse
+		if err := json.Unmarshal(body, &errorResp); err == nil && errorResp.Error != "" {
+			return "", fmt.Errorf("API error: %s", errorResp.Error)
+		}
+		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Return raw YAML content
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	return string(body), nil
+}
+
+// RollbackPipeline rolls back a pipeline deployment to a previous version
+func (c *APIClient) RollbackPipeline(deploymentID string, req RollbackPipelineRequest) (*PipelineDeployment, error) {
+	resp, err := c.doRequest("POST", "/api/v1/pipelines/deployments/"+deploymentID+"/rollback", req)
+	if err != nil {
+		return nil, err
+	}
+
+	var deployment PipelineDeployment
+	if err := c.parseResponse(resp, &deployment); err != nil {
+		return nil, err
+	}
+
+	return &deployment, nil
+}
+
 // DeletePipelineDeployment deletes a pipeline deployment
 func (c *APIClient) DeletePipelineDeployment(deploymentID string) error {
 	resp, err := c.doRequest("DELETE", "/api/v1/pipelines/deployments/"+deploymentID, nil)

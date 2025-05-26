@@ -10,8 +10,17 @@ import (
 
 // Config manages CLI configuration
 type Config struct {
-	configPath string
-	viper      *viper.Viper
+	configPath  string
+	viper       *viper.Viper
+	Token       string `json:"token"`
+	APIEndpoint string `json:"api_endpoint"`
+}
+
+// Load loads configuration from the default location
+func Load() (*Config, error) {
+	config := New()
+	// Config is always created successfully, but return for consistency
+	return config, nil
 }
 
 // New creates a new config instance
@@ -34,10 +43,19 @@ func New() *Config {
 	// Try to read existing config
 	v.ReadInConfig()
 
-	return &Config{
-		configPath: configPath,
-		viper:      v,
+	config := &Config{
+		configPath:  configPath,
+		viper:       v,
+		Token:       v.GetString("auth.token"),
+		APIEndpoint: v.GetString("api.endpoint"),
 	}
+	
+	// Set default if empty
+	if config.APIEndpoint == "" {
+		config.APIEndpoint = "http://localhost:8080"
+	}
+	
+	return config
 }
 
 // GetConfigPath returns the path to the config file

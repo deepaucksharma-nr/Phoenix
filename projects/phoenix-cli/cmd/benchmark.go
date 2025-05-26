@@ -311,13 +311,13 @@ func runExperimentOperations(apiClient *client.APIClient, totalExperiments, conc
 				
 				// Create experiment
 				req := client.CreateExperimentRequest{
-					Name:        fmt.Sprintf("benchmark-exp-%d-%d", worker, j),
-					Namespace:   "benchmark",
-					PipelineA:   "process-baseline-v1",
-					PipelineB:   "process-intelligent-v1",
-					TrafficSplit: "50/50",
-					Duration:    "30m",
-					Selector:    "app=benchmark",
+					Name:              fmt.Sprintf("benchmark-exp-%d-%d", worker, j),
+					Description:       "Benchmark experiment",
+					BaselinePipeline:  "process-baseline-v1",
+					CandidatePipeline: "process-intelligent-v1",
+					TargetNodes:       map[string]string{"app": "benchmark"},
+					Duration:          30 * time.Minute,
+					Parameters:        map[string]interface{}{"traffic_split": "50/50"},
 				}
 
 				experiment, err := apiClient.CreateExperiment(req)
@@ -438,7 +438,8 @@ finish:
 func makeRequest(apiClient *client.APIClient, endpoint, method string) error {
 	switch endpoint {
 	case "/api/v1/experiments":
-		_, err := apiClient.ListExperiments("", "")
+		req := client.ListExperimentsRequest{}
+		_, err := apiClient.ListExperiments(req)
 		return err
 	case "/api/v1/pipeline-deployments":
 		// This would require implementing the pipeline deployment client methods
@@ -483,4 +484,19 @@ func printBenchmarkResult(cmd *cobra.Command, result *BenchmarkResult) error {
 		fmt.Printf("  99th percentile:   %v\n", result.P99Latency)
 		return nil
 	}
+}
+
+// getAPIClient creates an API client from configuration
+func getAPIClient() (*client.APIClient, error) {
+	token := viper.GetString("auth.token")
+	if token == "" {
+		return nil, fmt.Errorf("not authenticated. Please run: phoenix auth login")
+	}
+	
+	apiEndpoint := viper.GetString("api.endpoint")
+	if apiEndpoint == "" {
+		apiEndpoint = "http://localhost:8080" // default
+	}
+	
+	return client.NewAPIClient(apiEndpoint, token), nil
 }
