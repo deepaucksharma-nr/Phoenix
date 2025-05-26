@@ -1,4 +1,5 @@
 name: Go Service CI/CD
+# Updated by Abhinav as part of CI/CD Pipeline Standardization
 
 on:
   workflow_call:
@@ -6,17 +7,36 @@ on:
       service-name:
         required: true
         type: string
+        description: "Name of the service"
       working-directory:
         required: true
         type: string
+        description: "Directory containing the service code"
       run-integration-tests:
         required: false
         type: boolean
         default: true
+        description: "Whether to run integration tests"
       deploy-environments:
         required: false
         type: string
         default: 'development'
+        description: "Comma-separated list of environments to deploy to"
+      build-args:
+        required: false
+        type: string
+        default: ''
+        description: "Additional build arguments for Docker"
+      security-scan-level:
+        required: false
+        type: string
+        default: 'medium'
+        description: "Security scan level (low, medium, high)"
+      code-coverage-threshold:
+        required: false
+        type: number
+        default: 80
+        description: "Minimum code coverage percentage"
     secrets:
       DOCKER_REGISTRY_TOKEN:
         required: true
@@ -24,10 +44,14 @@ on:
         required: false
       CODECOV_TOKEN:
         required: false
+      SNYK_TOKEN:
+        required: false
 
 env:
   GO_VERSION: '1.21'
   GOLANGCI_LINT_VERSION: 'v1.55.2'
+  GO_PACKAGES_CACHE_KEY: go-${{ hashFiles('**/go.sum', 'go.work.sum') }}
+  BUILD_CACHE_KEY: build-${{ github.workflow }}-${{ github.job }}
 
 jobs:
   validate:
