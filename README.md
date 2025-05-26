@@ -169,10 +169,24 @@ Pre-commit hooks are automatically installed to:
 
 ## 📚 Documentation
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
+### Core Documentation
+- [Architecture Overview](docs/architecture/PLATFORM_ARCHITECTURE.md)
 - [Monorepo Boundaries](MONOREPO_BOUNDARIES.md)
 - [Interface Contracts](docs/INTERFACE_CONTRACTS.md)
-- [Migration Guide](MIGRATION_FINAL_REPORT.md)
+- [AI Assistant Guidelines](CLAUDE.md)
+
+### Guides
+- [Contributing Guide](CONTRIBUTING.md)
+- [Team Onboarding](TEAM_ONBOARDING.md)
+- [E2E Demo Guide](E2E_DEMO_GUIDE.md)
+
+### Migration & Operations
+- [Migration Summary](docs/migration/MIGRATION_SUMMARY_CONSOLIDATED.md)
+- [Service Consolidation](docs/operations/SERVICE_CONSOLIDATION_PLAN.md)
+- [Service Inventory](docs/generated/SERVICE_INVENTORY.md)
+
+### Quick Reference
+- [Consolidated Documentation Index](CONSOLIDATED_DOCUMENTATION.md)
 
 ## 🤝 Contributing
 

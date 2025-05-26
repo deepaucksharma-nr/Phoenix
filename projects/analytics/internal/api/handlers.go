@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/phoenix-vnext/analytics/internal/analyzer"
-	"github.com/phoenix-vnext/analytics/internal/visualizer"
+	"github.com/phoenix/platform/projects/analytics/internal/analyzer"
+	"github.com/phoenix/platform/projects/analytics/internal/visualizer"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"

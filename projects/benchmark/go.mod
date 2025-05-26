@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/projects/benchmark
+module github.com/phoenix/platform/projects/benchmark
 
 go 1.21
 
@@ -20,8 +20,8 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
-replace github.com/phoenix-vnext/platform/pkg => ../../pkg
+replace github.com/phoenix/platform/pkg => ../../pkg
 
-replace github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
 
-replace github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts
+replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts

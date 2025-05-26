@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/projects/analytics
+module github.com/phoenix/platform/projects/analytics
 
 go 1.21
 
@@ -11,7 +11,7 @@ require (
 	gonum.org/v1/plot v0.14.0
 )
 
-replace github.com/phoenix-vnext/platform/pkg => ../../pkg
+replace github.com/phoenix/platform/pkg => ../../pkg
 
 require (
 	git.sr.ht/~sbinet/gg v0.5.0 // indirect
@@ -38,6 +38,6 @@ require (
 	google.golang.org/protobuf v1.34.2 // indirect
 )
 
-replace github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
+replace github.com/phoenix/platform/packages/go-common => ../../packages/go-common
 
-replace github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts
+replace github.com/phoenix/platform/packages/contracts => ../../packages/contracts

@@ -6,8 +6,6 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
-	github.com/phoenix-vnext/platform/packages/contracts v0.0.0
-	github.com/phoenix-vnext/platform/packages/go-common v0.0.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.26.0
