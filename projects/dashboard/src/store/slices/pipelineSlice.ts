@@ -1,178 +1,256 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { Pipeline, PipelineNode, PipelineConnection } from '@types/pipeline';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 
-// Mock deployments data
-const mockDeployments = [
-  {
-    id: '1',
-    name: 'prod-process-optimizer',
-    pipeline: 'process-optimizer-v2',
-    namespace: 'production',
-    status: 'active',
-    phase: 'running',
-    targetNodes: {
-      'node-1': 'collector-node-1.phoenix.local',
-      'node-2': 'collector-node-2.phoenix.local',
-    },
-    instances: {
-      desired: 3,
-      ready: 3,
-    },
-    metrics: {
-      cardinality: 15420,
-      throughput: '1.2M/s',
-      errorRate: 0.002,
-      cpuUsage: 45,
-      memoryUsage: 68,
-    },
-    createdAt: '2024-03-15T10:00:00Z',
-    updatedAt: '2024-03-20T15:30:00Z',
-  },
-  {
-    id: '2',
-    name: 'staging-sampler',
-    pipeline: 'tail-sampling-v1',
-    namespace: 'staging',
-    status: 'active',
-    phase: 'running',
-    targetNodes: {
-      'node-1': 'collector-staging.phoenix.local',
-    },
-    instances: {
-      desired: 1,
-      ready: 1,
-    },
-    metrics: {
-      cardinality: 8500,
-      throughput: '500K/s',
-      errorRate: 0.001,
-      cpuUsage: 32,
-      memoryUsage: 45,
-    },
-    createdAt: '2024-03-18T14:00:00Z',
-    updatedAt: '2024-03-20T14:00:00Z',
-  },
-];
+// Types
+interface PipelineDeployment {
+  id: string
+  name: string
+  pipeline: string
+  namespace: string
+  status: 'active' | 'pending' | 'failed' | 'stopped'
+  phase: string
+  targetNodes: Record<string, string>
+  instances: {
+    desired: number
+    ready: number
+  }
+  metrics: {
+    cardinality: number
+    throughput: string
+    errorRate: number
+    cpuUsage: number
+    memoryUsage: number
+  }
+  createdAt: string
+  updatedAt: string
+}
+
+interface PipelineTemplate {
+  id: string
+  name: string
+  description: string
+  category: string
+  version: string
+  author: string
+  tags: string[]
+  performance: {
+    avgLatency: string
+    cpuUsage: string
+    memoryUsage: string
+    cardinalityReduction: string
+  }
+  yaml: string
+}
 
 interface PipelineState {
-  pipelines: Pipeline[];
-  currentPipeline: Pipeline | null;
-  nodes: PipelineNode[];
-  connections: PipelineConnection[];
-  selectedNodeId: string | null;
-  isLoading: boolean;
-  error: string | null;
-  isDirty: boolean;
-  deployments: any[]; // Pipeline deployments
-  loading: boolean; // For backward compatibility
+  deployments: PipelineDeployment[]
+  templates: PipelineTemplate[]
+  loading: boolean
+  error: string | null
+  currentDeployment: PipelineDeployment | null
 }
 
 const initialState: PipelineState = {
-  pipelines: [],
-  currentPipeline: null,
-  nodes: [],
-  connections: [],
-  selectedNodeId: null,
-  isLoading: false,
-  error: null,
-  isDirty: false,
-  deployments: mockDeployments,
+  deployments: [],
+  templates: [],
   loading: false,
-};
+  error: null,
+  currentDeployment: null,
+}
+
+// Async thunks for API calls
+export const fetchPipelineDeployments = createAsyncThunk(
+  'pipelines/fetchDeployments',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/v1/pipelines/deployments', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.deployments || []
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const fetchPipelineTemplates = createAsyncThunk(
+  'pipelines/fetchTemplates',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/v1/pipelines/templates', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.templates || []
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const deployPipeline = createAsyncThunk(
+  'pipelines/deployPipeline',
+  async (deploymentData: {
+    name: string
+    pipeline: string
+    namespace: string
+    targetNodes: Record<string, string>
+    config?: any
+  }, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/v1/pipelines/deployments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(deploymentData),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.deployment
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const fetchPipelineDeployment = createAsyncThunk(
+  'pipelines/fetchDeployment',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`/api/v1/pipelines/deployments/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.deployment
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const deletePipelineDeployment = createAsyncThunk(
+  'pipelines/deleteDeployment',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`/api/v1/pipelines/deployments/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      return id
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 const pipelineSlice = createSlice({
   name: 'pipelines',
   initialState,
   reducers: {
-    setPipelines: (state, action: PayloadAction<Pipeline[]>) => {
-      state.pipelines = action.payload;
-      state.isLoading = false;
-      state.error = null;
+    setCurrentDeployment: (state, action: PayloadAction<PipelineDeployment | null>) => {
+      state.currentDeployment = action.payload
     },
-    setCurrentPipeline: (state, action: PayloadAction<Pipeline | null>) => {
-      state.currentPipeline = action.payload;
-      state.nodes = action.payload?.nodes || [];
-      state.connections = action.payload?.connections || [];
-      state.isDirty = false;
-    },
-    addNode: (state, action: PayloadAction<PipelineNode>) => {
-      state.nodes.push(action.payload);
-      state.isDirty = true;
-    },
-    updateNode: (state, action: PayloadAction<PipelineNode>) => {
-      const index = state.nodes.findIndex(
-        (node) => node.id === action.payload.id
-      );
-      if (index !== -1) {
-        state.nodes[index] = action.payload;
-        state.isDirty = true;
-      }
-    },
-    removeNode: (state, action: PayloadAction<string>) => {
-      state.nodes = state.nodes.filter((node) => node.id !== action.payload);
-      state.connections = state.connections.filter(
-        (conn) =>
-          conn.source !== action.payload && conn.target !== action.payload
-      );
-      state.isDirty = true;
-    },
-    addConnection: (state, action: PayloadAction<PipelineConnection>) => {
-      state.connections.push(action.payload);
-      state.isDirty = true;
-    },
-    removeConnection: (state, action: PayloadAction<string>) => {
-      state.connections = state.connections.filter(
-        (conn) => conn.id !== action.payload
-      );
-      state.isDirty = true;
-    },
-    setSelectedNode: (state, action: PayloadAction<string | null>) => {
-      state.selectedNodeId = action.payload;
-    },
-    updateNodePosition: (
-      state,
-      action: PayloadAction<{ id: string; x: number; y: number }>
-    ) => {
-      const node = state.nodes.find((n) => n.id === action.payload.id);
-      if (node) {
-        node.position = { x: action.payload.x, y: action.payload.y };
-        state.isDirty = true;
-      }
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.isLoading = action.payload;
-    },
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-      state.isLoading = false;
-    },
-    clearPipeline: (state) => {
-      state.currentPipeline = null;
-      state.nodes = [];
-      state.connections = [];
-      state.selectedNodeId = null;
-      state.isDirty = false;
-    },
-    setDirty: (state, action: PayloadAction<boolean>) => {
-      state.isDirty = action.payload;
+    clearError: (state) => {
+      state.error = null
     },
   },
-});
+  extraReducers: (builder) => {
+    builder
+      // Fetch deployments
+      .addCase(fetchPipelineDeployments.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchPipelineDeployments.fulfilled, (state, action) => {
+        state.loading = false
+        state.deployments = action.payload
+      })
+      .addCase(fetchPipelineDeployments.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      
+      // Fetch templates
+      .addCase(fetchPipelineTemplates.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(fetchPipelineTemplates.fulfilled, (state, action) => {
+        state.loading = false
+        state.templates = action.payload
+      })
+      .addCase(fetchPipelineTemplates.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      
+      // Deploy pipeline
+      .addCase(deployPipeline.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(deployPipeline.fulfilled, (state, action) => {
+        state.loading = false
+        state.deployments.push(action.payload)
+      })
+      .addCase(deployPipeline.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      
+      // Fetch single deployment
+      .addCase(fetchPipelineDeployment.fulfilled, (state, action) => {
+        state.currentDeployment = action.payload
+        const index = state.deployments.findIndex(dep => dep.id === action.payload.id)
+        if (index !== -1) {
+          state.deployments[index] = action.payload
+        }
+      })
+      
+      // Delete deployment
+      .addCase(deletePipelineDeployment.fulfilled, (state, action) => {
+        state.deployments = state.deployments.filter(dep => dep.id !== action.payload)
+      })
+  },
+})
 
-export const {
-  setPipelines,
-  setCurrentPipeline,
-  addNode,
-  updateNode,
-  removeNode,
-  addConnection,
-  removeConnection,
-  setSelectedNode,
-  updateNodePosition,
-  setLoading,
-  setError,
-  clearPipeline,
-  setDirty,
-} = pipelineSlice.actions;
-
-export default pipelineSlice.reducer;
+export const { setCurrentDeployment, clearError } = pipelineSlice.actions
+export default pipelineSlice.reducer

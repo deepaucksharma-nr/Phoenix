@@ -1,258 +1,232 @@
-import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { Experiment, ExperimentMetrics } from '@/types/experiment';
-import axiosInstance from '@/config/axios';
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 
-interface ExperimentState {
-  experiments: Experiment[];
-  currentExperiment: Experiment | null;
-  metrics: Record<string, ExperimentMetrics>;
-  loading: boolean;
-  error: string | null;
-  filters: {
-    status: string[];
-    dateRange: [Date | null, Date | null];
-    search: string;
-  };
+// Types
+interface Experiment {
+  id: string
+  name: string
+  description?: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  createdAt: string
+  updatedAt: string
+  startedAt?: string
+  completedAt?: string
+  spec: {
+    duration: string
+    targetHosts: string[]
+    baselinePipeline: string
+    candidatePipeline: string
+  }
+  results?: {
+    cardinalityReduction: number
+    costReduction: number
+    baselineMetrics: any
+    candidateMetrics: any
+    recommendation: string
+  }
 }
 
-// Async thunks
-export const fetchExperiments = createAsyncThunk(
-  'experiments/fetchAll',
-  async () => {
-    const response = await axiosInstance.get('/api/experiments');
-    return response.data;
-  }
-);
-
-export const fetchExperimentById = createAsyncThunk(
-  'experiments/fetchById',
-  async (id: string) => {
-    const response = await axiosInstance.get(`/api/experiments/${id}`);
-    return response.data;
-  }
-);
-
-export const createExperiment = createAsyncThunk(
-  'experiments/create',
-  async (data: Partial<Experiment>) => {
-    const response = await axiosInstance.post('/api/experiments', data);
-    return response.data;
-  }
-);
-
-export const updateExperimentStatus = createAsyncThunk(
-  'experiments/updateStatus',
-  async ({ id, status }: { id: string; status: string }) => {
-    const response = await axiosInstance.patch(`/api/experiments/${id}/status`, { status });
-    return response.data;
-  }
-);
-
-export const deleteExperiment = createAsyncThunk(
-  'experiments/delete',
-  async (id: string) => {
-    await axiosInstance.delete(`/api/experiments/${id}`);
-    return id;
-  }
-);
-
-export const startExperiment = createAsyncThunk(
-  'experiments/start',
-  async (id: string) => {
-    const response = await axiosInstance.post(`/api/experiments/${id}/start`);
-    return response.data;
-  }
-);
-
-export const stopExperiment = createAsyncThunk(
-  'experiments/stop',
-  async (id: string) => {
-    const response = await axiosInstance.post(`/api/experiments/${id}/stop`);
-    return response.data;
-  }
-);
-
-export const promoteVariant = createAsyncThunk(
-  'experiments/promoteVariant',
-  async ({ id, variant }: { id: string; variant: 'baseline' | 'candidate' }) => {
-    const response = await axiosInstance.post(`/api/experiments/${id}/promote`, { variant });
-    return response.data;
-  }
-);
+interface ExperimentState {
+  experiments: Experiment[]
+  loading: boolean
+  error: string | null
+  currentExperiment: Experiment | null
+}
 
 const initialState: ExperimentState = {
   experiments: [],
-  currentExperiment: null,
-  metrics: {},
   loading: false,
   error: null,
-  filters: {
-    status: [],
-    dateRange: [null, null],
-    search: '',
-  },
-};
+  currentExperiment: null,
+}
+
+// Async thunks for API calls
+export const fetchExperiments = createAsyncThunk(
+  'experiments/fetchExperiments',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/v1/experiments', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.experiments || []
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const fetchExperiment = createAsyncThunk(
+  'experiments/fetchExperiment',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`/api/v1/experiments/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.experiment
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const createExperiment = createAsyncThunk(
+  'experiments/createExperiment',
+  async (experimentData: Partial<Experiment>, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/v1/experiments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(experimentData),
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.experiment
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const updateExperimentStatus = createAsyncThunk(
+  'experiments/updateExperimentStatus',
+  async ({ id, status }: { id: string; status: string }, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`/api/v1/experiments/${id}/${status}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      return data.experiment
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
+
+export const deleteExperiment = createAsyncThunk(
+  'experiments/deleteExperiment',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`/api/v1/experiments/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      return id
+    } catch (error: any) {
+      return rejectWithValue(error.message)
+    }
+  }
+)
 
 const experimentSlice = createSlice({
   name: 'experiments',
   initialState,
   reducers: {
-    setExperiments: (state, action: PayloadAction<Experiment[]>) => {
-      state.experiments = action.payload;
-      state.loading = false;
-      state.error = null;
-    },
-    addExperiment: (state, action: PayloadAction<Experiment>) => {
-      state.experiments.push(action.payload);
-    },
-    updateExperiment: (state, action: PayloadAction<Experiment>) => {
-      const index = state.experiments.findIndex(
-        (exp) => exp.id === action.payload.id
-      );
-      if (index !== -1) {
-        state.experiments[index] = action.payload;
-      }
-      if (state.currentExperiment?.id === action.payload.id) {
-        state.currentExperiment = action.payload;
-      }
-    },
-    removeExperiment: (state, action: PayloadAction<string>) => {
-      state.experiments = state.experiments.filter(
-        (exp) => exp.id !== action.payload
-      );
-      if (state.currentExperiment?.id === action.payload) {
-        state.currentExperiment = null;
-      }
-    },
     setCurrentExperiment: (state, action: PayloadAction<Experiment | null>) => {
-      state.currentExperiment = action.payload;
+      state.currentExperiment = action.payload
     },
-    setExperimentMetrics: (
-      state,
-      action: PayloadAction<{ experimentId: string; metrics: ExperimentMetrics }>
-    ) => {
-      const { experimentId, metrics } = action.payload;
-      state.metrics[experimentId] = metrics;
-    },
-    setLoading: (state, action: PayloadAction<boolean>) => {
-      state.loading = action.payload;
-    },
-    setError: (state, action: PayloadAction<string | null>) => {
-      state.error = action.payload;
-      state.loading = false;
-    },
-    setFilters: (
-      state,
-      action: PayloadAction<Partial<ExperimentState['filters']>>
-    ) => {
-      state.filters = { ...state.filters, ...action.payload };
-    },
-    clearFilters: (state) => {
-      state.filters = initialState.filters;
+    clearError: (state) => {
+      state.error = null
     },
   },
   extraReducers: (builder) => {
     builder
       // Fetch experiments
       .addCase(fetchExperiments.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.loading = true
+        state.error = null
       })
       .addCase(fetchExperiments.fulfilled, (state, action) => {
-        state.loading = false;
-        state.experiments = action.payload;
+        state.loading = false
+        state.experiments = action.payload
       })
       .addCase(fetchExperiments.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to fetch experiments';
+        state.loading = false
+        state.error = action.payload as string
       })
-      // Fetch experiment by ID
-      .addCase(fetchExperimentById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      
+      // Fetch single experiment
+      .addCase(fetchExperiment.pending, (state) => {
+        state.loading = true
+        state.error = null
       })
-      .addCase(fetchExperimentById.fulfilled, (state, action) => {
-        state.loading = false;
-        state.currentExperiment = action.payload;
+      .addCase(fetchExperiment.fulfilled, (state, action) => {
+        state.loading = false
+        state.currentExperiment = action.payload
       })
-      .addCase(fetchExperimentById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to fetch experiment';
+      .addCase(fetchExperiment.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
       })
+      
       // Create experiment
       .addCase(createExperiment.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.loading = true
+        state.error = null
       })
       .addCase(createExperiment.fulfilled, (state, action) => {
-        state.loading = false;
-        state.experiments.push(action.payload);
+        state.loading = false
+        state.experiments.push(action.payload)
       })
       .addCase(createExperiment.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.error.message || 'Failed to create experiment';
+        state.loading = false
+        state.error = action.payload as string
       })
+      
       // Update experiment status
       .addCase(updateExperimentStatus.fulfilled, (state, action) => {
-        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
+        const index = state.experiments.findIndex(exp => exp.id === action.payload.id)
         if (index !== -1) {
-          state.experiments[index] = action.payload;
-        }
-        if (state.currentExperiment?.id === action.payload.id) {
-          state.currentExperiment = action.payload;
+          state.experiments[index] = action.payload
         }
       })
+      
       // Delete experiment
       .addCase(deleteExperiment.fulfilled, (state, action) => {
-        state.experiments = state.experiments.filter(exp => exp.id !== action.payload);
-        if (state.currentExperiment?.id === action.payload) {
-          state.currentExperiment = null;
-        }
+        state.experiments = state.experiments.filter(exp => exp.id !== action.payload)
       })
-      // Start experiment
-      .addCase(startExperiment.fulfilled, (state, action) => {
-        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
-        if (index !== -1) {
-          state.experiments[index] = action.payload;
-        }
-        if (state.currentExperiment?.id === action.payload.id) {
-          state.currentExperiment = action.payload;
-        }
-      })
-      // Stop experiment
-      .addCase(stopExperiment.fulfilled, (state, action) => {
-        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
-        if (index !== -1) {
-          state.experiments[index] = action.payload;
-        }
-        if (state.currentExperiment?.id === action.payload.id) {
-          state.currentExperiment = action.payload;
-        }
-      })
-      // Promote variant
-      .addCase(promoteVariant.fulfilled, (state, action) => {
-        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
-        if (index !== -1) {
-          state.experiments[index] = action.payload;
-        }
-        if (state.currentExperiment?.id === action.payload.id) {
-          state.currentExperiment = action.payload;
-        }
-      });
   },
-});
+})
 
-export const {
-  setExperiments,
-  addExperiment,
-  updateExperiment,
-  removeExperiment,
-  setCurrentExperiment,
-  setExperimentMetrics,
-  setLoading,
-  setError,
-  setFilters,
-  clearFilters,
-} = experimentSlice.actions;
-
-export default experimentSlice.reducer;
+export const { setCurrentExperiment, clearError } = experimentSlice.actions
+export default experimentSlice.reducer
