@@ -60,7 +60,6 @@
 - Security and monitoring setup
 - Production deployments
 
-**Backup**: Ryan Thompson
 
 ---
 
@@ -82,8 +81,6 @@
 - Integration testing strategy
 - Performance optimization
 
-**Backup**: David Park
-
 ---
 
 ### 🌐 Praveen
@@ -104,9 +101,6 @@
 - User experience improvements
 - Frontend-backend integration
 - User documentation
-
-**Backup**: Jessica Zhang
-
 ---
 
 ### ⚙️ Shivani
@@ -127,8 +121,6 @@
 - Metrics and monitoring
 - Performance testing
 - Data processing optimization
-
-**Backup**: Michael Kumar
 
 ---
 
@@ -152,7 +144,6 @@
 - Frontend testing
 - Developer documentation
 
-**Backup**: Emma Wilson
 
 ---
 
@@ -176,7 +167,6 @@
 - Configuration management
 - Operational tooling
 
-**Backup**: Sarah Martinez
 
 ---
 
@@ -197,7 +187,6 @@
 - Test helpers
 - Bug fixes
 
-**Mentor**: David Park
 
 ---
 
@@ -218,9 +207,6 @@
 - UI bug fixes
 - Frontend utilities
 - API documentation
-
-**Mentor**: Jessica Zhang
-
 ---
 
 ### 🔒 Ramana
@@ -241,173 +227,7 @@
 - Monitoring setup assistance
 - DevOps tooling support
 
-**Mentor**: Sarah Martinez
-
 ---
 
-## 🔄 Rotation Schedule
 
-### Quarterly Rotations
-- **Q1**: Focus on current assignments
-- **Q2**: Junior devs rotate to new areas
-- **Q3**: Cross-training between teams
-- **Q4**: Leadership shadowing for mid-level devs
 
-### Knowledge Sharing
-- **Weekly**: Team tech talks
-- **Bi-weekly**: Code review sessions
-- **Monthly**: Architecture reviews
-- **Quarterly**: Hack days
-
----
-
-## 📋 Team Responsibilities Matrix
-
-| Area | Primary | Secondary | Reviewers |
-|------|---------|-----------|-----------|
-| Architecture | Alex | Michael | Sarah |
-| Infrastructure | Sarah | Ryan | Alex |
-| Core Services | Michael | David | Alex |
-| Frontend | Jessica | Emma | Nathan |
-| Analytics | David | Olivia | Michael |
-| DevOps | Sarah | Ryan, Sophia | Alex |
-| Testing | Michael | David | All |
-| Documentation | Emma | Nathan | Jessica |
-
----
-
-## 🎯 Sprint Assignments
-
-### Current Sprint Focus
-| Developer | Sprint Tasks | Story Points |
-|-----------|-------------|--------------|
-| Alex | Architecture review, pkg refactoring | 13 |
-| Sarah | K8s migration, CI/CD updates | 13 |
-| Michael | API v2 design, controller updates | 13 |
-| Emma | Dashboard features, CLI improvements | 8 |
-| David | Analytics pipeline optimization | 8 |
-| Jessica | UI component library | 8 |
-| Ryan | Operator improvements | 8 |
-| Olivia | Benchmark suite expansion | 5 |
-| Nathan | Dashboard bug fixes | 5 |
-| Sophia | Monitoring setup | 5 |
-
----
-
-## 🚨 On-Call Rotation
-
-### Primary On-Call (Weekly Rotation)
-1. Michael Kumar
-2. David Park
-3. Emma Wilson
-4. Ryan Thompson
-
-### Secondary On-Call
-1. Sarah Martinez (Infrastructure)
-2. Alex Chen (Architecture)
-
-### Weekend Coverage
-- Rotates among all team members
-- Junior devs paired with seniors
-
----
-
-## 📚 Code Review Requirements
-
-### Review Matrix
-| Code Area | Required Reviewers | Optional Reviewers |
-|-----------|-------------------|-------------------|
-| /pkg/* | Alex + 1 Senior | Any |
-| /deployments/* | Sarah + 1 | Ryan |
-| Core Services | Michael + 1 | David |
-| Frontend | Jessica + 1 | Emma |
-| Scripts/Tools | Sarah | Sophia |
-
-### Review SLAs
-- **Critical**: 2 hours
-- **High**: 4 hours
-- **Normal**: 24 hours
-- **Low**: 48 hours
-
----
-
-## 🎓 Mentorship Pairs
-
-| Mentor | Mentee | Focus Area |
-|--------|--------|------------|
-| David Park | Olivia Brown | Backend development, Go best practices |
-| Jessica Zhang | Nathan Lee | Frontend architecture, React patterns |
-| Sarah Martinez | Sophia Patel | DevOps practices, Kubernetes |
-| Michael Kumar | Ryan Thompson | System design, scalability |
-| Alex Chen | Emma Wilson | Architecture patterns, leadership |
-
----
-
-## 📊 Performance Metrics
-
-### Individual KPIs
-- **Code Quality**: Maintainability index > 80
-- **Test Coverage**: > 80% for owned code
-- **PR Turnaround**: < 24 hours
-- **Documentation**: Updated with code changes
-- **Knowledge Sharing**: 1 presentation/quarter
-
-### Team KPIs
-- **Sprint Velocity**: 80 points/sprint
-- **Bug Resolution**: < 48 hours
-- **Deployment Success**: > 95%
-- **System Uptime**: > 99.9%
-
----
-
-## 🔐 Access Levels
-
-### Production Access
-- **Full Access**: Alex, Sarah, Michael
-- **Read + Deploy**: Emma, David, Ryan
-- **Read Only**: Jessica, Olivia, Nathan, Sophia
-
-### Repository Permissions
-- **Admin**: Alex, Sarah
-- **Maintain**: Michael, Emma, David
-- **Write**: All team members
-- **Triage**: External contributors
-
----
-
-## 📅 Meeting Schedule
-
-### Daily
-- **Standup**: 9:30 AM (15 min)
-- **Blockers**: 4:30 PM (optional)
-
-### Weekly
-- **Architecture Review**: Monday 2 PM (Alex leads)
-- **Sprint Planning**: Tuesday 10 AM (All)
-- **Tech Talk**: Thursday 3 PM (Rotating)
-- **Retrospective**: Friday 2 PM (Bi-weekly)
-
-### Monthly
-- **All-Hands**: First Monday (All)
-- **1-on-1s**: Throughout month
-- **Hack Day**: Last Friday
-
----
-
-## 📈 Career Development Paths
-
-### Growth Tracks
-1. **IC Track**: Junior → Mid → Senior → Staff → Principal
-2. **Management Track**: Senior → Tech Lead → Engineering Manager
-3. **Architecture Track**: Senior → Solution Architect → Principal Architect
-
-### Skill Development Focus
-- **Juniors**: Core skills, code quality, testing
-- **Mid-Level**: System design, ownership, mentoring
-- **Seniors**: Architecture, strategy, leadership
-
----
-
-*Last Updated: May 2025*  
-*Team Lead: Alex Chen*  
-*Department: Platform Engineering*
