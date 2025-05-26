@@ -7,8 +7,8 @@ import (
 	"go.uber.org/zap"
 	"github.com/google/uuid"
 
-	"github.com/phoenix-vnext/platform/packages/go-common/models"
-	"github.com/phoenix-vnext/platform/packages/go-common/store"
+	"github.com/phoenix/platform/packages/go-common/models"
+	"github.com/phoenix/platform/packages/go-common/store"
 )
 
 // ExperimentService handles experiment-related operations
