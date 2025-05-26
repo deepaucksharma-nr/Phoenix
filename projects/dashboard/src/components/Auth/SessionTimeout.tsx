@@ -30,7 +30,8 @@ export const SessionTimeout: React.FC<SessionTimeoutProps> = ({
   autoExtend = true,
 }) => {
   const navigate = useNavigate()
-  const { isAuthenticated, logout, checkAuth } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const isAuthenticated = useAppSelector(state => state.auth.isAuthenticated)
   const [showWarning, setShowWarning] = useState(false)
   const [timeLeft, setTimeLeft] = useState(warningTime * 60) // Convert to seconds
   const [lastActivity, setLastActivity] = useState(Date.now())

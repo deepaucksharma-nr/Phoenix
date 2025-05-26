@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-github.com/phoenix-vnext/platform/packages/go-common/store
+	"github.com/phoenix-vnext/platform/packages/go-common/store"
 	"github.com/phoenix-vnext/platform/projects/platform-api/internal/services"
 )
 
