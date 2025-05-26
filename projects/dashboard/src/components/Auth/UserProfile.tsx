@@ -21,7 +21,8 @@ import {
   Business,
   Email,
 } from '@mui/icons-material'
-import { useAuthStore } from '../../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { logout } from '@store/slices/authSlice'
 import { useNavigate } from 'react-router-dom'
 
 interface UserProfileProps {
@@ -34,7 +35,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   showFullProfile = false 
 }) => {
   const navigate = useNavigate()
-  const { user, logout } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector(state => state.auth.user)
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const open = Boolean(anchorEl)
 
@@ -47,7 +49,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({
   }
 
   const handleLogout = async () => {
-    await logout()
+    await dispatch(logout())
     navigate('/login')
   }
 

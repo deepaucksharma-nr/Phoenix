@@ -22,7 +22,8 @@ import {
   Lock,
   Business,
 } from '@mui/icons-material'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { register } from '@store/slices/authSlice'
 
 interface RegisterFormData {
   name: string
@@ -44,7 +45,8 @@ interface FormErrors {
 
 export const Register: React.FC = () => {
   const navigate = useNavigate()
-  const { register, loading, error } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const { loading, error } = useAppSelector(state => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -111,12 +113,11 @@ export const Register: React.FC = () => {
     if (!validateForm()) return
 
     try {
-      await register({
+      await dispatch(register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        organization: formData.organization,
-      })
+      })).unwrap()
       navigate('/dashboard')
     } catch (err) {
       // Error handled by store

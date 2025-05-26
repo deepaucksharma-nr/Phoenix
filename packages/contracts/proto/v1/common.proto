@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package phoenix.common.v1;
 
-option go_package = "github.com/phoenix-platform/api/proto/v1/common;commonv1";
+option go_package = "github.com/phoenix-vnext/platform/packages/contracts/proto/v1;v1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
