@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	// "github.com/go-chi/chi/v5" // Unused for now
 	"github.com/phoenix/platform/projects/analytics/internal/analyzer"
 	"github.com/phoenix/platform/projects/analytics/internal/visualizer"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
-	"gonum.org/v1/plot/plotter"
+	// "gonum.org/v1/plot/plotter" // Unused for now
 )
 
 type Handler struct {
@@ -229,7 +230,7 @@ func (h *Handler) GenerateVisualization(w http.ResponseWriter, r *http.Request) 
 	w.Write(imageData)
 }
 
-func (h *Handler) generateTimeSeriesChart(result v1.Value, options map[string]interface{}) ([]byte, error) {
+func (h *Handler) generateTimeSeriesChart(result model.Value, options map[string]interface{}) ([]byte, error) {
 	title := "Time Series"
 	if t, ok := options["title"].(string); ok {
 		title = t
@@ -239,7 +240,7 @@ func (h *Handler) generateTimeSeriesChart(result v1.Value, options map[string]in
 	seriesData := []visualizer.TimeSeriesData{}
 	
 	switch v := result.(type) {
-	case v1.Matrix:
+	case model.Matrix:
 		for _, series := range v {
 			points := make([]visualizer.TimePoint, len(series.Values))
 			for i, sample := range series.Values {
@@ -258,7 +259,7 @@ func (h *Handler) generateTimeSeriesChart(result v1.Value, options map[string]in
 	return h.chartGenerator.GenerateTimeSeriesChart(title, seriesData)
 }
 
-func (h *Handler) generateHistogram(result v1.Value, options map[string]interface{}) ([]byte, error) {
+func (h *Handler) generateHistogram(result model.Value, options map[string]interface{}) ([]byte, error) {
 	title := "Histogram"
 	if t, ok := options["title"].(string); ok {
 		title = t
@@ -270,10 +271,10 @@ func (h *Handler) generateHistogram(result v1.Value, options map[string]interfac
 	}
 
 	// Extract values
-	values := plotter.Values{}
+	values := []float64{}
 	
 	switch v := result.(type) {
-	case v1.Matrix:
+	case model.Matrix:
 		for _, series := range v {
 			for _, sample := range series.Values {
 				values = append(values, float64(sample.Value))
@@ -284,11 +285,11 @@ func (h *Handler) generateHistogram(result v1.Value, options map[string]interfac
 	return h.chartGenerator.GenerateHistogram(title, "Value", "Frequency", values, bins)
 }
 
-func (h *Handler) convertToDataPoints(result v1.Value) []analyzer.DataPoint {
+func (h *Handler) convertToDataPoints(result model.Value) []analyzer.DataPoint {
 	dataPoints := []analyzer.DataPoint{}
 	
 	switch v := result.(type) {
-	case v1.Matrix:
+	case model.Matrix:
 		for _, series := range v {
 			for _, sample := range series.Values {
 				dataPoints = append(dataPoints, analyzer.DataPoint{
