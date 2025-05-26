@@ -1,0 +1,191 @@
+name: CI/CD Metrics Collection
+# Created by Abhinav as part of CI/CD Pipeline Management task
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *'  # Run daily at midnight UTC
+
+env:
+  METRICS_DIR: ./.github/metrics
+
+jobs:
+  collect-metrics:
+    name: Collect CI/CD Metrics
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pandas matplotlib seaborn
+
+      - name: Collect workflow metrics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p $METRICS_DIR
+          
+          # Collect metrics using GitHub API
+          echo "Collecting CI/CD metrics..."
+          python - << EOF
+          import os
+          import requests
+          import pandas as pd
+          import matplotlib.pyplot as plt
+          import seaborn as sns
+          from datetime import datetime, timedelta
+          import json
+          
+          # Setup
+          token = os.environ.get('GITHUB_TOKEN')
+          repo = os.environ.get('GITHUB_REPOSITORY')
+          api_url = f"https://api.github.com/repos/{repo}/actions/runs"
+          headers = {
+              'Authorization': f'token {token}',
+              'Accept': 'application/vnd.github.v3+json'
+          }
+          
+          # Calculate date range (last 30 days)
+          end_date = datetime.now()
+          start_date = end_date - timedelta(days=30)
+          
+          # Collect workflow runs data
+          all_runs = []
+          page = 1
+          while True:
+              params = {
+                  'per_page': 100,
+                  'page': page,
+                  'created': f">={start_date.strftime('%Y-%m-%d')}"
+              }
+              response = requests.get(api_url, headers=headers, params=params)
+              response.raise_for_status()
+              data = response.json()
+              
+              if not data.get('workflow_runs'):
+                  break
+                  
+              all_runs.extend(data['workflow_runs'])
+              if len(data['workflow_runs']) < 100:
+                  break
+              page += 1
+          
+          # Process data
+          if all_runs:
+              # Create DataFrame
+              runs_data = []
+              for run in all_runs:
+                  created_at = datetime.strptime(run['created_at'], '%Y-%m-%dT%H:%M:%SZ')
+                  updated_at = datetime.strptime(run['updated_at'], '%Y-%m-%dT%H:%M:%SZ')
+                  duration = (updated_at - created_at).total_seconds() / 60  # minutes
+                  
+                  runs_data.append({
+                      'workflow_id': run['workflow_id'],
+                      'workflow_name': run['name'],
+                      'run_id': run['id'],
+                      'status': run['status'],
+                      'conclusion': run['conclusion'],
+                      'branch': run['head_branch'],
+                      'created_at': created_at,
+                      'duration_minutes': duration
+                  })
+              
+              df = pd.DataFrame(runs_data)
+              
+              # Calculate metrics
+              metrics = {
+                  'total_runs': len(df),
+                  'success_rate': round(len(df[df['conclusion'] == 'success']) / len(df) * 100, 2) if len(df) > 0 else 0,
+                  'failure_rate': round(len(df[df['conclusion'] == 'failure']) / len(df) * 100, 2) if len(df) > 0 else 0,
+                  'avg_duration': round(df['duration_minutes'].mean(), 2),
+                  'median_duration': round(df['duration_minutes'].median(), 2),
+                  'min_duration': round(df['duration_minutes'].min(), 2),
+                  'max_duration': round(df['duration_minutes'].max(), 2),
+                  'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+              }
+              
+              # Add metrics by workflow
+              workflow_metrics = []
+              for workflow_name, group in df.groupby('workflow_name'):
+                  wm = {
+                      'workflow_name': workflow_name,
+                      'runs': len(group),
+                      'success_rate': round(len(group[group['conclusion'] == 'success']) / len(group) * 100, 2) if len(group) > 0 else 0,
+                      'avg_duration': round(group['duration_minutes'].mean(), 2),
+                  }
+                  workflow_metrics.append(wm)
+              
+              metrics['workflows'] = workflow_metrics
+              
+              # Save metrics
+              with open(os.environ.get('METRICS_DIR') + '/cicd_metrics.json', 'w') as f:
+                  json.dump(metrics, f, indent=2)
+              
+              # Generate visualizations
+              plt.figure(figsize=(12, 8))
+              
+              # Success rate by workflow
+              plt.subplot(2, 2, 1)
+              workflow_df = pd.DataFrame(workflow_metrics)
+              if not workflow_df.empty:
+                  sns.barplot(x='workflow_name', y='success_rate', data=workflow_df)
+                  plt.title('Success Rate by Workflow')
+                  plt.xticks(rotation=45, ha='right')
+                  plt.ylim(0, 100)
+              
+              # Average duration by workflow
+              plt.subplot(2, 2, 2)
+              if not workflow_df.empty:
+                  sns.barplot(x='workflow_name', y='avg_duration', data=workflow_df)
+                  plt.title('Average Duration by Workflow (minutes)')
+                  plt.xticks(rotation=45, ha='right')
+              
+              # Daily success rate trend
+              plt.subplot(2, 2, 3)
+              df['date'] = df['created_at'].dt.date
+              daily_success = df.groupby('date').apply(
+                  lambda x: len(x[x['conclusion'] == 'success']) / len(x) * 100 if len(x) > 0 else 0
+              ).reset_index()
+              daily_success.columns = ['date', 'success_rate']
+              sns.lineplot(x='date', y='success_rate', data=daily_success)
+              plt.title('Daily Success Rate Trend')
+              plt.xticks(rotation=45, ha='right')
+              plt.ylim(0, 100)
+              
+              # Average duration trend
+              plt.subplot(2, 2, 4)
+              daily_duration = df.groupby('date')['duration_minutes'].mean().reset_index()
+              sns.lineplot(x='date', y='duration_minutes', data=daily_duration)
+              plt.title('Average Daily Duration (minutes)')
+              plt.xticks(rotation=45, ha='right')
+              
+              plt.tight_layout()
+              plt.savefig(os.environ.get('METRICS_DIR') + '/cicd_metrics.png')
+              
+              print("CI/CD metrics collected successfully!")
+          else:
+              print("No workflow runs found in the specified time period.")
+          EOF
+
+      - name: Upload metrics as artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: cicd-metrics
+          path: ${{ env.METRICS_DIR }}
+          retention-days: 90
+      
+      # In a real implementation, we might add steps to:
+      # - Store metrics in a database
+      # - Send notification with metrics summary
+      # - Update dashboards

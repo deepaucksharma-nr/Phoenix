@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alert-rules.yaml: |
+    groups:
+    - name: phoenix.alerts
+      interval: 30s
+      rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage on {{ $labels.instance }} has been above 85% for more than 15 minutes."
+          
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage on {{ $labels.instance }} has been above 85% for more than 15 minutes."
+          
+      - alert: HighDiskUsage
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 10
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage on {{ $labels.instance }} has less than 10% free disk space for more than 15 minutes."
+          
+  phoenix-service-rules.yaml: |
+    groups:
+    - name: phoenix.services
+      interval: 30s
+      rules:
+      - alert: PhoenixServiceDown
+        expr: up{service=~"phoenix-.*"} == 0
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Phoenix service {{ $labels.service }} is down"
+          description: "Phoenix service {{ $labels.service }} in namespace {{ $labels.namespace }} has been down for more than 5 minutes."
+          
+      - alert: PhoenixServiceHighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{service=~"phoenix-.*"}[5m])) by (service, le)) > 2
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Phoenix service high latency"
+          description: "Phoenix service {{ $labels.service }} has 95th percentile latency above 2 seconds for more than 10 minutes."
+          
+      - alert: PhoenixServiceHighErrorRate
+        expr: sum(rate(http_requests_total{service=~"phoenix-.*", status_code=~"5.."}[5m])) by (service) / sum(rate(http_requests_total{service=~"phoenix-.*"}[5m])) by (service) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Phoenix service high error rate"
+          description: "Phoenix service {{ $labels.service }} has error rate above 5% for more than 5 minutes."

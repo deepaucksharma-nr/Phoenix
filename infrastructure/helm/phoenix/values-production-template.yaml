@@ -1,0 +1,227 @@
+# Phoenix Platform - Production Values Template
+# Use this file as a reference for configuring production deployments
+
+## Global Settings
+global:
+  domain: phoenix.example.com
+  storageClass: "managed-premium"
+  imagePullSecrets: 
+    - name: phoenix-registry-creds
+  imageRegistry: "ghcr.io/phoenix"
+  imagePullPolicy: IfNotPresent
+  commonLabels:
+    environment: production
+    team: platform
+  commonAnnotations:
+    contact: "platform-team@example.com"
+
+# Chart naming - usually left as default
+nameOverride: ""
+fullnameOverride: ""
+
+# Service account configuration
+serviceAccount:
+  create: true
+  annotations:
+    eks.amazonaws.com/role-arn: "arn:aws:iam::012345678901:role/phoenix-production-role"
+
+# Security contexts
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  allowPrivilegeEscalation: false
+
+# Network policies
+networkPolicy:
+  enabled: true
+
+# API Service Configuration
+api:
+  enabled: true
+  logLevel: info
+  replicaCount: 3
+  
+  image:
+    repository: "ghcr.io/phoenix/api"
+    tag: "v1.2.3"
+  
+  service:
+    type: ClusterIP
+    httpPort: 8080
+    grpcPort: 9090
+  
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 80
+  
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 2
+  
+  nodeSelector:
+    role: app
+  
+  tolerations:
+    - key: "app"
+      operator: "Equal"
+      value: "phoenix"
+      effect: "NoSchedule"
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: app.kubernetes.io/component
+              operator: In
+              values:
+              - api
+          topologyKey: kubernetes.io/hostname
+  
+  auth:
+    useSecretRef: true
+    secretName: "phoenix-auth-secrets"
+    tokenExpiry: 4h
+    refreshExpiry: 7d
+  
+  database:
+    maxOpenConns: 50
+    maxIdleConns: 10
+    connMaxLifetime: 30m
+
+# Dashboard Configuration
+dashboard:
+  enabled: true
+  replicaCount: 3
+  
+  image:
+    tag: "v1.2.1"
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Event Bus Configuration
+eventBus:
+  type: nats
+  bufferSize: 5000
+  workers: 20
+  
+  nats:
+    url: nats://nats-cluster.messaging:4222
+
+# Telemetry Configuration
+telemetry:
+  enabled: true
+  sampling:
+    probability: 0.25
+  
+  otel:
+    enabled: true
+    endpoint: otel-collector.monitoring:4317
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.phoenix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - host: dashboard.phoenix.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: phoenix-api-tls
+      hosts:
+        - api.phoenix.example.com
+    - secretName: phoenix-dashboard-tls
+      hosts:
+        - dashboard.phoenix.example.com
+
+# Monitoring Configuration
+monitoring:
+  serviceMonitor:
+    enabled: true
+    labels:
+      prometheus: default
+  
+  prometheusRule:
+    enabled: true
+    labels:
+      prometheus: default
+
+# Pipeline Operator Configuration
+pipelineOperator:
+  enabled: true
+  replicaCount: 2
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# LoadSim Operator Configuration
+loadsimOperator:
+  enabled: true
+  replicaCount: 2
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+
+# Generator Configuration
+generator:
+  enabled: true
+  replicaCount: 2
+  
+  service:
+    grpcPort: 5060
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  git:
+    existingSecret: "phoenix-git-creds"

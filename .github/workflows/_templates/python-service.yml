@@ -1,0 +1,391 @@
+name: Python Service CI/CD
+# Created by Abhinav as part of CI/CD Pipeline Standardization
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        required: true
+        type: string
+        description: "Name of the service"
+      working-directory:
+        required: true
+        type: string
+        description: "Directory containing the service code"
+      python-version:
+        required: false
+        type: string
+        default: '3.11'
+        description: "Python version to use"
+      use-poetry:
+        required: false
+        type: boolean
+        default: false
+        description: "Use Poetry for package management"
+      run-integration-tests:
+        required: false
+        type: boolean
+        default: true
+        description: "Whether to run integration tests"
+      deploy-environments:
+        required: false
+        type: string
+        default: 'development'
+        description: "Comma-separated list of environments to deploy to"
+      security-scan-level:
+        required: false
+        type: string
+        default: 'medium'
+        description: "Security scan level (low, medium, high)"
+    secrets:
+      DOCKER_REGISTRY_TOKEN:
+        required: true
+      SONAR_TOKEN:
+        required: false
+      CODECOV_TOKEN:
+        required: false
+      SNYK_TOKEN:
+        required: false
+
+env:
+  PIP_CACHE_KEY: pip-${{ hashFiles('**/requirements.txt', '**/pyproject.toml', '**/poetry.lock') }}
+  BUILD_CACHE_KEY: build-${{ github.workflow }}-${{ github.job }}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            curl -sSL https://install.python-poetry.org | python3 -
+            poetry install
+          else
+            python -m pip install --upgrade pip
+            pip install flake8 black isort mypy pytest
+            if [ -f requirements-dev.txt ]; then
+                pip install -r requirements-dev.txt
+            elif [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+            fi
+          fi
+
+      - name: Lint with flake8
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run flake8 .
+          else
+            flake8 .
+          fi
+
+      - name: Check formatting with black
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run black --check .
+          else
+            black --check .
+          fi
+
+      - name: Check imports with isort
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run isort --check .
+          else
+            isort --check .
+          fi
+
+      - name: Type checking with mypy
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run mypy .
+          else
+            mypy .
+          fi
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            curl -sSL https://install.python-poetry.org | python3 -
+            poetry install
+          else
+            python -m pip install --upgrade pip
+            pip install pytest pytest-cov
+            if [ -f requirements-dev.txt ]; then
+                pip install -r requirements-dev.txt
+            elif [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+            fi
+          fi
+
+      - name: Test with pytest
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run pytest --cov=./ --cov-report=xml
+          else
+            pytest --cov=./ --cov-report=xml
+          fi
+
+      - name: Upload coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ${{ inputs.working-directory }}/coverage.xml
+          flags: ${{ inputs.service-name }}
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            curl -sSL https://install.python-poetry.org | python3 -
+            poetry install
+          else
+            python -m pip install --upgrade pip
+            if [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+            fi
+          fi
+
+      - name: Run Bandit scan
+        run: |
+          pip install bandit
+          bandit -r . -ll
+          
+      - name: Run Snyk to check for vulnerabilities
+        if: ${{ secrets.SNYK_TOKEN != '' }}
+        uses: snyk/actions/python@master
+        with:
+          args: --severity-threshold=${{ inputs.security-scan-level }} ${{ inputs.working-directory }}
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: security-scan
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build wheel
+
+      - name: Build package
+        run: |
+          python -m build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ inputs.service-name }}-dist
+          path: ${{ inputs.working-directory }}/dist
+          retention-days: 7
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ inputs.run-integration-tests }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            ${{ inputs.working-directory }}/requirements*.txt
+            ${{ inputs.working-directory }}/pyproject.toml
+            ${{ inputs.working-directory }}/poetry.lock
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            curl -sSL https://install.python-poetry.org | python3 -
+            poetry install
+          else
+            python -m pip install --upgrade pip
+            pip install pytest
+            if [ -f requirements-dev.txt ]; then
+                pip install -r requirements-dev.txt
+            elif [ -f requirements.txt ]; then
+                pip install -r requirements.txt
+            fi
+          fi
+
+      - name: Run integration tests
+        run: |
+          if [ "${{ inputs.use-poetry }}" = "true" ]; then
+            poetry run pytest tests/integration
+          else
+            pytest tests/integration
+          fi
+
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: [security-scan, integration]
+    if: always() && (needs.integration.result == 'success' || needs.integration.result == 'skipped') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/'))
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ inputs.service-name }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ inputs.service-name }}-
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.DOCKER_REGISTRY_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/phoenix/${{ inputs.service-name }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.working-directory }}
+          file: ${{ inputs.working-directory }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/tags/')
+    strategy:
+      matrix:
+        environment: ${{ fromJson('[' + inputs.deploy-environments + ']') }}
+    environment:
+      name: ${{ matrix.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Deploy to ${{ matrix.environment }}
+        run: |
+          echo "Deploying ${{ inputs.service-name }} to ${{ matrix.environment }}"
+          # Deployment commands would go here
+          # For example:
+          # helm upgrade --install ${{ inputs.service-name }} ./deployments/helm/${{ inputs.service-name }} \
+          #   --namespace=phoenix-${{ matrix.environment }} \
+          #   --set image.tag=${{ github.sha }} \
+          #   --wait

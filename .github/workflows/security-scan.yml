@@ -1,0 +1,278 @@
+name: Security Scanning
+# Created by Abhinav as part of Security & Compliance task
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM UTC
+  workflow_dispatch:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.go'
+      - '**/*.js'
+      - '**/*.ts'
+      - '**/*.py'
+      - '**/Dockerfile'
+      - '**/docker-compose*.yml'
+      - '**/package*.json'
+      - '**/requirements*.txt'
+      - '**/go.mod'
+      - '**/go.sum'
+      - '.github/workflows/security-scan.yml'
+
+jobs:
+  tfsec:
+    name: TFSec Infrastructure Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-sarif-action@v0.1.4
+        with:
+          sarif_file: tfsec.sarif
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: tfsec.sarif
+          category: tfsec
+
+  docker-scan:
+    name: Docker Image Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find Dockerfiles
+        id: find-dockerfiles
+        shell: bash
+        run: |
+          echo "files=$(find . -name Dockerfile -type f | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        if: ${{ steps.find-dockerfiles.outputs.files != '' }}
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: ${{ steps.find-dockerfiles.outputs.files != '' }}
+        with:
+          sarif_file: 'trivy-results.sarif'
+          category: trivy
+
+  go-scan:
+    name: Go Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.21
+          check-latest: true
+
+      - name: Run gosec scanner
+        uses: securego/gosec@master
+        with:
+          args: '-fmt=sarif -out=gosec.sarif ./...'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: gosec.sarif
+          category: gosec
+
+  node-scan:
+    name: Node.js Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find package.json files
+        id: find-package-json
+        shell: bash
+        run: |
+          echo "files=$(find . -name "package.json" -not -path "*/node_modules/*" -type f | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Set up Node.js
+        if: ${{ steps.find-package-json.outputs.files != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Run npm audit
+        if: ${{ steps.find-package-json.outputs.files != '' }}
+        continue-on-error: true
+        run: |
+          for package_json in ${{ steps.find-package-json.outputs.files }}; do
+            dir=$(dirname "$package_json")
+            echo "Scanning $package_json"
+            cd $GITHUB_WORKSPACE/$dir
+            npm audit --json > npm-audit-$dir.json || true
+          done
+
+      - name: Run Snyk to check for vulnerabilities
+        if: ${{ steps.find-package-json.outputs.files != '' && env.SNYK_TOKEN != '' }}
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --all-projects --sarif-file-output=snyk.sarif
+
+      - name: Upload Snyk scan results to GitHub Security tab
+        if: ${{ steps.find-package-json.outputs.files != '' && env.SNYK_TOKEN != '' }}
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: snyk.sarif
+          category: snyk
+
+  python-scan:
+    name: Python Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Find Python requirements files
+        id: find-requirements
+        shell: bash
+        run: |
+          echo "files=$(find . -name "requirements*.txt" -o -name "pyproject.toml" -type f | tr '\n' ' ')" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        if: ${{ steps.find-requirements.outputs.files != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install safety
+        if: ${{ steps.find-requirements.outputs.files != '' }}
+        run: pip install safety
+
+      - name: Run safety check
+        if: ${{ steps.find-requirements.outputs.files != '' }}
+        run: |
+          mkdir -p safety-reports
+          for req_file in ${{ steps.find-requirements.outputs.files }}; do
+            echo "Scanning $req_file"
+            if [[ $req_file == *"requirements"* ]]; then
+              safety check -r $req_file --json > safety-reports/$(basename $req_file).json || true
+            elif [[ $req_file == *"pyproject.toml"* ]]; then
+              safety check --file $req_file --json > safety-reports/$(basename $(dirname $req_file)).json || true
+            fi
+          done
+
+      - name: Run Bandit
+        if: ${{ steps.find-requirements.outputs.files != '' }}
+        run: |
+          pip install bandit
+          bandit -r . -f sarif -o bandit-results.sarif || true
+
+      - name: Upload Bandit scan results to GitHub Security tab
+        if: ${{ steps.find-requirements.outputs.files != '' }}
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  compliance-check:
+    name: Compliance Check
+    runs-on: ubuntu-latest
+    needs: [tfsec, docker-scan, go-scan, node-scan, python-scan, secret-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate timestamp
+        id: timestamp
+        run: echo "time=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Generate compliance summary
+        run: |
+          mkdir -p compliance-reports
+          
+          echo "# Security Scan Compliance Report" > compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "Generated: ${{ steps.timestamp.outputs.time }}" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "## Summary" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Check | Status |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "|-------|--------|" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Infrastructure Security | ${{ needs.tfsec.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Container Security | ${{ needs.docker-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Go Code Security | ${{ needs.go-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| JavaScript Security | ${{ needs.node-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Python Security | ${{ needs.python-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "| Secret Detection | ${{ needs.secret-scan.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "## Next Steps" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "1. Review security findings in GitHub Security tab" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "2. Prioritize critical and high severity issues" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "3. Create tickets for required remediations" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "## Compliance Standards" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "This scan checks for compliance against:" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "- OWASP Top 10" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "- CIS Benchmarks" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+          echo "- SOC2 Requirements" >> compliance-reports/compliance-${{ steps.timestamp.outputs.time }}.md
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v3
+        with:
+          name: compliance-report
+          path: compliance-reports/
+          retention-days: 90

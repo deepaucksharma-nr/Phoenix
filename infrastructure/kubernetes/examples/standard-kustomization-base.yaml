@@ -1,0 +1,52 @@
+# Standard Kustomization Bases Example
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: phoenix-system
+
+commonLabels:
+  app.kubernetes.io/part-of: phoenix-platform
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - rbac/
+  - api/
+  - dashboard/
+  - operators/
+  - monitoring/
+  - network-policies/
+
+configMapGenerator:
+  - name: phoenix-config
+    behavior: merge
+    literals:
+      - log-level=info
+      - metrics-enabled=true
+
+patchesStrategicMerge:
+  - patches/resource-limits.yaml
+  - patches/security-contexts.yaml
+
+images:
+  - name: phoenix/api-gateway
+    newName: ghcr.io/phoenix/api-gateway
+    newTag: v1.2.0
+  - name: phoenix/dashboard
+    newName: ghcr.io/phoenix/dashboard
+    newTag: v1.1.0
+  - name: phoenix/pipeline-operator
+    newName: ghcr.io/phoenix/pipeline-operator
+    newTag: v1.0.5
+  - name: phoenix/loadsim-operator
+    newName: ghcr.io/phoenix/loadsim-operator
+    newTag: v1.0.3
+
+vars:
+  - name: DASHBOARD_SERVICE
+    objref:
+      kind: Service
+      name: dashboard
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.name

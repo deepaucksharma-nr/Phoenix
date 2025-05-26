@@ -1,0 +1,91 @@
+# Schema for Phoenix Platform Helm values
+# This schema follows JSON Schema specification and provides validation for values.yaml
+#
+# Created as part of the Helm Chart Optimization task by Abhinav
+#
+apiVersion: v2
+name: "values"
+schema:
+  type: object
+  required:
+    - global
+  properties:
+    global:
+      type: object
+      required:
+        - domain
+      properties:
+        domain:
+          type: string
+          description: "Global domain for ingress"
+        storageClass:
+          type: string
+          description: "Global storage class for persistent volumes"
+        imagePullSecrets:
+          type: array
+          description: "Global image pull secrets"
+          items:
+            type: string
+    
+    nameOverride:
+      type: string
+      description: "String to partially override phoenix.fullname"
+    
+    fullnameOverride:
+      type: string
+      description: "String to fully override phoenix.fullname"
+    
+    api:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          description: "Enable API service"
+        replicaCount:
+          type: integer
+          minimum: 1
+          description: "Number of API replicas"
+        image:
+          type: object
+          properties:
+            repository:
+              type: string
+            pullPolicy:
+              type: string
+              enum: ["IfNotPresent", "Always", "Never"]
+            tag:
+              type: string
+        service:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: ["ClusterIP", "NodePort", "LoadBalancer"]
+            grpcPort:
+              type: integer
+              minimum: 1
+            httpPort:
+              type: integer
+              minimum: 1
+        resources:
+          type: object
+          properties:
+            requests:
+              type: object
+              properties:
+                cpu:
+                  type: string
+                memory:
+                  type: string
+            limits:
+              type: object
+              properties:
+                cpu:
+                  type: string
+                memory:
+                  type: string
+    
+    # Similar schema definitions for other components...
+    # This is a simplified example focusing on the API service

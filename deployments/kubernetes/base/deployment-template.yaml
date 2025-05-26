@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${SERVICE_NAME}
+  labels:
+    app.kubernetes.io/name: ${SERVICE_NAME}
+    app.kubernetes.io/part-of: phoenix-platform
+    app.kubernetes.io/version: ${VERSION}
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ${SERVICE_NAME}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: ${SERVICE_NAME}
+        app.kubernetes.io/part-of: phoenix-platform
+        app.kubernetes.io/version: ${VERSION}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "${METRICS_PORT}"
+    spec:
+      containers:
+      - name: ${SERVICE_NAME}
+        image: ${IMAGE_REPOSITORY}/${SERVICE_NAME}:${VERSION}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: ${HTTP_PORT}
+          name: http
+        - containerPort: ${METRICS_PORT}
+          name: metrics
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: phoenix-config
+              key: environment
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: phoenix-config
+              key: log_level
+        - name: SERVICE_NAME
+          value: ${SERVICE_NAME}
+        resources:
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+      securityContext:
+        fsGroup: 1000
+      serviceAccountName: ${SERVICE_NAME}
