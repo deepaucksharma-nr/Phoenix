@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package analytics;
+
+option go_package = "github.com/phoenix/platform/projects/analytics/api";
+
+import "google/protobuf/timestamp.proto";
+
+// Analytics service definition
+service Analytics {
+  // AnalyzeMetrics processes and analyzes metrics data
+  rpc AnalyzeMetrics(AnalyzeMetricsRequest) returns (AnalyzeMetricsResponse) {}
+  
+  // DetectAnomalies identifies anomalies in the metrics data
+  rpc DetectAnomalies(DetectAnomaliesRequest) returns (DetectAnomaliesResponse) {}
+  
+  // GenerateReport creates a comprehensive analysis report
+  rpc GenerateReport(GenerateReportRequest) returns (GenerateReportResponse) {}
+}
+
+// Metric represents a single metric data point
+message Metric {
+  google.protobuf.Timestamp timestamp = 1;
+  string name = 2;
+  double value = 3;
+  map<string, string> labels = 4;
+}
+
+// AnalysisResult contains the results of metric analysis
+message AnalysisResult {
+  google.protobuf.Timestamp timestamp = 1;
+  string summary = 2;
+  repeated Metric metrics = 3;
+  map<string, double> stats = 4;
+}
+
+// Anomaly represents a detected anomaly in the metrics
+message Anomaly {
+  google.protobuf.Timestamp timestamp = 1;
+  string type = 2;
+  string severity = 3;
+  Metric metric = 4;
+  map<string, string> details = 5;
+}
+
+// Report represents a comprehensive analysis report
+message Report {
+  google.protobuf.Timestamp generated_at = 1;
+  string summary = 2;
+  AnalysisResult analysis = 3;
+  repeated Anomaly anomalies = 4;
+  repeated string recommendations = 5;
+}
+
+// Request/Response messages
+message AnalyzeMetricsRequest {
+  repeated Metric metrics = 1;
+}
+
+message AnalyzeMetricsResponse {
+  AnalysisResult result = 1;
+}
+
+message DetectAnomaliesRequest {
+  repeated Metric metrics = 1;
+}
+
+message DetectAnomaliesResponse {
+  repeated Anomaly anomalies = 1;
+}
+
+message GenerateReportRequest {
+  AnalysisResult analysis = 1;
+}
+
+message GenerateReportResponse {
+  Report report = 1;
+} 

@@ -22,7 +22,7 @@ go work sync
 # Build packages
 echo ""
 echo -e "${YELLOW}Building shared packages...${NC}"
-for pkg in packages/go-common packages/contracts; do
+for pkg in pkg pkg/*; do
     if [[ -d "$pkg" ]] && [[ -f "$pkg/go.mod" ]]; then
         echo -n "Building $pkg... "
         if (cd "$pkg" && go build ./...) > /dev/null 2>&1; then
@@ -56,25 +56,6 @@ for project in projects/*/; do
     fi
 done
 
-# Build legacy services if they exist
-if [[ -d "services" ]]; then
-    echo ""
-    echo -e "${YELLOW}Building legacy services...${NC}"
-    for service in services/*/; do
-        if [[ -f "$service/go.mod" ]]; then
-            service_name=$(basename "$service")
-            echo -n "Building $service_name... "
-            
-            if (cd "$service" && go build ./...) > /dev/null 2>&1; then
-                echo -e "${GREEN}✓${NC}"
-                ((SUCCEEDED++))
-            else
-                echo -e "${RED}✗${NC}"
-                ((FAILED++))
-            fi
-        fi
-    done
-fi
 
 # Summary
 echo ""

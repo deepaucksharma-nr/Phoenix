@@ -292,6 +292,20 @@ func (c *APIClient) GetPipelineDeployment(deploymentID string) (*PipelineDeploym
 	return &deployment, nil
 }
 
+// GetPipelineDeploymentStatus retrieves aggregated deployment status
+func (c *APIClient) GetPipelineDeploymentStatus(deploymentID string) (*DeploymentStatusResponse, error) {
+	resp, err := c.doRequest("GET", "/api/v1/pipelines/deployments/"+deploymentID+"/status", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var status DeploymentStatusResponse
+	if err := c.parseResponse(resp, &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
 // GetPipelineConfig retrieves the active configuration from a deployment
 func (c *APIClient) GetPipelineConfig(deploymentID string) (string, error) {
 	resp, err := c.doRequest("GET", "/api/v1/pipelines/deployments/"+deploymentID+"/config", nil)
@@ -300,7 +314,7 @@ func (c *APIClient) GetPipelineConfig(deploymentID string) (string, error) {
 	}
 
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode >= 400 {
 		body, _ := io.ReadAll(resp.Body)
 		var errorResp ErrorResponse

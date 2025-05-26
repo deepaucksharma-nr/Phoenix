@@ -3,12 +3,15 @@ package controller
 import (
 	"context"
 	"fmt"
-	"math"
+	"os"
 	"time"
 
-	"go.uber.org/zap"
-	"github.com/phoenix/platform/projects/controller/internal/clients"
 	"github.com/phoenix/platform/pkg/common/analysis"
+	"github.com/phoenix/platform/projects/controller/internal/clients"
+	api "github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/prometheus/common/model"
+	"go.uber.org/zap"
 )
 
 // StateMachine manages experiment state transitions
@@ -17,17 +20,28 @@ type StateMachine struct {
 	controller       *ExperimentController
 	generatorClient  *clients.GeneratorClient
 	kubernetesClient *clients.KubernetesClient
+	promAPI          v1.API
 	analyzer         *analysis.ExperimentAnalyzer
 	transitions      map[ExperimentPhase][]ExperimentPhase
 }
 
 // NewStateMachine creates a new experiment state machine
 func NewStateMachine(logger *zap.Logger, controller *ExperimentController, generatorClient *clients.GeneratorClient, kubernetesClient *clients.KubernetesClient) *StateMachine {
+	promAddr := getEnvDefault("PROMETHEUS_URL", "http://localhost:9090")
+	promClient, err := api.NewClient(api.Config{Address: promAddr})
+	var promAPI v1.API
+	if err == nil {
+		promAPI = v1.NewAPI(promClient)
+	} else {
+		logger.Warn("failed to create Prometheus client", zap.Error(err))
+	}
+
 	return &StateMachine{
 		logger:           logger,
 		controller:       controller,
 		generatorClient:  generatorClient,
 		kubernetesClient: kubernetesClient,
+		promAPI:          promAPI,
 		analyzer:         analysis.NewExperimentAnalyzer(),
 		transitions: map[ExperimentPhase][]ExperimentPhase{
 			ExperimentPhasePending:      {ExperimentPhaseInitializing, ExperimentPhaseCancelled},
@@ -105,7 +119,7 @@ func (sm *StateMachine) handleInitializing(ctx context.Context, exp *Experiment)
 	// Perform initialization tasks asynchronously
 	go func() {
 		ctx := context.Background()
-		
+
 		// Initialization tasks
 		tasks := []struct {
 			name     string
@@ -123,7 +137,7 @@ func (sm *StateMachine) handleInitializing(ctx context.Context, exp *Experiment)
 				zap.String("experiment_id", exp.ID),
 				zap.String("task", task.name),
 			)
-			
+
 			// Execute task
 			if err := task.action(ctx, exp); err != nil {
 				sm.logger.Error("initialization task failed",
@@ -190,7 +204,7 @@ func (sm *StateMachine) handleAnalyzing(ctx context.Context, exp *Experiment) er
 	// Perform analysis asynchronously
 	go func() {
 		ctx := context.Background()
-		
+
 		// Collect metrics data from monitoring system
 		metricsData, err := sm.collectMetricsData(ctx, exp)
 		if err != nil {
@@ -200,7 +214,7 @@ func (sm *StateMachine) handleAnalyzing(ctx context.Context, exp *Experiment) er
 			}
 			return
 		}
-		
+
 		// Perform statistical analysis
 		analysisResult, err := sm.analyzer.AnalyzeExperimentResults(ctx, exp, metricsData)
 		if err != nil {
@@ -210,13 +224,13 @@ func (sm *StateMachine) handleAnalyzing(ctx context.Context, exp *Experiment) er
 			}
 			return
 		}
-		
+
 		// Convert analysis to experiment results
 		results := sm.convertAnalysisToResults(analysisResult)
-		
+
 		// Update experiment with results
 		exp.Status.Results = results
-		
+
 		// Log analysis summary
 		sm.logger.Info("experiment analysis completed",
 			zap.String("experiment_id", exp.ID),
@@ -224,7 +238,7 @@ func (sm *StateMachine) handleAnalyzing(ctx context.Context, exp *Experiment) er
 			zap.Float64("confidence", analysisResult.Confidence),
 			zap.Bool("sufficient_data", analysisResult.SufficientData),
 		)
-		
+
 		// Generate and store analysis report
 		report := analysisResult.GenerateReport()
 		exp.Status.AnalysisReport = report
@@ -240,7 +254,7 @@ func (sm *StateMachine) handleAnalyzing(ctx context.Context, exp *Experiment) er
 			}
 		} else {
 			// Continue or neutral - mark as completed but with caution
-			exp.Status.Message = fmt.Sprintf("Analysis result: %s (confidence: %.1f%%)", 
+			exp.Status.Message = fmt.Sprintf("Analysis result: %s (confidence: %.1f%%)",
 				analysisResult.Recommendation, analysisResult.Confidence*100)
 			if err := sm.TransitionTo(ctx, exp.ID, ExperimentPhaseCompleted); err != nil {
 				sm.logger.Error("failed to transition to completed", zap.Error(err))
@@ -336,21 +350,21 @@ func (sm *StateMachine) validatePipelines(ctx context.Context, exp *Experiment) 
 		zap.String("baseline_pipeline", exp.Config.BaselinePipeline),
 		zap.String("candidate_pipeline", exp.Config.CandidatePipeline),
 	)
-	
+
 	// Validate baseline pipeline
 	if err := sm.generatorClient.ValidateTemplate(ctx, exp.Config.BaselinePipeline, nil); err != nil {
 		return fmt.Errorf("baseline pipeline validation failed: %w", err)
 	}
-	
+
 	// Validate candidate pipeline
 	if err := sm.generatorClient.ValidateTemplate(ctx, exp.Config.CandidatePipeline, nil); err != nil {
 		return fmt.Errorf("candidate pipeline validation failed: %w", err)
 	}
-	
+
 	sm.logger.Info("pipeline validation completed successfully",
 		zap.String("experiment_id", exp.ID),
 	)
-	
+
 	return nil
 }
 
@@ -358,21 +372,21 @@ func (sm *StateMachine) createGitBranch(ctx context.Context, exp *Experiment) er
 	sm.logger.Info("creating git branch for experiment",
 		zap.String("experiment_id", exp.ID),
 	)
-	
+
 	// In a real implementation, this would:
 	// 1. Connect to git repository using git client
 	// 2. Create a new branch named "experiment-{experiment_id}"
 	// 3. Prepare directory structure for configurations
 	// 4. Set up ArgoCD sync for the branch
-	
+
 	// For now, simulate the operation
 	time.Sleep(300 * time.Millisecond)
-	
+
 	sm.logger.Info("git branch created successfully",
 		zap.String("experiment_id", exp.ID),
 		zap.String("branch", fmt.Sprintf("experiment-%s", exp.ID)),
 	)
-	
+
 	return nil
 }
 
@@ -380,7 +394,7 @@ func (sm *StateMachine) generateConfigurations(ctx context.Context, exp *Experim
 	sm.logger.Info("generating experiment configurations",
 		zap.String("experiment_id", exp.ID),
 	)
-	
+
 	// Prepare request for config generator
 	generatorReq := &clients.GeneratorRequest{
 		ExperimentID:      exp.ID,
@@ -393,24 +407,24 @@ func (sm *StateMachine) generateConfigurations(ctx context.Context, exp *Experim
 			"NAMESPACE":                     "phoenix-system",
 		},
 	}
-	
+
 	// Call config generator service
 	response, err := sm.generatorClient.GenerateConfigurations(ctx, generatorReq)
 	if err != nil {
 		return fmt.Errorf("failed to generate configurations: %w", err)
 	}
-	
+
 	if !response.Success {
 		return fmt.Errorf("configuration generation failed: %s", response.Message)
 	}
-	
+
 	sm.logger.Info("configurations generated successfully",
 		zap.String("experiment_id", exp.ID),
 		zap.String("baseline_config_id", response.BaselineConfigID),
 		zap.String("candidate_config_id", response.CandidateConfigID),
 		zap.String("git_commit_sha", response.GitCommitSHA),
 	)
-	
+
 	return nil
 }
 
@@ -418,16 +432,16 @@ func (sm *StateMachine) createKubernetesResources(ctx context.Context, exp *Expe
 	sm.logger.Info("creating Kubernetes resources",
 		zap.String("experiment_id", exp.ID),
 	)
-	
+
 	namespace := "phoenix-system" // In real implementation, get from config
-	
+
 	// Deploy baseline pipeline
 	baselineDeployment := &clients.PipelineDeployment{
-		ExperimentID:     exp.ID,
-		PipelineName:     exp.Config.BaselinePipeline,
-		PipelineType:     "baseline",
-		TargetNodes:      exp.Config.TargetHosts,
-		ConfigID:         fmt.Sprintf("%s-baseline", exp.ID),
+		ExperimentID: exp.ID,
+		PipelineName: exp.Config.BaselinePipeline,
+		PipelineType: "baseline",
+		TargetNodes:  exp.Config.TargetHosts,
+		ConfigID:     fmt.Sprintf("%s-baseline", exp.ID),
 		Variables: map[string]interface{}{
 			"NEW_RELIC_API_KEY_SECRET_NAME": "newrelic-secret",
 			"EXPERIMENT_ID":                 exp.ID,
@@ -435,18 +449,18 @@ func (sm *StateMachine) createKubernetesResources(ctx context.Context, exp *Expe
 		},
 		Namespace: namespace,
 	}
-	
+
 	if err := sm.kubernetesClient.DeployPipeline(ctx, baselineDeployment); err != nil {
 		return fmt.Errorf("failed to deploy baseline pipeline: %w", err)
 	}
-	
+
 	// Deploy candidate pipeline
 	candidateDeployment := &clients.PipelineDeployment{
-		ExperimentID:     exp.ID,
-		PipelineName:     exp.Config.CandidatePipeline,
-		PipelineType:     "candidate",
-		TargetNodes:      exp.Config.TargetHosts,
-		ConfigID:         fmt.Sprintf("%s-candidate", exp.ID),
+		ExperimentID: exp.ID,
+		PipelineName: exp.Config.CandidatePipeline,
+		PipelineType: "candidate",
+		TargetNodes:  exp.Config.TargetHosts,
+		ConfigID:     fmt.Sprintf("%s-candidate", exp.ID),
 		Variables: map[string]interface{}{
 			"NEW_RELIC_API_KEY_SECRET_NAME": "newrelic-secret",
 			"EXPERIMENT_ID":                 exp.ID,
@@ -454,160 +468,139 @@ func (sm *StateMachine) createKubernetesResources(ctx context.Context, exp *Expe
 		},
 		Namespace: namespace,
 	}
-	
+
 	if err := sm.kubernetesClient.DeployPipeline(ctx, candidateDeployment); err != nil {
 		return fmt.Errorf("failed to deploy candidate pipeline: %w", err)
 	}
-	
+
 	// Wait for both pipelines to be ready
 	timeout := 5 * time.Minute
-	
+
 	sm.logger.Info("waiting for pipelines to be ready",
 		zap.String("experiment_id", exp.ID),
 		zap.Duration("timeout", timeout),
 	)
-	
+
 	// Wait for baseline to be ready
 	if err := sm.kubernetesClient.WaitForPipelineReady(ctx, exp.ID, "baseline", namespace, timeout); err != nil {
 		return fmt.Errorf("baseline pipeline failed to become ready: %w", err)
 	}
-	
+
 	// Wait for candidate to be ready
 	if err := sm.kubernetesClient.WaitForPipelineReady(ctx, exp.ID, "candidate", namespace, timeout); err != nil {
 		return fmt.Errorf("candidate pipeline failed to become ready: %w", err)
 	}
-	
+
 	sm.logger.Info("Kubernetes resources created successfully",
 		zap.String("experiment_id", exp.ID),
 	)
-	
+
 	return nil
 }
 
 // collectMetricsData collects metrics data from Prometheus for analysis
 func (sm *StateMachine) collectMetricsData(ctx context.Context, exp *Experiment) (map[string]*analysis.MetricData, error) {
-	// In a real implementation, this would query Prometheus for metrics
-	// For now, we'll generate sample data
-	
 	metrics := make(map[string]*analysis.MetricData)
-	
-	// Define the metrics we want to analyze
-	metricDefinitions := []struct {
+
+	queries := []struct {
 		name       string
 		metricType analysis.MetricType
-		query      string
+		fmtStr     string
 	}{
-		{
-			name:       "latency_p95",
-			metricType: analysis.MetricTypeLatency,
-			query:      `histogram_quantile(0.95, rate(otelcol_processor_latency_bucket[5m]))`,
-		},
-		{
-			name:       "throughput",
-			metricType: analysis.MetricTypeThroughput,
-			query:      `rate(otelcol_processor_accepted_metric_points[5m])`,
-		},
-		{
-			name:       "error_rate",
-			metricType: analysis.MetricTypeErrorRate,
-			query:      `rate(otelcol_processor_refused_metric_points[5m]) / rate(otelcol_processor_accepted_metric_points[5m])`,
-		},
 		{
 			name:       "cpu_usage",
 			metricType: analysis.MetricTypeCost,
-			query:      `rate(container_cpu_usage_seconds_total{pod=~"otelcol-.*"}[5m])`,
+			fmtStr:     `avg(rate(container_cpu_usage_seconds_total{deployment="%s"}[5m])) * 100`,
+		},
+		{
+			name:       "memory_usage",
+			metricType: analysis.MetricTypeCost,
+			fmtStr:     `avg(container_memory_usage_bytes{deployment="%s"}) / 1024 / 1024`,
+		},
+		{
+			name:       "process_count",
+			metricType: analysis.MetricTypeThroughput,
+			fmtStr:     `count(count by (process_name) (process_cpu_seconds_total{deployment="%s"}))`,
 		},
 	}
-	
-	// For each metric, collect baseline and candidate data
-	for _, def := range metricDefinitions {
-		// In production, these would come from Prometheus queries
-		// For now, generate sample data that shows improvement
-		baselineData := generateSampleData(100, 100, 10)  // mean=100, stddev=10
-		candidateData := generateSampleData(100, 90, 8)   // mean=90, stddev=8 (improvement)
-		
-		metrics[def.name] = &analysis.MetricData{
-			Type:      def.metricType,
-			Baseline:  baselineData,
-			Candidate: candidateData,
+
+	for _, q := range queries {
+		baselineQuery := fmt.Sprintf(q.fmtStr, exp.Config.BaselinePipeline)
+		candidateQuery := fmt.Sprintf(q.fmtStr, exp.Config.CandidatePipeline)
+
+		baselineVal, err := sm.queryPromFloat(ctx, baselineQuery)
+		if err != nil {
+			sm.logger.Warn("failed to query baseline metric", zap.String("metric", q.name), zap.Error(err))
 		}
-		
-		sm.logger.Debug("collected metric data",
-			zap.String("metric", def.name),
-			zap.Int("baseline_samples", len(baselineData)),
-			zap.Int("candidate_samples", len(candidateData)),
-		)
+		candidateVal, err := sm.queryPromFloat(ctx, candidateQuery)
+		if err != nil {
+			sm.logger.Warn("failed to query candidate metric", zap.String("metric", q.name), zap.Error(err))
+		}
+
+		metrics[q.name] = &analysis.MetricData{
+			Type:      q.metricType,
+			Baseline:  []float64{baselineVal},
+			Candidate: []float64{candidateVal},
+		}
 	}
-	
+
 	return metrics, nil
 }
 
 // convertAnalysisToResults converts statistical analysis to experiment results
 func (sm *StateMachine) convertAnalysisToResults(analysis *analysis.ExperimentAnalysis) *ExperimentResults {
-	// Calculate aggregate metrics from analysis
-	var totalCardinalityReduction float64
-	var cpuImprovement float64
-	var memoryImprovement float64
-	
-	// Extract key metrics from analysis
-	if latency, ok := analysis.Metrics["latency_p95"]; ok {
-		// Use latency improvement as a proxy for efficiency
-		totalCardinalityReduction = math.Abs(latency.Improvement)
-	}
-	
-	if cpu, ok := analysis.Metrics["cpu_usage"]; ok {
-		cpuImprovement = cpu.Improvement
-	}
-	
-	// Estimate memory improvement (in production, this would come from actual metrics)
-	memoryImprovement = cpuImprovement * 0.8 // Assume memory scales with CPU
-	
+	totalCardinalityReduction := analysis.CardinalityReduction
+	cpuOverhead := analysis.CPUOverhead
+	memoryOverhead := analysis.MemoryOverhead
+
 	// Build recommendation string
 	recommendation := fmt.Sprintf("Analysis: %s (Confidence: %.1f%%, Risk: %s)",
 		analysis.Recommendation,
 		analysis.Confidence*100,
 		analysis.GetRiskLevel(),
 	)
-	
+
 	return &ExperimentResults{
 		BaselineMetrics: MetricsSnapshot{
-			Timestamp:        analysis.AnalysisTime,
-			TimeSeriesCount:  10000, // Would come from actual metrics
-			SamplesPerSecond: 1000,
-			CPUUsage:         5.0,
-			MemoryUsage:      512,
-			ProcessCount:     150,
+			Timestamp:    analysis.AnalysisTime,
+			CPUUsage:     analysis.BaselineCPU,
+			MemoryUsage:  analysis.BaselineMemory,
+			ProcessCount: int64(analysis.BaselineProcessCount),
 		},
 		CandidateMetrics: MetricsSnapshot{
-			Timestamp:        analysis.AnalysisTime,
-			TimeSeriesCount:  int64(10000 * (1 - totalCardinalityReduction/100)),
-			SamplesPerSecond: float64(1000 * (1 - totalCardinalityReduction/100)),
-			CPUUsage:         5.0 * (1 - cpuImprovement/100),
-			MemoryUsage:      512 * (1 - memoryImprovement/100),
-			ProcessCount:     150,
+			Timestamp:    analysis.AnalysisTime,
+			CPUUsage:     analysis.CandidateCPU,
+			MemoryUsage:  analysis.CandidateMemory,
+			ProcessCount: int64(analysis.CandidateProcessCount),
 		},
 		CardinalityReduction: totalCardinalityReduction,
-		CPUOverhead:          -cpuImprovement,
-		MemoryOverhead:       -memoryImprovement,
+		CPUOverhead:          cpuOverhead,
+		MemoryOverhead:       memoryOverhead,
 		ProcessCoverage:      100.0,
 		Recommendation:       recommendation,
 		StatisticalAnalysis:  analysis,
 	}
 }
 
-// generateSampleData generates sample metric data for testing
-func generateSampleData(n int, mean, stddev float64) []float64 {
-	data := make([]float64, n)
-	
-	// Simple pseudo-random data generation
-	for i := 0; i < n; i++ {
-		// Box-Muller transform approximation
-		u1 := float64(i+1) / float64(n+1)
-		u2 := float64(n-i) / float64(n+1)
-		
-		z0 := math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
-		data[i] = mean + stddev*z0
+// queryPromFloat executes a Prometheus instant query and returns the first value
+func (sm *StateMachine) queryPromFloat(ctx context.Context, query string) (float64, error) {
+	if sm.promAPI == nil {
+		return 0, fmt.Errorf("prometheus client not configured")
 	}
-	
-	return data
+	result, _, err := sm.promAPI.Query(ctx, query, time.Now())
+	if err != nil {
+		return 0, err
+	}
+	if vector, ok := result.(model.Vector); ok && len(vector) > 0 {
+		return float64(vector[0].Value), nil
+	}
+	return 0, fmt.Errorf("no data")
+}
+
+// getEnvDefault retrieves an environment variable or returns a default value
+func getEnvDefault(key, defaultValue string) string {
+	if val := os.Getenv(key); val != "" {
+		return val
+	}
+	return defaultValue
 }
