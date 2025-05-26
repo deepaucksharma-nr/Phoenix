@@ -11,15 +11,11 @@ use (
 	./projects/benchmark
 	./projects/control-actuator-go
 	./projects/controller
+	./projects/generator
+	./projects/hello-phoenix
 	./projects/loadsim-operator
+	./projects/phoenix-cli
 	./projects/pipeline-operator
 	./projects/platform-api
-	./services/anomaly-detector
-	./services/api
-	./services/controller
-	./services/generator
-	./services/generators/synthetic
-	./services/validator
+	./projects/validator
 )
-
-use ./projects/hello-phoenix

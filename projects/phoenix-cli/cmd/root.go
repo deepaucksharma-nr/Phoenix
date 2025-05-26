@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/completion"
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/plugin"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/completion"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/plugin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
