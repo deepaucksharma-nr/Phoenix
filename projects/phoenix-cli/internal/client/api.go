@@ -342,3 +342,12 @@ func (c *APIClient) DeletePipelineDeployment(deploymentID string) error {
 	}
 	return c.parseResponse(resp, nil)
 }
+
+// DeleteExperiment deletes an experiment
+func (c *APIClient) DeleteExperiment(id string) error {
+	resp, err := c.doRequest("DELETE", "/api/v1/experiments/"+id, nil)
+	if err != nil {
+		return err
+	}
+	return c.parseResponse(resp, nil)
+}

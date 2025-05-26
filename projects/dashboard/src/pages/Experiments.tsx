@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Container,
@@ -21,6 +21,12 @@ import {
   Skeleton,
   Alert,
   TablePagination,
+  ToggleButton,
+  ToggleButtonGroup,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Divider,
 } from '@mui/material'
 import {
   Add,
@@ -33,6 +39,12 @@ import {
   FilterList,
   Search,
   Assessment,
+  Visibility,
+  VisibilityOff,
+  GetApp,
+  Description,
+  Code,
+  TableChart,
 } from '@mui/icons-material'
 import { useAppSelector, useAppDispatch } from '@hooks/redux'
 import { fetchExperiments, deleteExperiment, updateExperimentStatus } from '@store/slices/experimentSlice'
@@ -45,6 +57,9 @@ const STATUS_COLORS = {
   completed: 'success',
   failed: 'error',
   cancelled: 'warning',
+  initializing: 'info',
+  stopping: 'warning',
+  stopped: 'default',
 } as const
 
 const PRIORITY_COLORS = {
@@ -64,10 +79,33 @@ export const Experiments: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [showFilters, setShowFilters] = useState(false)
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [watchMode, setWatchMode] = useState(false)
+  const [exportMenuAnchor, setExportMenuAnchor] = useState<null | HTMLElement>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     dispatch(fetchExperiments())
   }, [dispatch])
+
+  // Watch mode effect
+  useEffect(() => {
+    if (watchMode) {
+      intervalRef.current = setInterval(() => {
+        dispatch(fetchExperiments())
+      }, 5000) // Refresh every 5 seconds
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [watchMode, dispatch])
 
   const handleCreateExperiment = () => {
     setWizardOpen(true)
@@ -127,6 +165,80 @@ export const Experiments: React.FC = () => {
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10))
     setPage(0)
+  }
+
+  const handleExportClick = (event: React.MouseEvent<HTMLElement>) => {
+    setExportMenuAnchor(event.currentTarget)
+  }
+
+  const handleExportClose = () => {
+    setExportMenuAnchor(null)
+  }
+
+  const exportToJSON = () => {
+    const dataStr = JSON.stringify(filteredExperiments, null, 2)
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+    
+    const exportFileDefaultName = `experiments_${new Date().toISOString().split('T')[0]}.json`
+    
+    const linkElement = document.createElement('a')
+    linkElement.setAttribute('href', dataUri)
+    linkElement.setAttribute('download', exportFileDefaultName)
+    linkElement.click()
+    handleExportClose()
+  }
+
+  const exportToCSV = () => {
+    const headers = ['ID', 'Name', 'Description', 'Status', 'Created At', 'Duration', 'Target Hosts']
+    const rows = filteredExperiments.map(exp => [
+      exp.id,
+      exp.name,
+      exp.description || '',
+      exp.status,
+      new Date(exp.createdAt).toISOString(),
+      exp.spec?.duration || '',
+      exp.spec?.targetHosts?.length || 0
+    ])
+    
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n')
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `experiments_${new Date().toISOString().split('T')[0]}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    handleExportClose()
+  }
+
+  const exportToYAML = () => {
+    // Simple YAML export (in production, use a proper YAML library)
+    const yamlContent = filteredExperiments.map(exp => {
+      return `- id: ${exp.id}
+  name: ${exp.name}
+  description: ${exp.description || ''}
+  status: ${exp.status}
+  created_at: ${exp.createdAt}
+  spec:
+    duration: ${exp.spec?.duration || ''}
+    target_hosts: ${exp.spec?.targetHosts?.length || 0}`
+    }).join('\n\n')
+    
+    const blob = new Blob([yamlContent], { type: 'text/yaml;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `experiments_${new Date().toISOString().split('T')[0]}.yaml`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    handleExportClose()
   }
 
   if (loading && experiments.length === 0) {
@@ -192,10 +304,29 @@ export const Experiments: React.FC = () => {
             </IconButton>
           </Tooltip>
           <Tooltip title="Refresh">
-            <IconButton onClick={() => fetchExperiments()}>
+            <IconButton onClick={() => dispatch(fetchExperiments())}>
               <Refresh />
             </IconButton>
           </Tooltip>
+          <ToggleButtonGroup
+            value={watchMode}
+            exclusive
+            onChange={(_, newValue) => setWatchMode(newValue === true)}
+            size="small"
+          >
+            <ToggleButton value={true} aria-label="watch mode">
+              <Tooltip title={watchMode ? "Watch mode on (5s refresh)" : "Enable watch mode"}>
+                {watchMode ? <Visibility /> : <VisibilityOff />}
+              </Tooltip>
+            </ToggleButton>
+          </ToggleButtonGroup>
+          <Button
+            variant="outlined"
+            startIcon={<GetApp />}
+            onClick={handleExportClick}
+          >
+            Export
+          </Button>
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -204,7 +335,38 @@ export const Experiments: React.FC = () => {
             New Experiment
           </Button>
         </Box>
+        {watchMode && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            Watch mode enabled - experiments will refresh every 5 seconds
+          </Alert>
+        )}
       </Paper>
+
+      {/* Export Menu */}
+      <Menu
+        anchorEl={exportMenuAnchor}
+        open={Boolean(exportMenuAnchor)}
+        onClose={handleExportClose}
+      >
+        <MenuItem onClick={exportToJSON}>
+          <ListItemIcon>
+            <Code fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Export as JSON</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={exportToCSV}>
+          <ListItemIcon>
+            <TableChart fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Export as CSV</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={exportToYAML}>
+          <ListItemIcon>
+            <Description fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Export as YAML</ListItemText>
+        </MenuItem>
+      </Menu>
 
       <Grid container spacing={3}>
         {paginatedExperiments.map((experiment) => (

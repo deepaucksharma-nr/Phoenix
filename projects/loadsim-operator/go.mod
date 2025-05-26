@@ -1,8 +1,14 @@
-module github.com/phoenix-vnext/platform/projects/loadsim-operator
+module github.com/phoenix/platform/projects/loadsim-operator
 
 go 1.21
 
-require go.uber.org/zap v1.26.0
+require (
+	go.uber.org/zap v1.26.0
+	k8s.io/api v0.28.3
+	k8s.io/apimachinery v0.28.3
+	k8s.io/client-go v0.28.3
+	sigs.k8s.io/controller-runtime v0.16.3
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

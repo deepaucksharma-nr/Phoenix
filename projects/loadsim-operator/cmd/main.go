@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	ctrlzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/loadsim-operator/api/v1alpha1"
-	"github.com/phoenix-vnext/platform/projects/loadsim-operator/internal/controller"
+	phoenixv1alpha1 "github.com/phoenix/platform/projects/loadsim-operator/api/v1alpha1"
+	"github.com/phoenix/platform/projects/loadsim-operator/internal/controller"
 )
 
 var (

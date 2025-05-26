@@ -9,6 +9,8 @@ const Dashboard = lazy(() => import('@pages/Dashboard'));
 const Experiments = lazy(() => import('@pages/Experiments'));
 const ExperimentDetails = lazy(() => import('@pages/ExperimentDetails'));
 const PipelineBuilder = lazy(() => import('@pages/PipelineBuilder'));
+const DeployedPipelines = lazy(() => import('@pages/DeployedPipelines'));
+const PipelineCatalog = lazy(() => import('@pages/PipelineCatalog'));
 const Analysis = lazy(() => import('@pages/Analysis'));
 const Settings = lazy(() => import('@pages/Settings'));
 const Login = lazy(() => import('@pages/Login'));
@@ -111,6 +113,27 @@ export const router = createBrowserRouter([
                 <PipelineBuilder />
               </SuspenseWrapper>
             ),
+          },
+          {
+            path: 'pipelines',
+            children: [
+              {
+                index: true,
+                element: (
+                  <SuspenseWrapper>
+                    <DeployedPipelines />
+                  </SuspenseWrapper>
+                ),
+              },
+              {
+                path: 'catalog',
+                element: (
+                  <SuspenseWrapper>
+                    <PipelineCatalog />
+                  </SuspenseWrapper>
+                ),
+              },
+            ],
           },
           {
             path: 'analysis',

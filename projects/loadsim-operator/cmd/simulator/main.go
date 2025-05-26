@@ -10,7 +10,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/projects/loadsim-operator/internal/generator"
+	"github.com/phoenix/platform/projects/loadsim-operator/internal/generator"
 )
 
 func main() {

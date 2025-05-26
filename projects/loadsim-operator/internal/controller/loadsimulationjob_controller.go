@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	phoenixv1alpha1 "github.com/phoenix-vnext/platform/projects/loadsim-operator/api/v1alpha1"
+	phoenixv1alpha1 "github.com/phoenix/platform/projects/loadsim-operator/api/v1alpha1"
 )
 
 // LoadSimulationJobReconciler reconciles a LoadSimulationJob object
