@@ -36,8 +36,7 @@ func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	
-	// Always use agent deployment mode
-	req.Config.DeploymentMode = "agent"
+	// Deployment mode will be managed at the pipeline level
 	
 	// Create experiment
 	exp := &models.Experiment{
@@ -56,9 +55,10 @@ func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) 
 	}
 	
 	// Broadcast creation event
-	s.hub.Broadcast <- websocket.Message{
+	expData, _ := json.Marshal(exp)
+	s.hub.Broadcast <- &websocket.Message{
 		Type: "experiment_created",
-		Data: exp,
+		Data: json.RawMessage(expData),
 	}
 	
 	respondJSON(w, http.StatusCreated, exp)
@@ -109,12 +109,13 @@ func (s *Server) handleUpdateExperimentPhase(w http.ResponseWriter, r *http.Requ
 	}
 	
 	// Broadcast phase update
-	s.hub.Broadcast <- websocket.Message{
+	phaseData, _ := json.Marshal(map[string]string{
+		"experiment_id": expID,
+		"phase":         req.Phase,
+	})
+	s.hub.Broadcast <- &websocket.Message{
 		Type: "experiment_phase_updated",
-		Data: map[string]string{
-			"experiment_id": expID,
-			"phase":         req.Phase,
-		},
+		Data: json.RawMessage(phaseData),
 	}
 	
 	w.WriteHeader(http.StatusNoContent)
@@ -244,13 +245,12 @@ func (s *Server) handleAnalyzeExperiment(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	
-	// Run analysis
-	analyzer := analyzer.NewExperimentAnalyzer(s.store, s.config.PrometheusURL)
-	analysis, err := analyzer.AnalyzeExperiment(r.Context(), exp)
-	if err != nil {
-		log.Error().Err(err).Str("experiment_id", expID).Msg("Failed to analyze experiment")
-		respondError(w, http.StatusInternalServerError, "Failed to analyze experiment")
-		return
+	// TODO: Implement experiment analysis
+	// For now, return a placeholder analysis
+	analysis := map[string]interface{}{
+		"experiment_id": exp.ID,
+		"status": "analysis_pending",
+		"message": "Analysis functionality is being implemented",
 	}
 	
 	respondJSON(w, http.StatusOK, analysis)

@@ -11,6 +11,8 @@ const (
 	DeploymentStatusUpdating = "updating"
 	DeploymentStatusDeleting = "deleting"
 	DeploymentStatusFailed   = "failed"
+	DeploymentStatusDegraded = "degraded"
+	DeploymentStatusHealthy  = "healthy"
 )
 
 // Pipeline deployment phase constants
@@ -29,6 +31,7 @@ type PipelineDeployment struct {
 	DeploymentName string                 `json:"deployment_name"`
 	PipelineName   string                 `json:"pipeline_name"`
 	Namespace      string                 `json:"namespace"`
+	Variant        string                 `json:"variant,omitempty"`
 	TargetNodes    map[string]string      `json:"target_nodes"`
 	Parameters     map[string]interface{} `json:"parameters"`
 	Resources      *ResourceRequirements  `json:"resources,omitempty"`
@@ -63,12 +66,14 @@ type DeploymentInstances struct {
 
 // DeploymentMetrics contains the latest metrics for a deployment
 type DeploymentMetrics struct {
-	Cardinality    int64   `json:"cardinality"`
-	Throughput     string  `json:"throughput"`
-	ErrorRate      float64 `json:"error_rate"`
-	CPUUsage       float64 `json:"cpu_usage"`
-	MemoryUsage    float64 `json:"memory_usage"`
-	LastUpdated    time.Time `json:"last_updated"`
+	Cardinality          int64     `json:"cardinality"`
+	Throughput           string    `json:"throughput"`
+	ErrorRate            float64   `json:"error_rate"`
+	CPUUsage             float64   `json:"cpu_usage"`
+	MemoryUsage          float64   `json:"memory_usage"`
+	MetricsPerSecond     float64   `json:"metrics_per_second"`
+	CardinalityReduction float64   `json:"cardinality_reduction"`
+	LastUpdated          time.Time `json:"last_updated"`
 }
 
 // CreateDeploymentRequest represents a request to create a pipeline deployment
@@ -85,10 +90,12 @@ type CreateDeploymentRequest struct {
 
 // UpdateDeploymentRequest represents a request to update a deployment
 type UpdateDeploymentRequest struct {
-	Parameters map[string]interface{} `json:"parameters,omitempty"`
-	Resources  *ResourceRequirements  `json:"resources,omitempty"`
-	Status     string                 `json:"status,omitempty"`
-	Phase      string                 `json:"phase,omitempty"`
+	Parameters    map[string]interface{} `json:"parameters,omitempty"`
+	Resources     *ResourceRequirements  `json:"resources,omitempty"`
+	Status        string                 `json:"status,omitempty"`
+	Phase         string                 `json:"phase,omitempty"`
+	StatusMessage string                 `json:"status_message,omitempty"`
+	UpdatedBy     string                 `json:"updated_by,omitempty"`
 }
 
 // ListDeploymentsRequest represents a request to list deployments

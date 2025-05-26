@@ -1,8 +1,6 @@
 module github.com/phoenix/platform/projects/phoenix-api
 
-go 1.23.0
-
-toolchain go1.24.3
+go 1.21
 
 require (
 	github.com/go-chi/chi/v5 v5.1.0

@@ -240,16 +240,13 @@ func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experi
 	baselineRunning := 0
 	candidateRunning := 0
 	
-	// TODO: Add Variant field to PipelineDeployment model or use metadata
 	for _, pipeline := range pipelines {
 		if pipeline.Status == "running" {
-			// if pipeline.Variant == "baseline" {
-			// 	baselineRunning++
-			// } else if pipeline.Variant == "candidate" {
-			// 	candidateRunning++
-			// }
-			// For now, count all running pipelines
-			candidateRunning++
+			if pipeline.Variant == "baseline" {
+				baselineRunning++
+			} else if pipeline.Variant == "candidate" {
+				candidateRunning++
+			}
 		}
 	}
 	

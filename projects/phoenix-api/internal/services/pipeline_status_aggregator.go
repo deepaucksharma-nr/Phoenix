@@ -54,13 +54,13 @@ type MetricsCollector interface {
 func NewPipelineStatusAggregator(
 	store store.PipelineDeploymentStore,
 	metricsCollector MetricsCollector,
-	k8sClient kubernetes.Interface,
+	agentClient AgentClient,
 	logger *zap.Logger,
 ) *PipelineStatusAggregator {
 	return &PipelineStatusAggregator{
 		store:            store,
 		metricsCollector: metricsCollector,
-		k8sClient:        k8sClient,
+		agentClient:      agentClient,
 		logger:           logger,
 	}
 }
@@ -83,13 +83,15 @@ type AggregatedStatus struct {
 
 // CollectorStatus represents individual collector status
 type CollectorStatus struct {
+	AgentID      string            `json:"agent_id"`
+	HostName     string            `json:"host_name"`
 	PodName      string            `json:"pod_name"`
 	NodeName     string            `json:"node_name"`
 	Status       string            `json:"status"`
 	Ready        bool              `json:"ready"`
 	RestartCount int32             `json:"restart_count"`
 	StartTime    *time.Time        `json:"start_time,omitempty"`
-	Conditions   []v1.PodCondition `json:"conditions,omitempty"`
+	Conditions   []AgentCondition  `json:"conditions,omitempty"`
 	Metrics      *CollectorMetrics `json:"metrics,omitempty"`
 }
 
@@ -273,11 +275,9 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 
 	// Calculate metrics if available
 	if status.Metrics != nil {
-		// TODO: Add MetricsPerSecond field to DeploymentMetrics model
-		// summary.TotalMetricsRate = status.Metrics.MetricsPerSecond
+		summary.TotalMetricsRate = status.Metrics.MetricsPerSecond
 		summary.ErrorRate = status.Metrics.ErrorRate
-		// TODO: Add CardinalityReduction field to DeploymentMetrics model
-		// summary.CardinalityReduction = status.Metrics.CardinalityReduction
+		summary.CardinalityReduction = status.Metrics.CardinalityReduction
 
 		// Check for high error rates
 		if summary.ErrorRate > 0.05 { // 5% error rate threshold
@@ -313,28 +313,26 @@ func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx con
 
 	// Prepare update request
 	updateReq := &models.UpdateDeploymentRequest{
-		// TODO: Add UpdatedBy field to UpdateDeploymentRequest model
-		// UpdatedBy: "system-aggregator",
+		UpdatedBy: "system-aggregator",
 	}
 
 	// Update status based on summary
 	if !aggregatedStatus.Summary.IsHealthy {
-		updateReq.Status = models.DeploymentStatusFailed // Use existing status instead of DeploymentStatusDegraded
-		// TODO: Add StatusMessage field to UpdateDeploymentRequest model
+		updateReq.Status = models.DeploymentStatusDegraded
+		updateReq.StatusMessage = "Deployment is degraded"
 	} else if aggregatedStatus.Summary.HealthyCollectors == 0 {
 		updateReq.Status = models.DeploymentStatusFailed
-		// TODO: Add StatusMessage field to UpdateDeploymentRequest model
+		updateReq.StatusMessage = "No healthy collectors"
 	} else {
-		updateReq.Status = models.DeploymentStatusActive // Use existing status
-		// TODO: Add StatusMessage field to UpdateDeploymentRequest model
+		updateReq.Status = models.DeploymentStatusHealthy
+		updateReq.StatusMessage = "Deployment is healthy"
 	}
 
 	// Update metrics if available
 	if aggregatedStatus.Metrics != nil {
-		// TODO: Implement UpdateDeploymentMetrics method in store
-		a.logger.Debug("would update deployment metrics here",
-			zap.String("deployment_id", deploymentID),
-			zap.Float64("cardinality", float64(aggregatedStatus.Metrics.Cardinality)))
+		if err := a.store.UpdateDeploymentMetrics(ctx, deploymentID, aggregatedStatus.Metrics); err != nil {
+			a.logger.Error("failed to update deployment metrics", zap.Error(err))
+		}
 	}
 
 	// TODO: Update health status once store method is implemented

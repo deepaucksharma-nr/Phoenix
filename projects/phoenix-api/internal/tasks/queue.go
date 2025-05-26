@@ -173,13 +173,11 @@ func (q *Queue) UpdateTaskStatusWithResult(ctx context.Context, taskID string, s
 
 // GetTasksForExperiment retrieves all tasks for a specific experiment
 func (q *Queue) GetTasksForExperiment(ctx context.Context, experimentID string) ([]*models.Task, error) {
-	// TODO: Implement GetTasksByExperiment in store interface
-	// tasks, err := q.store.GetTasksByExperiment(ctx, experimentID)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get tasks for experiment: %w", err)
-	// }
-	// return tasks, nil
-	return []*models.Task{}, nil
+	tasks, err := q.store.GetTasksByExperiment(ctx, experimentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tasks for experiment: %w", err)
+	}
+	return tasks, nil
 }
 
 // CancelTasksForExperiment cancels all pending tasks for an experiment
@@ -202,11 +200,9 @@ func (q *Queue) CancelTasksForExperiment(ctx context.Context, experimentID strin
 
 // GetTaskStats returns statistics about tasks in the queue
 func (q *Queue) GetTaskStats(ctx context.Context) (map[string]interface{}, error) {
-	// TODO: Implement GetTaskStats in store interface
-	// stats, err := q.store.GetTaskStats(ctx)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to get task stats: %w", err)
-	// }
-	// return stats, nil
-	return map[string]interface{}{"pending": 0, "running": 0, "completed": 0}, nil
+	stats, err := q.store.GetTaskStats(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get task stats: %w", err)
+	}
+	return stats, nil
 }

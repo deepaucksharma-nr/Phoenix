@@ -23,6 +23,7 @@ type Store interface {
 	ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) ([]*models.PipelineDeployment, int, error)
 	UpdateDeployment(ctx context.Context, deploymentID string, update *models.UpdateDeploymentRequest) error
 	DeleteDeployment(ctx context.Context, deploymentID string) error
+	UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *models.DeploymentMetrics) error
 
 	// Task operations
 	CreateTask(ctx context.Context, task *internalModels.Task) error
@@ -58,4 +59,5 @@ type PipelineDeploymentStore interface {
 	ListDeployments(ctx context.Context, req *models.ListDeploymentsRequest) ([]*models.PipelineDeployment, int, error)
 	UpdateDeployment(ctx context.Context, deploymentID string, update *models.UpdateDeploymentRequest) error
 	DeleteDeployment(ctx context.Context, deploymentID string) error
+	UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *models.DeploymentMetrics) error
 }

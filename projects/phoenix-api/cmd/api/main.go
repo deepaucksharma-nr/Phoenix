@@ -18,12 +18,14 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	commonstore "github.com/phoenix/platform/pkg/common/store"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/api"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -55,10 +57,12 @@ func main() {
 	}
 
 	// Initialize store
-	store := store.NewPostgresStore(db)
+	postgresStore := commonstore.NewPostgresStore(db)
+	pipelineStore := store.NewPostgresPipelineDeploymentStore(postgresStore)
 
 	// Initialize WebSocket hub
-	hub := websocket.NewHub()
+	zapLogger, _ := zap.NewProduction()
+	hub := websocket.NewHub(zapLogger)
 	go hub.Run()
 
 	// Setup router
@@ -82,7 +86,7 @@ func main() {
 	}))
 
 	// Initialize API server
-	apiServer := api.NewServer(store, hub, cfg)
+	apiServer := api.NewServer(pipelineStore, hub, cfg)
 
 	// Setup routes
 	apiServer.SetupRoutes(r)

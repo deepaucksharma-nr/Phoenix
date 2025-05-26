@@ -141,3 +141,10 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 func respondError(w http.ResponseWriter, status int, message string) {
 	respondJSON(w, status, map[string]string{"error": message})
 }
+
+// handleWebSocket handles WebSocket connections
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement WebSocket handler
+	// This will be implemented when integrating with the websocket package
+	http.Error(w, "WebSocket endpoint not yet implemented", http.StatusNotImplemented)
+}

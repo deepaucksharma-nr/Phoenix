@@ -13,6 +13,11 @@ type Config struct {
 	PushgatewayURL string
 	JWTSecret      string
 	Environment    string
+	Features       Features
+}
+
+type Features struct {
+	UsePushgateway bool
 }
 
 func Load() *Config {
@@ -23,6 +28,9 @@ func Load() *Config {
 		PushgatewayURL: getEnv("PUSHGATEWAY_URL", "http://localhost:9091"),
 		JWTSecret:      getEnv("JWT_SECRET", "phoenix-secret-key"),
 		Environment:    getEnv("ENVIRONMENT", "development"),
+		Features: Features{
+			UsePushgateway: getEnvBool("USE_PUSHGATEWAY", false),
+		},
 	}
 }
 

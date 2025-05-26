@@ -112,7 +112,10 @@ func (m *LoadSimManager) monitorJob(profile string) {
 	m.activeJobMu.Unlock()
 
 	if err != nil {
-		if ctx.Err() != context.DeadlineExceeded {
+		// Check if it's a context cancellation
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == -1 {
+			log.Info().Str("profile", profile).Msg("Load simulation was cancelled")
+		} else {
 			log.Error().Err(err).Str("profile", profile).Msg("Load simulation ended with error")
 		}
 	} else {

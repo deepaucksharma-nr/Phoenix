@@ -129,7 +129,7 @@ func (s *MemoryProcessSpawner) SimulateProcessActivity(ctx context.Context, upda
 			return
 		case <-ticker.C:
 			s.mu.Lock()
-			for pid, process := range s.processes {
+			for _, process := range s.processes {
 				if process.State == ProcessStateRunning {
 					// Add some randomness to CPU and memory usage
 					cpuVariation := (rand.Float64() - 0.5) * 10 // ±5% variation

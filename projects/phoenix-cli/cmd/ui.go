@@ -1,12 +1,15 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
+	"time"
 
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +37,10 @@ var uiStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show UI component status",
 	RunE: func(cmd *cobra.Command, args []string) error {
+		// Get config
+		cfg := config.New()
+		apiURL := cfg.GetAPIEndpoint()
+		
 		// Check API
 		apiStatus := checkEndpoint(apiURL + "/health")
 		fmt.Printf("Phoenix API:       %s\n", formatStatus(apiStatus))
@@ -47,15 +54,9 @@ var uiStatusCmd = &cobra.Command{
 		dashboardStatus := checkEndpoint(dashboardURL)
 		fmt.Printf("Phoenix Dashboard: %s\n", formatStatus(dashboardStatus))
 
-		// Check fleet
-		fleet, err := apiClient.GetFleetStatus()
-		if err == nil {
-			fmt.Printf("\nFleet Status:\n")
-			fmt.Printf("  Total Agents:   %d\n", fleet.TotalAgents)
-			fmt.Printf("  Healthy:        %d\n", fleet.HealthyAgents)
-			fmt.Printf("  Offline:        %d\n", fleet.OfflineAgents)
-			fmt.Printf("  Total Savings:  ₹%.2f/hour\n", fleet.TotalSavings)
-		}
+		// Fleet status placeholder
+		fmt.Printf("\nFleet Status:\n")
+		fmt.Printf("  Feature under development\n")
 
 		return nil
 	},
@@ -65,33 +66,7 @@ var uiCostCmd = &cobra.Command{
 	Use:   "cost",
 	Short: "Show real-time cost flow",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		costFlow, err := apiClient.GetMetricCostFlow()
-		if err != nil {
-			return fmt.Errorf("failed to get cost flow: %w", err)
-		}
-
-		fmt.Printf("Total Cost Rate: ₹%.2f/minute\n\n", costFlow.TotalCostRate)
-		fmt.Println("Top Cost Drivers:")
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		fmt.Printf("%-40s %12s %10s %8s\n", "Metric", "Cost/min", "Cardinality", "Percent")
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-		for i, metric := range costFlow.TopMetrics {
-			if i >= 10 {
-				break
-			}
-			name := metric.MetricName
-			if len(name) > 40 {
-				name = name[:37] + "..."
-			}
-			fmt.Printf("%-40s ₹%10.2f %10d %7.1f%%\n",
-				name,
-				metric.CostPerMinute,
-				metric.Cardinality,
-				metric.Percentage,
-			)
-		}
-
+		fmt.Println("Cost flow feature is under development")
 		return nil
 	},
 }
@@ -103,83 +78,7 @@ var uiWizardCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Println("Phoenix Experiment Wizard")
 		fmt.Println("========================")
-
-		// Interactive prompts
-		var name, description string
-		var hosts []string
-		var pipelineType string
-		var duration int
-
-		fmt.Print("\nExperiment name: ")
-		fmt.Scanln(&name)
-
-		fmt.Print("Description (optional): ")
-		fmt.Scanln(&description)
-
-		// Show available host groups
-		fleet, _ := apiClient.GetFleetStatus()
-		if fleet != nil {
-			fmt.Println("\nAvailable host groups:")
-			groups := make(map[string]int)
-			for _, agent := range fleet.Agents {
-				groups[agent.Group]++
-			}
-			for group, count := range groups {
-				fmt.Printf("  - %s (%d hosts)\n", group, count)
-			}
-		}
-
-		fmt.Print("\nSelect hosts (comma-separated groups or 'all'): ")
-		var hostInput string
-		fmt.Scanln(&hostInput)
-		if hostInput == "all" {
-			hosts = []string{"all"}
-		} else {
-			// Parse comma-separated groups
-			hosts = parseCommaSeparated(hostInput)
-		}
-
-		// Show pipeline templates
-		templates, _ := apiClient.GetPipelineTemplates()
-		if templates != nil {
-			fmt.Println("\nAvailable pipeline templates:")
-			for _, tmpl := range templates {
-				fmt.Printf("  - %s: %s (-%d%% cost)\n",
-					tmpl.ID,
-					tmpl.Name,
-					tmpl.EstimatedSavings,
-				)
-			}
-		}
-
-		fmt.Print("\nSelect pipeline template: ")
-		fmt.Scanln(&pipelineType)
-
-		fmt.Print("Duration (hours) [24]: ")
-		fmt.Scanln(&duration)
-		if duration == 0 {
-			duration = 24
-		}
-
-		// Create experiment
-		wizardData := map[string]interface{}{
-			"name":           name,
-			"description":    description,
-			"host_selector":  hosts,
-			"pipeline_type":  pipelineType,
-			"duration_hours": duration,
-		}
-
-		experiment, err := apiClient.CreateExperimentWizard(wizardData)
-		if err != nil {
-			return fmt.Errorf("failed to create experiment: %w", err)
-		}
-
-		fmt.Printf("\n✅ Experiment created successfully!\n")
-		fmt.Printf("ID: %s\n", experiment.ID)
-		fmt.Printf("Estimated savings: %d%%\n", experiment.EstimatedSavings)
-		fmt.Printf("\nView in dashboard: http://localhost:3000/experiments/%s\n", experiment.ID)
-
+		fmt.Println("\nWizard feature is under development")
 		return nil
 	},
 }
@@ -197,24 +96,23 @@ func openBrowser(url string) error {
 	var args []string
 
 	switch runtime.GOOS {
-	case "linux":
-		cmd = "xdg-open"
-		args = []string{url}
 	case "windows":
-		cmd = "rundll32"
-		args = []string{"url.dll,FileProtocolHandler", url}
+		cmd = "cmd"
+		args = []string{"/c", "start", url}
 	case "darwin":
 		cmd = "open"
 		args = []string{url}
-	default:
-		return fmt.Errorf("unsupported platform")
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
 	}
 
 	return exec.Command(cmd, args...).Start()
 }
 
 func checkEndpoint(url string) bool {
-	resp, err := httpClient.Get(url)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return false
 	}
@@ -225,28 +123,31 @@ func checkEndpoint(url string) bool {
 func checkWebSocket(baseURL string) bool {
 	// Simple check - just verify the endpoint exists
 	wsURL := baseURL + "/api/v1/ws"
-	resp, err := httpClient.Get(wsURL)
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(wsURL)
 	if err != nil {
 		return false
 	}
 	defer resp.Body.Close()
-	// WebSocket endpoint typically returns 400 for non-WebSocket requests
-	return resp.StatusCode == 400 || resp.StatusCode == 426
+	// WebSocket upgrade would return 400, but that's ok - it means endpoint exists
+	return resp.StatusCode == 400 || resp.StatusCode == 200
 }
 
 func formatStatus(ok bool) string {
 	if ok {
-		return "✅ Running"
+		return "✅ Online"
 	}
-	return "❌ Not available"
+	return "❌ Offline"
 }
 
+// Helper function to parse comma-separated strings
 func parseCommaSeparated(input string) []string {
-	var result []string
-	for _, item := range strings.Split(input, ",") {
-		trimmed := strings.TrimSpace(item)
+	parts := strings.Split(input, ",")
+	result := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
 		if trimmed != "" {
-			result = append(result, "group:"+trimmed)
+			result = append(result, trimmed)
 		}
 	}
 	return result

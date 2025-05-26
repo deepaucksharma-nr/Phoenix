@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -11,9 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/pkg/common/models"
-	"github.com/phoenix/platform/projects/phoenix-api/internal/analyzer"
-	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
-	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )

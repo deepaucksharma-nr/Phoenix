@@ -119,7 +119,7 @@ func (s *Server) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/v1/agent/metrics - Push metrics from agent
 func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request) {
-	// hostID := r.Context().Value("hostID").(string)
+	hostID := r.Context().Value("hostID").(string)
 	
 	var metrics struct {
 		Timestamp time.Time                `json:"timestamp"`
@@ -131,20 +131,18 @@ func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// TODO: Implement metric caching
 	// Store metrics in cache for faster queries
-	// for _, metric := range metrics.Metrics {
-	// 	if err := s.store.CacheMetric(r.Context(), hostID, metric); err != nil {
-	// 		log.Error().Err(err).Str("host", hostID).Msg("Failed to cache metric")
-	// 	}
-	// }
+	for _, metric := range metrics.Metrics {
+		if err := s.store.CacheMetric(r.Context(), hostID, metric); err != nil {
+			log.Error().Err(err).Str("host", hostID).Msg("Failed to cache metric")
+		}
+	}
 	
-	// TODO: Add Features field to config
 	// Also forward to Pushgateway if configured
-	// if s.config.Features.UsePushgateway {
-	// 	// TODO: Implement Pushgateway client
-	// 	log.Debug().Str("host", hostID).Int("count", len(metrics.Metrics)).Msg("Would forward metrics to Pushgateway")
-	// }
+	if s.config.Features.UsePushgateway {
+		// TODO: Implement Pushgateway client
+		log.Debug().Str("host", hostID).Int("count", len(metrics.Metrics)).Msg("Would forward metrics to Pushgateway")
+	}
 	
 	w.WriteHeader(http.StatusAccepted)
 }

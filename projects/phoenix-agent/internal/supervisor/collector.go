@@ -80,7 +80,6 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 		fmt.Sprintf("EXPERIMENT_ID=%s", strings.Split(id, "-")[0]),
 		fmt.Sprintf("VARIANT=%s", variant),
 		fmt.Sprintf("HOST_ID=%s", m.config.HostID),
-		fmt.Sprintf("METRICS_PUSHGATEWAY_URL=%s", m.config.PushgatewayURL),
 	)
 
 	// Set up logging
@@ -233,7 +232,8 @@ func (m *CollectorManager) applyVariables(config string, vars map[string]string,
 		"EXPERIMENT_ID":          strings.Split(id, "-")[0],
 		"VARIANT":                variant,
 		"HOST_ID":                m.config.HostID,
-		"METRICS_PUSHGATEWAY_URL": m.config.PushgatewayURL,
+		// TODO: Add pushgateway URL support
+		// "METRICS_PUSHGATEWAY_URL": m.config.PushgatewayURL,
 		"BATCH_TIMEOUT":          "1s",
 		"BATCH_SIZE":             "1000",
 	}
@@ -280,6 +280,4 @@ func (m *CollectorManager) monitorProcess(process *Process, logFile *os.File) {
 			Int("pid", process.Pid).
 			Msg("Collector process exited normally")
 	}
-}
-
 }

@@ -1,9 +1,11 @@
+version: '3.8'
+
 services:
   # Phoenix API - Consolidated control plane with WebSocket
   phoenix-api:
     build:
-      context: .
-      dockerfile: ./projects/phoenix-api/Dockerfile
+      context: ./projects/phoenix-api
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
       - "8081:8081"  # WebSocket port

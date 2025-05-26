@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/phoenix/platform/projects/phoenix-agent/internal/config"
-	"github.com/rs/zerolog/log"
 )
 
 type Client struct {

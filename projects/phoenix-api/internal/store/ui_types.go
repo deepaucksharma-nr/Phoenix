@@ -48,6 +48,9 @@ type PipelineTemplate struct {
 	Description           string                 `json:"description"`
 	Category              string                 `json:"category"`
 	Config                map[string]interface{} `json:"config"`
+	ConfigURL             string                 `json:"config_url"`
+	Variables             map[string]interface{} `json:"variables"`
+	Metadata              map[string]interface{} `json:"metadata"`
 	EstimatedSavings      float64                `json:"estimated_savings_percent"`
 	EstimatedCPUImpact    float64                `json:"estimated_cpu_impact"`
 	EstimatedMemoryImpact int                    `json:"estimated_memory_impact_mb"`

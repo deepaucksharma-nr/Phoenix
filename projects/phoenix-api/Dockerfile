@@ -1,27 +1,20 @@
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:1.21-alpine AS builder
 
 # Install dependencies
 RUN apk add --no-cache git make
 
 # Set working directory
-WORKDIR /workspace
+WORKDIR /build
 
-# Copy pkg module first
-COPY pkg/common/go.mod pkg/common/go.sum /workspace/pkg/common/
-WORKDIR /workspace/pkg/common
-RUN go mod download
-
-# Copy phoenix-api module
-WORKDIR /workspace/projects/phoenix-api
-COPY projects/phoenix-api/go.mod projects/phoenix-api/go.sum ./
-
-# Copy source code
-COPY pkg/common /workspace/pkg/common
-COPY projects/phoenix-api /workspace/projects/phoenix-api
+# Copy go mod files
+COPY go.mod go.sum ./
 
 # Download dependencies
 RUN go mod download
+
+# Copy source code
+COPY . .
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o phoenix-api cmd/api/main.go
@@ -40,8 +33,8 @@ RUN addgroup -g 1000 -S phoenix && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /workspace/projects/phoenix-api/phoenix-api /app/
-COPY --from=builder /workspace/projects/phoenix-api/migrations /app/migrations
+COPY --from=builder /build/phoenix-api /app/
+COPY --from=builder /build/migrations /app/migrations
 
 # Install migrate tool
 RUN wget -q https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz && \
