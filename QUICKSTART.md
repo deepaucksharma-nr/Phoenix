@@ -143,6 +143,21 @@ curl -X POST http://localhost:8080/api/v1/experiments \
 ./scripts/test-system.sh
 ```
 
+## 🖥️ Running Collectors on a VM
+
+Generate a static collector config and run it with systemd:
+
+```bash
+# Create the configuration
+phoenix pipeline vm-config process-topk-v1 \
+  --exporter-endpoint otel-phoenix.example.com:4317 \
+  --output /etc/otelcol/collector.yaml
+
+# Start the service
+sudo systemctl daemon-reload
+sudo systemctl enable --now otelcol
+```
+
 ## 🏗️ Architecture
 
 ```
