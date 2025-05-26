@@ -23,7 +23,7 @@ var (
 )
 
 // deployPipelineCmd represents the pipeline deploy command
-var deployPipelineCmd = &cobra.Command{
+var pipelineDeployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "Deploy a pipeline directly",
 	Long: `Deploy a pipeline configuration directly without running an experiment.
@@ -55,24 +55,24 @@ Examples:
 }
 
 func init() {
-	pipelineCmd.AddCommand(deployPipelineCmd)
+	pipelineCmd.AddCommand(pipelineDeployCmd)
 
 	// Required flags
-	deployPipelineCmd.Flags().StringVarP(&deploymentName, "name", "n", "", "Deployment name (required)")
-	deployPipelineCmd.Flags().StringVar(&deployPipeline, "pipeline", "", "Pipeline template to deploy (required)")
-	deployPipelineCmd.Flags().StringVar(&deployNamespace, "namespace", "default", "Kubernetes namespace")
-	deployPipelineCmd.Flags().StringToStringVar(&deploySelector, "selector", nil, "Target node selector labels (required)")
+	pipelineDeployCmd.Flags().StringVarP(&deploymentName, "name", "n", "", "Deployment name (required)")
+	pipelineDeployCmd.Flags().StringVar(&deployPipeline, "pipeline", "", "Pipeline template to deploy (required)")
+	pipelineDeployCmd.Flags().StringVar(&deployNamespace, "namespace", "default", "Kubernetes namespace")
+	pipelineDeployCmd.Flags().StringToStringVar(&deploySelector, "selector", nil, "Target node selector labels (required)")
 	
-	deployPipelineCmd.MarkFlagRequired("name")
-	deployPipelineCmd.MarkFlagRequired("pipeline")
-	deployPipelineCmd.MarkFlagRequired("selector")
+	pipelineDeployCmd.MarkFlagRequired("name")
+	pipelineDeployCmd.MarkFlagRequired("pipeline")
+	pipelineDeployCmd.MarkFlagRequired("selector")
 
 	// Optional flags
-	deployPipelineCmd.Flags().StringToStringVar(&deployParams, "param", nil, "Pipeline parameters (can be specified multiple times)")
-	deployPipelineCmd.Flags().StringVar(&deployCPURequest, "cpu-request", "100m", "CPU request")
-	deployPipelineCmd.Flags().StringVar(&deployCPULimit, "cpu-limit", "500m", "CPU limit")
-	deployPipelineCmd.Flags().StringVar(&deployMemRequest, "memory-request", "128Mi", "Memory request")
-	deployPipelineCmd.Flags().StringVar(&deployMemLimit, "memory-limit", "512Mi", "Memory limit")
+	pipelineDeployCmd.Flags().StringToStringVar(&deployParams, "param", nil, "Pipeline parameters (can be specified multiple times)")
+	pipelineDeployCmd.Flags().StringVar(&deployCPURequest, "cpu-request", "100m", "CPU request")
+	pipelineDeployCmd.Flags().StringVar(&deployCPULimit, "cpu-limit", "500m", "CPU limit")
+	pipelineDeployCmd.Flags().StringVar(&deployMemRequest, "memory-request", "128Mi", "Memory request")
+	pipelineDeployCmd.Flags().StringVar(&deployMemLimit, "memory-limit", "512Mi", "Memory limit")
 }
 
 func runPipelineDeploy(cmd *cobra.Command, args []string) error {

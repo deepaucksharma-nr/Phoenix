@@ -19,7 +19,7 @@ var (
 )
 
 // listDeploymentsCmd represents the pipeline list-deployments command
-var listDeploymentsCmd = &cobra.Command{
+var pipelineListDeploymentsCmd = &cobra.Command{
 	Use:   "list-deployments",
 	Short: "List pipeline deployments",
 	Long: `List all pipeline deployments.
@@ -40,10 +40,10 @@ Examples:
 }
 
 func init() {
-	pipelineCmd.AddCommand(listDeploymentsCmd)
+	pipelineCmd.AddCommand(pipelineListDeploymentsCmd)
 
-	listDeploymentsCmd.Flags().StringVar(&listDeployNamespace, "namespace", "", "Filter by namespace")
-	listDeploymentsCmd.Flags().StringVar(&listDeployStatus, "status", "", "Filter by status (pending, active, failed)")
+	pipelineListDeploymentsCmd.Flags().StringVar(&listDeployNamespace, "namespace", "", "Filter by namespace")
+	pipelineListDeploymentsCmd.Flags().StringVar(&listDeployStatus, "status", "", "Filter by status (pending, active, failed)")
 }
 
 func runListDeployments(cmd *cobra.Command, args []string) error {

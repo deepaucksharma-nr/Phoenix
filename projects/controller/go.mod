@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/projects/controller
+module github.com/phoenix/platform/projects/controller
 
 go 1.24.0
 
@@ -16,7 +16,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.16.3
 )
 
-replace github.com/phoenix-vnext/platform/pkg => ../../pkg
+replace github.com/phoenix/platform/pkg => ../../pkg
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

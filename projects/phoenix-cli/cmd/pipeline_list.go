@@ -16,8 +16,8 @@ var (
 	pipelineType string
 )
 
-// listPipelineCmd represents the pipeline list command
-var listPipelineCmd = &cobra.Command{
+// pipelineListCmd represents the pipeline list command
+var pipelineListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available pipeline templates",
 	Long: `List all available pipeline templates in the Phoenix platform.
@@ -35,9 +35,9 @@ Examples:
 }
 
 func init() {
-	pipelineCmd.AddCommand(listPipelineCmd)
+	pipelineCmd.AddCommand(pipelineListCmd)
 
-	listPipelineCmd.Flags().StringVar(&pipelineType, "type", "", "Filter by pipeline type (baseline, optimization)")
+	pipelineListCmd.Flags().StringVar(&pipelineType, "type", "", "Filter by pipeline type (baseline, optimization)")
 }
 
 func runPipelineList(cmd *cobra.Command, args []string) error {

@@ -1,7 +1,0 @@
-# Sensitive files
-secrets/*
-certificates/*
-*.key
-*.pem
-*.crt
-.env
