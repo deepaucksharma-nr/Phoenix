@@ -2,6 +2,30 @@
 
 A modular observability cost optimization platform that reduces metrics cardinality by up to 90% while maintaining critical visibility.
 
+## 📋 Current Status
+
+- **Platform Status**: 65% PRD compliant, core functionality operational
+- **Critical Issue**: LoadSim Operator needs fixing for experiments
+- **Documentation**: See [PLATFORM_STATUS.md](./PLATFORM_STATUS.md) for details
+
+## 🗺️ Documentation Navigation
+
+### For Developers
+- [Quick Start Guide](./QUICKSTART.md) - Get up and running in 5 minutes
+- [Development Guide](./DEVELOPMENT_GUIDE.md) - Development workflow and standards
+- [API Documentation](./docs/api/README.md) - API contracts and playground
+- [Architecture Guide](./docs/architecture/PLATFORM_ARCHITECTURE.md) - System design
+
+### For Operators
+- [Operations Guide](./docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Deployment and operations
+- [Monitoring Setup](./monitoring/README.md) - Prometheus and Grafana configuration
+- [Helm Charts](./infrastructure/helm/phoenix/README.md) - Kubernetes deployment
+
+### Key References
+- [PRD Status](./PRD_STATUS.md) - Product requirements implementation status
+- [Contributing](./CONTRIBUTING.md) - Contribution guidelines
+- [Claude AI Guide](./CLAUDE.md) - AI assistant integration guide
+
 ## 🏗️ Monorepo Structure
 
 ```

@@ -1,6 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
-import MainLayout from '@components/Layout/MainLayout';
+import { MainLayout } from '@components/Layout/MainLayout';
 import { PrivateRoute } from '@components/Auth';
 import { CircularProgress, Box } from '@mui/material';
 

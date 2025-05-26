@@ -1,17 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice';
-import experimentReducer from './slices/experimentSlice';
-import pipelineReducer from './slices/pipelineSlice';
-import notificationReducer from './slices/notificationSlice';
-import uiReducer from './slices/uiSlice';
+import authSlice from './slices/authSlice';
+import experimentSlice from './slices/experimentSlice';
+import pipelineSlice from './slices/pipelineSlice';
+import notificationSlice from './slices/notificationSlice';
+import uiSlice from './slices/uiSlice';
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
-    experiments: experimentReducer,
-    pipelines: pipelineReducer,
-    notifications: notificationReducer,
-    ui: uiReducer,
+    auth: authSlice,
+    experiments: experimentSlice,
+    pipeline: pipelineSlice,
+    notifications: notificationSlice,
+    ui: uiSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

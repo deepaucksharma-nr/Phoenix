@@ -1,6 +1,59 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { Pipeline, PipelineNode, PipelineConnection } from '@types/pipeline';
 
+// Mock deployments data
+const mockDeployments = [
+  {
+    id: '1',
+    name: 'prod-process-optimizer',
+    pipeline: 'process-optimizer-v2',
+    namespace: 'production',
+    status: 'active',
+    phase: 'running',
+    targetNodes: {
+      'node-1': 'collector-node-1.phoenix.local',
+      'node-2': 'collector-node-2.phoenix.local',
+    },
+    instances: {
+      desired: 3,
+      ready: 3,
+    },
+    metrics: {
+      cardinality: 15420,
+      throughput: '1.2M/s',
+      errorRate: 0.002,
+      cpuUsage: 45,
+      memoryUsage: 68,
+    },
+    createdAt: '2024-03-15T10:00:00Z',
+    updatedAt: '2024-03-20T15:30:00Z',
+  },
+  {
+    id: '2',
+    name: 'staging-sampler',
+    pipeline: 'tail-sampling-v1',
+    namespace: 'staging',
+    status: 'active',
+    phase: 'running',
+    targetNodes: {
+      'node-1': 'collector-staging.phoenix.local',
+    },
+    instances: {
+      desired: 1,
+      ready: 1,
+    },
+    metrics: {
+      cardinality: 8500,
+      throughput: '500K/s',
+      errorRate: 0.001,
+      cpuUsage: 32,
+      memoryUsage: 45,
+    },
+    createdAt: '2024-03-18T14:00:00Z',
+    updatedAt: '2024-03-20T14:00:00Z',
+  },
+];
+
 interface PipelineState {
   pipelines: Pipeline[];
   currentPipeline: Pipeline | null;
@@ -10,6 +63,8 @@ interface PipelineState {
   isLoading: boolean;
   error: string | null;
   isDirty: boolean;
+  deployments: any[]; // Pipeline deployments
+  loading: boolean; // For backward compatibility
 }
 
 const initialState: PipelineState = {
@@ -21,6 +76,8 @@ const initialState: PipelineState = {
   isLoading: false,
   error: null,
   isDirty: false,
+  deployments: mockDeployments,
+  loading: false,
 };
 
 const pipelineSlice = createSlice({

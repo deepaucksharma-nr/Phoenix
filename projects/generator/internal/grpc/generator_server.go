@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 
-	generatorv1 "github.com/phoenix-vnext/platform/api/proto/v1"
-	"github.com/phoenix-vnext/platform/projects/generator/internal/config"
+	generatorv1 "github.com/phoenix/platform/pkg/grpc/proto/v1"
+	"github.com/phoenix/platform/projects/generator/internal/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

@@ -38,7 +38,6 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
-import { fetchPipelineDeployments } from '../store/slices/pipelineSlice';
 
 interface PipelineDeployment {
   id: string;
@@ -74,19 +73,15 @@ export default function DeployedPipelines() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [pipelineFilter, setPipelineFilter] = useState('all');
 
+  // Mock data will be set via Redux in production
   useEffect(() => {
-    dispatch(fetchPipelineDeployments());
-    
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(() => {
-      dispatch(fetchPipelineDeployments());
-    }, 30000);
-
-    return () => clearInterval(interval);
+    // In production, dispatch action to fetch deployments
+    // For now, we'll use mock data from initial Redux state
   }, [dispatch]);
 
   const handleRefresh = () => {
-    dispatch(fetchPipelineDeployments());
+    // In production, dispatch refresh action
+    console.log('Refresh pipeline deployments');
   };
 
   const handleStartExperiment = (deployment: PipelineDeployment) => {

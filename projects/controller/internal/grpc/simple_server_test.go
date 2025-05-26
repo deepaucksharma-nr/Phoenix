@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
-	// pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
+	// pb "github.com/phoenix-vnext/platform/pkg/contracts/proto/v1"
 )
 
 // MockExperimentStore is a mock implementation of the ExperimentStore interface
