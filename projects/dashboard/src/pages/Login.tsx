@@ -48,8 +48,8 @@ export const Login: React.FC = () => {
 
   // Clear errors on mount
   useEffect(() => {
-    clearError()
-  }, [clearError])
+    dispatch(setError(null))
+  }, [dispatch])
 
   const validateForm = (): boolean => {
     const errors = {
@@ -81,7 +81,7 @@ export const Login: React.FC = () => {
     }
 
     try {
-      await login(formData.email, formData.password)
+      await dispatch(login({ email: formData.email, password: formData.password })).unwrap()
       // Navigation handled by useEffect above
     } catch (err) {
       // Error handled by store
