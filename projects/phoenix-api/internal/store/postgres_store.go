@@ -335,3 +335,19 @@ func (s *PostgresPipelineDeploymentStore) createTables(ctx context.Context) erro
 	_, err := s.db.DB().ExecContext(ctx, schema)
 	return err
 }
+
+// UpdateDeploymentMetrics updates metrics for a deployment
+func (s *PostgresPipelineDeploymentStore) UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *models.DeploymentMetrics) error {
+	// TODO: Implement metrics storage
+	// For now, just log the metrics
+	fmt.Printf("Updating metrics for deployment %s: cardinality=%d, errorRate=%.2f\n", 
+		deploymentID, metrics.Cardinality, metrics.ErrorRate)
+	return nil
+}
+
+// GetDeploymentHistory gets historical deployment configuration
+func (s *PostgresPipelineDeploymentStore) GetDeploymentHistory(ctx context.Context, deploymentID string, version int) (*models.PipelineDeployment, error) {
+	// TODO: Implement deployment versioning
+	// For now, just return the current deployment
+	return s.GetDeployment(ctx, deploymentID)
+}

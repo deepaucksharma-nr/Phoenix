@@ -313,19 +313,19 @@ func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx con
 
 	// Prepare update request
 	updateReq := &models.UpdateDeploymentRequest{
-		UpdatedBy: "system-aggregator",
+		// TODO: Add UpdatedBy field when available
 	}
 
 	// Update status based on summary
 	if !aggregatedStatus.Summary.IsHealthy {
-		updateReq.Status = models.DeploymentStatusDegraded
-		updateReq.StatusMessage = "Deployment is degraded"
+		updateReq.Status = models.DeploymentStatusFailed // Use existing status
+		// TODO: Add StatusMessage field when available
 	} else if aggregatedStatus.Summary.HealthyCollectors == 0 {
 		updateReq.Status = models.DeploymentStatusFailed
-		updateReq.StatusMessage = "No healthy collectors"
+		// TODO: Add StatusMessage field when available
 	} else {
-		updateReq.Status = models.DeploymentStatusHealthy
-		updateReq.StatusMessage = "Deployment is healthy"
+		updateReq.Status = models.DeploymentStatusActive // Use existing status
+		// TODO: Add StatusMessage field when available
 	}
 
 	// Update metrics if available

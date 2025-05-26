@@ -2,7 +2,7 @@ package store
 
 import (
 	"context"
-	
+
 	"github.com/phoenix/platform/pkg/common/models"
 	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
 )
@@ -31,17 +31,20 @@ type Store interface {
 	ListTasks(ctx context.Context, filters map[string]interface{}) ([]*internalModels.Task, error)
 	UpdateTask(ctx context.Context, task *internalModels.Task) error
 	GetPendingTasksForHost(ctx context.Context, hostID string) ([]*internalModels.Task, error)
+	GetTasksByExperiment(ctx context.Context, experimentID string) ([]*internalModels.Task, error)
+	GetTaskStats(ctx context.Context) (map[string]interface{}, error)
 
 	// Agent operations
 	UpsertAgent(ctx context.Context, agent *internalModels.AgentStatus) error
 	GetAgent(ctx context.Context, hostID string) (*internalModels.AgentStatus, error)
 	ListAgents(ctx context.Context) ([]*internalModels.AgentStatus, error)
 	UpdateAgentHeartbeat(ctx context.Context, heartbeat *internalModels.AgentHeartbeat) error
+	CacheMetric(ctx context.Context, hostID string, metric map[string]interface{}) error
 
 	// Event operations
 	CreateExperimentEvent(ctx context.Context, event *internalModels.ExperimentEvent) error
 	ListExperimentEvents(ctx context.Context, experimentID string) ([]*internalModels.ExperimentEvent, error)
-	
+
 	// UI-specific operations
 	GetMetricCostFlow(ctx context.Context) (*MetricCostFlow, error)
 	GetCardinalityBreakdown(ctx context.Context, namespace, service string) (*CardinalityBreakdown, error)
@@ -60,4 +63,5 @@ type PipelineDeploymentStore interface {
 	UpdateDeployment(ctx context.Context, deploymentID string, update *models.UpdateDeploymentRequest) error
 	DeleteDeployment(ctx context.Context, deploymentID string) error
 	UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *models.DeploymentMetrics) error
+	GetDeploymentHistory(ctx context.Context, deploymentID string, version int) (*models.PipelineDeployment, error)
 }

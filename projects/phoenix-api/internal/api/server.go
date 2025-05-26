@@ -58,6 +58,25 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/{id}", s.handleGetPipeline)
 			r.Get("/status", s.handleGetPipelineStatus)
 		})
+		
+		// Pipeline deployment endpoints
+		r.Route("/deployments", func(r chi.Router) {
+			r.Post("/", s.handleCreateDeployment)
+			r.Get("/", s.handleListDeployments)
+			r.Get("/{id}", s.handleGetDeployment)
+			r.Put("/{id}", s.handleUpdateDeployment)
+			r.Delete("/{id}", s.handleDeleteDeployment)
+			r.Post("/{id}/rollback", s.handleRollbackDeployment)
+			r.Get("/{id}/status", s.handleGetDeploymentStatus)
+		})
+		
+		// Load simulation endpoints
+		r.Route("/loadsimulations", func(r chi.Router) {
+			r.Post("/", s.handleStartLoadSimulation)
+			r.Get("/", s.handleListLoadSimulations)
+			r.Get("/{id}", s.handleGetLoadSimulation)
+			r.Delete("/{id}", s.handleStopLoadSimulation)
+		})
 
 		// WebSocket endpoint
 		r.HandleFunc("/ws", s.handleWebSocket)
@@ -144,7 +163,13 @@ func respondError(w http.ResponseWriter, status int, message string) {
 
 // handleWebSocket handles WebSocket connections
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement WebSocket handler
-	// This will be implemented when integrating with the websocket package
-	http.Error(w, "WebSocket endpoint not yet implemented", http.StatusNotImplemented)
+	client, err := s.hub.HandleConnection(w, r)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to handle WebSocket connection")
+		return
+	}
+	
+	// Handle client messages
+	go client.ReadMessages()
+	go client.WriteMessages()
 }

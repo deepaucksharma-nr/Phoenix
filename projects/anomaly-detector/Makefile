@@ -30,7 +30,7 @@ NC := \033[0m # No Color
 
 ##@ General
 
-all: proto build test ## Run proto, build, and test
+all: build test ## Run build and test (proto skipped if protoc not available)
 
 help: ## Display this help message
 	@echo -e "$(CYAN)Anomaly Detector Service Makefile$(NC)"
@@ -46,8 +46,13 @@ clean: ## Clean build artifacts
 
 ##@ Building
 
-build: proto ## Build the service
+build: ## Build the service
 	@echo -e "$(CYAN)Building...$(NC)"
+	@if command -v protoc >/dev/null 2>&1; then \
+		$(MAKE) proto; \
+	else \
+		echo -e "$(YELLOW)Skipping proto generation (protoc not found)$(NC)"; \
+	fi
 	@mkdir -p $(BUILD_DIR)
 	@go build -o $(BUILD_DIR)/anomaly-detector $(CMD_DIR)/anomaly-detector
 	@echo -e "$(GREEN)✓ Built$(NC)"
@@ -81,5 +86,12 @@ fmt: ## Format code
 
 proto: ## Generate protobuf code
 	@echo -e "$(CYAN)Generating protobuf code...$(NC)"
-	@powershell -File $(SCRIPTS_DIR)/generate.ps1
+	@if command -v protoc >/dev/null 2>&1; then \
+		protoc --go_out=. --go_opt=paths=source_relative \
+			--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+			api/*.proto; \
+	else \
+		echo -e "$(RED)protoc not found. Please install protobuf compiler$(NC)"; \
+		exit 1; \
+	fi
 	@echo -e "$(GREEN)✓ Generated$(NC)" 

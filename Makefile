@@ -30,7 +30,7 @@ YELLOW := \033[0;33m
 NC := \033[0m # No Color
 
 # Projects
-ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null)
+ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null | grep -v dashboard)
 GO_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/go.mod \; -print 2>/dev/null | xargs -n1 basename)
 NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/package.json \; -print 2>/dev/null | xargs -n1 basename)
 
@@ -50,7 +50,7 @@ CORE_PROJECTS := phoenix-api phoenix-agent phoenix-cli dashboard
 
 all: validate build test ## Run validate, build, and test
 
-help: ## Display this help message
+help-extended: ## Display extended help message
 	@echo -e "$(CYAN)Phoenix Platform - Monorepo Makefile$(NC)"
 	@echo -e "$(CYAN)=====================================$(NC)"
 	@echo ""
@@ -64,7 +64,7 @@ help: ## Display this help message
 	@echo -e "$(GREEN)Available projects:$(NC)"
 	@for project in $(ALL_PROJECTS); do echo "  - $$project"; done
 
-clean: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
+clean-all: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
 	@echo -e "$(GREEN)✓ All projects cleaned$(NC)"
 
 ##@ Development
@@ -99,7 +99,7 @@ dev-reset: dev-down ## Reset development environment
 
 ##@ Building
 
-build: $(GO_PROJECTS:%=build-%) $(NODE_PROJECTS:%=build-node-%) ## Build all projects
+build: $(ALL_PROJECTS:%=build-%) build-dashboard ## Build all projects
 	@echo -e "$(GREEN)✓ All projects built$(NC)"
 
 build-%: ## Build specific project
@@ -111,6 +111,11 @@ build-node-%: ## Build Node.js project
 	@echo -e "$(CYAN)Building $*...$(NC)"
 	@$(MAKE) -C $(PROJECTS_DIR)/$* build
 	@echo -e "$(GREEN)✓ $* built$(NC)"
+
+build-dashboard: ## Build dashboard
+	@echo -e "$(CYAN)Building dashboard...$(NC)"
+	@cd $(PROJECTS_DIR)/dashboard && npm install && npm run build
+	@echo -e "$(GREEN)✓ dashboard built$(NC)"
 
 build-changed: ## Build only changed projects
 	@echo -e "$(CYAN)Building changed projects...$(NC)"
@@ -190,7 +195,7 @@ docker-%: ## Build Docker image for specific project
 	@$(MAKE) -C $(PROJECTS_DIR)/$* docker-build
 	@echo -e "$(GREEN)✓ $* Docker image built$(NC)"
 
-docker-push: $(ALL_PROJECTS:%=docker-push-%) ## Push all Docker images
+docker-push-all: $(ALL_PROJECTS:%=docker-push-%) ## Push all Docker images
 	@echo -e "$(GREEN)✓ All Docker images pushed$(NC)"
 
 docker-push-%: ## Push Docker image for specific project
@@ -217,7 +222,7 @@ k8s-deploy-dev: ## Deploy to development cluster
 
 ##@ Release
 
-version: ## Display current version
+show-version: ## Display current version
 	@echo $(VERSION)
 
 changelog: ## Generate changelog

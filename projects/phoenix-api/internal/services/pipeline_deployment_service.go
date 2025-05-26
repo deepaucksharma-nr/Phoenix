@@ -219,16 +219,16 @@ func (s *PipelineDeploymentService) RollbackDeployment(ctx context.Context, depl
 		return err
 	}
 
-	// Record rollback event
-	event := &models.DeploymentEvent{
-		DeploymentID: deploymentID,
-		EventType:    "rollback",
-		Version:      version,
-		Timestamp:    time.Now(),
-	}
-	if err := s.store.CreateDeploymentEvent(ctx, event); err != nil {
-		s.logger.Error("failed to record rollback event", zap.Error(err))
-	}
+	// TODO: Implement deployment events
+	// event := &models.DeploymentEvent{
+	// 	DeploymentID: deploymentID,
+	// 	EventType:    "rollback",
+	// 	Version:      version,
+	// 	Timestamp:    time.Now(),
+	// }
+	// if err := s.store.CreateDeploymentEvent(ctx, event); err != nil {
+	// 	s.logger.Error("failed to record rollback event", zap.Error(err))
+	// }
 
 	s.logger.Info("deployment rollback initiated successfully",
 		zap.String("deployment_id", deploymentID),
@@ -250,13 +250,14 @@ func (s *PipelineDeploymentService) UpdateDeploymentMetrics(ctx context.Context,
 }
 
 // UpdateDeploymentHealth updates the health status of a deployment
-func (s *PipelineDeploymentService) UpdateDeploymentHealth(ctx context.Context, deploymentID string, health *models.DeploymentHealth) error {
-	s.logger.Info("updating deployment health", zap.String("deployment_id", deploymentID))
-
-	if err := s.store.UpdateDeploymentHealth(ctx, deploymentID, health); err != nil {
-		s.logger.Error("failed to update deployment health", zap.Error(err))
-		return err
-	}
-
-	return nil
-}
+// TODO: Implement when DeploymentHealth model is available
+// func (s *PipelineDeploymentService) UpdateDeploymentHealth(ctx context.Context, deploymentID string, health *models.DeploymentHealth) error {
+// 	s.logger.Info("updating deployment health", zap.String("deployment_id", deploymentID))
+//
+// 	if err := s.store.UpdateDeploymentHealth(ctx, deploymentID, health); err != nil {
+// 		s.logger.Error("failed to update deployment health", zap.Error(err))
+// 		return err
+// 	}
+//
+// 	return nil
+// }

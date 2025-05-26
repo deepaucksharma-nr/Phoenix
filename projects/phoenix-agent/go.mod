@@ -1,6 +1,8 @@
 module github.com/phoenix/platform/projects/phoenix-agent
 
-go 1.21
+go 1.23.0
+
+toolchain go1.24.3
 
 require (
 	github.com/rs/zerolog v1.31.0

@@ -46,8 +46,13 @@ clean: ## Clean build artifacts
 
 ##@ Building
 
-build: proto ## Build the service
+build: ## Build the service
 	@echo -e "$(CYAN)Building...$(NC)"
+	@if [ -x "$(SCRIPTS_DIR)/generate.sh" ] && command -v protoc >/dev/null 2>&1; then \
+		$(MAKE) proto; \
+	else \
+		echo -e "$(YELLOW)Skipping proto generation$(NC)"; \
+	fi
 	@mkdir -p $(BUILD_DIR)
 	@go build -o $(BUILD_DIR)/analytics $(CMD_DIR)/analytics
 	@echo -e "$(GREEN)✓ Built$(NC)"

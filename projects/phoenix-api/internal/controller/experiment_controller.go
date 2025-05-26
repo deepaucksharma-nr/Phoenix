@@ -13,24 +13,27 @@ import (
 )
 
 type ExperimentController struct {
-	store     store.Store
-	taskQueue *tasks.Queue
+	store        store.Store
+	taskQueue    *tasks.Queue
+	stateMachine *ExperimentStateMachine
 }
 
 func NewExperimentController(store store.Store, taskQueue *tasks.Queue) *ExperimentController {
-	return &ExperimentController{
+	ec := &ExperimentController{
 		store:     store,
 		taskQueue: taskQueue,
 	}
+	ec.stateMachine = NewExperimentStateMachine(store, ec)
+	return ec
 }
 
 // StartExperiment initiates an experiment by creating tasks for agents
 func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.Experiment) error {
 	log.Info().Str("experiment_id", exp.ID).Msg("Starting experiment")
 	
-	// Update experiment phase
-	if err := c.store.UpdateExperimentPhase(ctx, exp.ID, "deploying"); err != nil {
-		return fmt.Errorf("failed to update experiment phase: %w", err)
+	// Use state machine for phase transition
+	if err := c.stateMachine.TransitionExperiment(ctx, exp.ID, "deploying"); err != nil {
+		return fmt.Errorf("failed to transition experiment: %w", err)
 	}
 	
 	// Create tasks for each target host
@@ -167,9 +170,9 @@ func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID 
 		}
 	}
 	
-	// Update experiment phase
-	if err := c.store.UpdateExperimentPhase(ctx, experimentID, "stopping"); err != nil {
-		return fmt.Errorf("failed to update experiment phase: %w", err)
+	// Use state machine for phase transition
+	if err := c.stateMachine.TransitionExperiment(ctx, experimentID, "stopping"); err != nil {
+		return fmt.Errorf("failed to transition experiment: %w", err)
 	}
 	
 	return nil

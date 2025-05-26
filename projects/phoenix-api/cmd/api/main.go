@@ -57,7 +57,10 @@ func main() {
 	}
 
 	// Initialize store
-	postgresStore := commonstore.NewPostgresStore(db)
+	postgresStore, err := commonstore.NewPostgresStore(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create postgres store")
+	}
 	pipelineStore := store.NewPostgresPipelineDeploymentStore(postgresStore)
 
 	// Initialize WebSocket hub
@@ -85,8 +88,11 @@ func main() {
 		MaxAge:           300,
 	}))
 
+	// Create composite store
+	compositeStore := store.NewCompositeStore(postgresStore, pipelineStore)
+	
 	// Initialize API server
-	apiServer := api.NewServer(pipelineStore, hub, cfg)
+	apiServer := api.NewServer(compositeStore, hub, cfg)
 
 	// Setup routes
 	apiServer.SetupRoutes(r)

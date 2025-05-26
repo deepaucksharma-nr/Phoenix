@@ -4,28 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-Phoenix Platform is an observability cost optimization system that reduces metrics cardinality by up to 90% while maintaining critical visibility. The platform uses a lean-core architecture with centralized control plane and lightweight distributed agents.
-
-## Architecture
-
-The platform consists of three main components:
-
-1. **Phoenix API** (`projects/phoenix-api/`) - Monolithic control plane managing experiments, tasks, and analysis
-2. **Phoenix Agent** (`projects/phoenix-agent/`) - Lightweight agents that poll for tasks and manage OTel collectors
-3. **Dashboard** (`projects/dashboard/`) - React-based web UI with real-time WebSocket updates
-
-Key architectural principles:
-- Agents use long-polling (no incoming connections required)
-- PostgreSQL serves as the single source of truth with task queue pattern
-- Metrics flow: Agent → OTel Collector → Pushgateway → Prometheus → API
-- All agent communication is outbound-only for security
+Phoenix Platform is a monorepo for an observability cost optimization system designed to reduce metrics cardinality by up to 90% while maintaining critical visibility. The architecture implements strict boundaries and comprehensive validation to prevent architectural drift, especially when using AI-assisted development.
 
 ## Critical Architecture Boundaries
 
 ### Project Independence
 - **NEVER** import between projects in `/projects/*`
 - Projects can only import from `/pkg/*` (shared packages)
-- Each project has its own `go.mod` and lifecycle
+- Each project maintains its own lifecycle and dependencies
 
 ### Database Access
 - **NEVER** use direct database drivers (`database/sql`, `pgx`, `mongo-driver`)
@@ -38,71 +24,60 @@ Key architectural principles:
 
 ## Build and Development Commands
 
-### Quick Start
-```bash
-# One-command start (builds and runs everything)
-./scripts/run-phoenix.sh
-
-# Run a demo experiment
-./scripts/demo-flow.sh
-
-# Access points:
-# - Dashboard: http://localhost:3000
-# - API: http://localhost:8080
-# - Prometheus: http://localhost:9090
-```
-
 ### Repository-wide Commands
 ```bash
-make setup              # First-time setup
-make dev-up             # Start dev services (postgres, redis, prometheus)
-make build              # Build all projects
-make test               # Run all tests
-make validate           # Validate architecture boundaries
-make fmt                # Format all code
-make lint               # Run linters
+# Setup development environment (first time)
+make setup
+
+# Start all development services
+make dev-up
+
+# Validate entire repository structure
+make validate
+
+# Build all projects
+make build
+
+# Run all tests
+make test
+
+# Format all code
+make fmt
+
+# Run linting
+make lint
+
+# Run security scans
+make security
 ```
 
 ### Project-specific Commands
 ```bash
-# Pattern: make <action>-<project>
-make build-phoenix-api
-make test-phoenix-agent
-make lint-dashboard
+# Work with specific project (replace <project> with actual name)
+make build-<project>     # Build specific project
+make test-<project>      # Test specific project
+make lint-<project>      # Lint specific project
 
-# Or work directly in project:
-cd projects/phoenix-api
-make run                # Run with hot reload
+# Example for platform-api:
+cd projects/platform-api
+make build              # Build the service
 make test               # Run all tests
-make test-unit          # Unit tests only
-make test-integration   # Integration tests
-make docker             # Build container
-```
-
-### Testing Commands
-```bash
-# Run specific test
-go test -v -run TestName ./...
-
-# Run with coverage
-go test -cover -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
-
-# Integration tests (requires services)
-make dev-up
-go test -tags=integration ./tests/integration/...
-
-# Dashboard tests
-cd projects/dashboard
-npm test
-npm run test:watch     # Watch mode
+make test-unit          # Run unit tests only
+make test-integration   # Run integration tests
+make run                # Build and run locally
+make docker             # Build Docker image
 ```
 
 ### Validation Commands (Run Before Committing)
 ```bash
-./tools/analyzers/boundary-check.sh        # Check import boundaries
-./tools/analyzers/llm-safety-check.sh      # Check for AI issues
-make validate                              # Run all validations
+# Check architectural boundaries
+./tools/analyzers/boundary-check.sh
+
+# Check for AI-generated issues
+./tools/analyzers/llm-safety-check.sh
+
+# Enhanced structure validation
+./build/scripts/utils/validate-structure-enhanced.sh
 ```
 
 ## Code Architecture
@@ -110,68 +85,59 @@ make validate                              # Run all validations
 ### Repository Structure
 ```
 phoenix/
-├── pkg/                    # Shared packages (strict review)
-│   ├── auth/              # JWT authentication
-│   ├── database/          # DB abstractions
-│   ├── models/            # Shared data models
-│   └── telemetry/         # Logging, metrics
-├── projects/              # Independent services
-│   ├── phoenix-api/       # Control plane
-│   ├── phoenix-agent/     # Data plane agent
-│   ├── phoenix-cli/       # CLI tool
-│   └── dashboard/         # React UI
-├── tests/                 # Cross-project tests
-└── deployments/           # K8s, Docker configs
+├── pkg/                    # Shared packages (strict review required)
+│   ├── auth/              # Authentication (security review)
+│   ├── telemetry/         # Logging, metrics, tracing
+│   ├── database/          # Database abstractions
+│   └── contracts/         # API contracts and schemas
+├── projects/              # Independent micro-projects
+│   └── <project-name>/    # Each follows standard structure:
+│       ├── cmd/           # Application entrypoints
+│       ├── internal/      # Private application code
+│       ├── build/         # Docker and build configs
+│       └── Makefile       # Project-specific commands
+├── build/                 # Shared build infrastructure
+│   └── makefiles/         # Reusable Makefile components
+├── tools/                 # Development and validation tools
+│   └── analyzers/         # Static analysis scripts
+└── deployments/           # K8s, Helm, Terraform configs
 ```
 
-### Phoenix API Structure
-```
-projects/phoenix-api/
-├── cmd/api/              # Main entrypoint
-├── internal/
-│   ├── api/             # HTTP/WebSocket handlers
-│   ├── controller/      # Business logic
-│   ├── store/           # Database layer
-│   ├── tasks/           # Task queue implementation
-│   └── websocket/       # Real-time updates
-└── migrations/          # SQL migrations
-```
+### Project Standard Structure
+Every project under `/projects/` follows:
+- `cmd/`: Application entrypoints
+- `internal/api/`: HTTP/gRPC handlers
+- `internal/domain/`: Business logic (entities, services, repositories)
+- `internal/infrastructure/`: External dependencies (DB, cache, etc.)
 
-### Task Queue Pattern
-The API uses PostgreSQL-based task queue:
-1. API creates tasks in `tasks` table
-2. Agents poll `/api/v1/agents/tasks` endpoint
-3. API assigns tasks atomically
-4. Agents report results back
-5. API updates experiment status
+### Shared Package Usage
+- Import shared packages: `github.com/phoenix/platform/pkg/<package>`
+- Module replacement in go.mod: `replace github.com/phoenix/platform/pkg => ../../pkg`
 
-### WebSocket Events
-Real-time updates via WebSocket (port 8081):
-- `experiment_started`
-- `experiment_phase_changed`
-- `metrics_updated`
-- `agent_status_changed`
+## AI Safety Configuration
 
-## Go Workspace
+The repository has `.ai-safety` configuration that defines:
+- Forbidden patterns and operations
+- File modification restrictions
+- Import limitations
+- Metrics tracking for anomaly detection
 
-This is a Go workspace monorepo:
-```bash
-go work sync            # Sync workspace modules
-go mod tidy -e          # Tidy individual module
-go work use ./new-proj  # Add new project
-```
+Key restrictions:
+- Cannot modify CODEOWNERS, .ai-safety, LICENSE, production configs
+- Cannot disable tests or remove validation
+- Must follow approved templates for code generation
 
-Current workspace modules:
-- `./pkg`
-- `./projects/phoenix-cli`
-- `./projects/phoenix-api`
-- `./projects/phoenix-agent`
-- `./tests/e2e`
+## Testing Requirements
 
-## Testing Patterns
+### For New Features
+1. Write unit tests in `*_test.go` files
+2. Use table-driven tests for Go code
+3. Maintain >80% coverage
+4. Integration tests go in `tests/integration/`
 
-### Go Table-Driven Tests
+### Test Patterns
 ```go
+// Go table-driven test pattern
 func TestFunction(t *testing.T) {
     tests := []struct {
         name    string
@@ -179,101 +145,112 @@ func TestFunction(t *testing.T) {
         want    string
         wantErr bool
     }{
-        {"valid input", "test", "TEST", false},
-        {"empty input", "", "", true},
+        // test cases
     }
     
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
-            got, err := Function(tt.input)
-            if (err != nil) != tt.wantErr {
-                t.Errorf("error = %v, wantErr %v", err, tt.wantErr)
-                return
-            }
-            if got != tt.want {
-                t.Errorf("got = %v, want %v", got, tt.want)
-            }
+            // test implementation
         })
     }
 }
 ```
 
-### Integration Test Pattern
-```go
-//go:build integration
-// +build integration
-
-func TestIntegration(t *testing.T) {
-    // Requires make dev-up
-}
-```
-
-## Common Development Tasks
-
-### Add New API Endpoint
-1. Define handler in `projects/phoenix-api/internal/api/`
-2. Add route in `server.go`
-3. Update OpenAPI spec if needed
-4. Write handler tests
-5. Add integration test
-
-### Modify Database Schema
-1. Create migration: `migrate create -ext sql -dir migrations -seq name`
-2. Write up/down SQL
-3. Test locally: `make migrate`
-4. Update models in `internal/models/`
-5. Update store methods
-
-### Add WebSocket Event
-1. Define event type in `internal/websocket/hub.go`
-2. Send from appropriate handler
-3. Update dashboard WebSocket handler
-4. Document in API docs
-
-## Environment Variables
-
-### Phoenix API
-- `DATABASE_URL` - PostgreSQL connection
-- `PROMETHEUS_URL` - Prometheus server
-- `PUSHGATEWAY_URL` - Pushgateway for metrics
-- `JWT_SECRET` - Auth token signing
-- `WEBSOCKET_PORT` - WebSocket server port
-
-### Phoenix Agent
-- `PHOENIX_API_URL` - API server URL
-- `HOST_ID` - Unique host identifier
-- `POLL_INTERVAL` - Task polling interval
-- `CONFIG_DIR` - OTel configs directory
-
 ## Pre-commit Validation
 
-The repo uses pre-commit hooks that run automatically:
-- Import boundary validation
+The repository uses extensive pre-commit hooks (`.pre-commit-config.yaml`):
+- File format validation
 - Secret scanning
-- Go formatting
-- License headers
+- License header checking
+- Import boundary validation
+- LLM safety checks
 
-Run manually: `pre-commit run --all-files`
+These run automatically on commit but can be run manually:
+```bash
+pre-commit run --all-files
+```
 
-## Important Files
+## Go Workspace
 
-- `.ai-safety` - AI safety rules and restrictions
-- `CODEOWNERS` - Code review requirements
-- `go.work` - Go workspace configuration
-- `.pre-commit-config.yaml` - Pre-commit hooks
-- `deployments/single-vm/` - Simple deployment option
+This is a Go workspace monorepo. Key points:
+- `go.work` defines the workspace modules
+- Each project has its own `go.mod`
+- Shared packages in `/pkg` have a separate `go.mod`
+- Use `go work sync` after modifying workspace
+
+## Code Review Requirements
+
+CODEOWNERS enforces review requirements:
+- `/pkg/` changes require architect review
+- Security-sensitive files require security team
+- Production deployments require DevOps + security review
+- Each project has designated team ownership
+
+## Common Issues and Solutions
+
+### Cross-project Import Violation
+**Error**: "Cross-project import detected"
+**Solution**: Move shared code to `/pkg/` or duplicate if project-specific
+
+### Direct Database Access
+**Error**: "Direct database driver import"
+**Solution**: Use `pkg/database` abstractions instead
+
+### Hardcoded Secrets
+**Error**: "Potential hardcoded secret detected"
+**Solution**: Use environment variables or secret management
+
+### Go Workspace Issues
+**Error**: "go.work references non-existent module"
+**Solution**: Run `go work sync` or update go.work to match existing projects
+
+## Development Workflow
+
+1. Create feature branch
+2. Make changes following architecture boundaries
+3. Run validation: `make validate`
+4. Run tests: `make test`
+5. Check boundaries: `./tools/analyzers/boundary-check.sh`
+6. Check AI safety: `./tools/analyzers/llm-safety-check.sh`
+7. Commit (pre-commit hooks will run)
+8. Create PR (CODEOWNERS will assign reviewers)
+
+## Important Configuration Files
+
+- `.ai-safety`: AI agent boundaries and rules
+- `.pre-commit-config.yaml`: Automated validation hooks
+- `CODEOWNERS`: Review requirements
+- `.golangci.yml`: Go linting configuration
+- `go.work`: Go workspace configuration
 
 ## Deployment
 
-### Local Development
-```bash
-docker-compose up -d    # Start all services
-make dev-up            # Alternative
-```
+- Development: `make k8s-deploy-dev`
+- Uses Kubernetes with Helm charts
+- GitOps workflow with manifest generation
+- Production requires multi-team approval
 
-### Production
-- Kubernetes deployment in `deployments/kubernetes/`
-- Helm charts in `infrastructure/helm/`
-- Single VM option in `deployments/single-vm/`
+## Recent Architecture Updates
 
-Remember: When in doubt, run `make validate` to ensure your changes follow architectural rules.
+### WebSocket Integration
+- Phoenix API now includes WebSocket support on port 8081
+- Real-time updates for experiments, metrics, and agent status
+- Hub pattern implementation in `pkg/common/websocket/`
+
+### UI-First Experience
+- New UI handlers in `projects/phoenix-api/internal/api/ui_handlers.go`
+- Dashboard components for live cost monitoring and agent visualization
+- React 18 with TypeScript and Vite for development
+
+### Task Queue Pattern
+- PostgreSQL-based task queue for agent communication
+- Long-polling design for security (agents only make outbound connections)
+- Atomic task assignment and status tracking
+
+### Model Extensions
+- Added `Variant` field to PipelineDeployment for A/B testing
+- DeploymentMetrics includes `MetricsPerSecond` and `CardinalityReduction`
+- UpdateDeploymentRequest supports `StatusMessage` and `UpdatedBy` fields
+- New deployment statuses: `degraded` and `healthy`
+
+Remember: The structure is designed to be self-validating. When in doubt, run `make validate` to check if your changes follow the architectural rules.
