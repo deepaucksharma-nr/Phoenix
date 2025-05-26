@@ -20,19 +20,19 @@ This guide provides comprehensive information for developers working on the Phoe
 ## Module Structure
 
 ### Core Modules
-- `packages/go-common` - Shared Go packages
+- `pkg/common` - Shared Go packages
 - `packages/contracts` - Protocol buffer definitions
-- `services/api` - API Gateway service
-- `services/controller` - Experiment Controller
-- `services/generator` - Configuration Generator
-- `services/phoenix-cli` - Command Line Interface
+- `projects/api` - API Gateway service
+- `projects/controller` - Experiment Controller
+- `projects/generator` - Configuration Generator
+- `projects/phoenix-cli` - Command Line Interface
 
 ### Import Conventions
 ```go
 // Always use the phoenix platform prefix
 import (
-    "github.com/phoenix/platform/packages/go-common/auth"
-    "github.com/phoenix/platform/packages/go-common/store"
+    "github.com/phoenix/platform/pkg/common/auth"
+    "github.com/phoenix/platform/pkg/common/store"
     pb "github.com/phoenix/platform/packages/contracts/proto/v1"
 )
 ```
@@ -69,7 +69,7 @@ make build
 
 # Or manually
 go work sync
-cd services/api && go build -o bin/api ./cmd/main.go
+cd projects/api && go build -o bin/api ./cmd/main.go
 cd ../controller && go build -o bin/controller ./cmd/controller/main.go
 cd ../generator && go build -o bin/generator ./cmd/generator/main.go
 cd ../phoenix-cli && go build -o bin/phoenix .
@@ -77,7 +77,7 @@ cd ../phoenix-cli && go build -o bin/phoenix .
 
 #### Build Specific Service
 ```bash
-cd services/<service-name>
+cd projects/<service-name>
 go build -o bin/<service-name> ./cmd/...
 ```
 
@@ -86,15 +86,15 @@ go build -o bin/<service-name> ./cmd/...
 #### Local Development
 ```bash
 # Terminal 1: API Gateway
-cd services/api
+cd projects/api
 ./bin/api --config=configs/dev.yaml
 
 # Terminal 2: Controller
-cd services/controller
+cd projects/controller
 ./bin/controller --config=configs/dev.yaml
 
 # Terminal 3: Generator
-cd services/generator
+cd projects/generator
 ./bin/generator --config=configs/dev.yaml
 ```
 
@@ -112,7 +112,7 @@ docker-compose -f docker-compose.dev.yml up
 go test ./...
 
 # Run tests for specific package
-go test ./services/api/...
+go test ./projects/api/...
 
 # Run with coverage
 go test -cover ./...
@@ -171,21 +171,21 @@ func (s *ExperimentService) CreateExperiment(ctx context.Context, req *pb.Create
 #### Adding a New Service
 1. Create service structure:
 ```bash
-mkdir -p services/my-service/{cmd,internal,api,configs,docs}
-cd services/my-service
-go mod init github.com/phoenix/platform/services/my-service
+mkdir -p projects/my-service/{cmd,internal,api,configs,docs}
+cd projects/my-service
+go mod init github.com/phoenix/platform/projects/my-service
 ```
 
 2. Add to workspace:
 ```bash
 cd ../..
-go work use ./services/my-service
+go work use ./projects/my-service
 ```
 
 3. Implement service following existing patterns
 
 #### Adding New CLI Command
-1. Create command file in `services/phoenix-cli/cmd/`
+1. Create command file in `projects/phoenix-cli/cmd/`
 2. Register command in root command
 3. Implement command logic
 4. Add tests
@@ -232,7 +232,7 @@ go work sync
 
 ### Import Cycle
 ```bash
-# Solution: Move shared types to packages/go-common/models
+# Solution: Move shared types to pkg/common/models
 ```
 
 ### Proto Generation Failed
@@ -245,11 +245,11 @@ bash scripts/install-protoc.sh
 
 1. **Always use the workspace** - Work from the repository root
 2. **Keep modules independent** - Services should not import from each other
-3. **Use shared packages** - Common code goes in packages/go-common
+3. **Use shared packages** - Common code goes in pkg/common
 4. **Write tests** - Aim for >80% coverage
 5. **Document APIs** - Use OpenAPI/Swagger for REST, proto comments for gRPC
 6. **Handle errors gracefully** - Never panic in production code
-7. **Use structured logging** - Use the common logger from packages/go-common/telemetry
+7. **Use structured logging** - Use the common logger from pkg/common/telemetry
 
 ## Contributing
 
