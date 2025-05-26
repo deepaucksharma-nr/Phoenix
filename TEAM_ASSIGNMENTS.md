@@ -7,23 +7,11 @@
 - **Sarah Martinez** - Senior Engineer, Infrastructure & DevOps
 - **Michael Kumar** - Senior Engineer, Core Services
 
-### Mid-Level Developers (4)
-- **Emma Wilson** - Full Stack Engineer
-- **David Park** - Backend Engineer
-- **Jessica Zhang** - Frontend Engineer
-- **Ryan Thompson** - Platform Engineer
-
-### Junior Developers (3)
-- **Olivia Brown** - Junior Backend Engineer
-- **Nathan Lee** - Junior Frontend Engineer
-- **Sophia Patel** - Junior DevOps Engineer
-
 ---
 
 ## 📂 Code Ownership Assignments
 
-### 🏗️ Alex Chen (Senior - Platform Architecture)
-**Role**: Principal Engineer, Platform Architecture Lead
+### 🏗️ Palash
 
 **Primary Ownership**:
 ```
@@ -49,9 +37,7 @@
 
 ---
 
-### 🔧 Sarah Martinez (Senior - Infrastructure & DevOps)
-**Role**: Senior Engineer, DevOps & Infrastructure Lead
-
+### 🔧 Abhinav
 **Primary Ownership**:
 ```
 ├── /deployments/                   # All deployment configurations
@@ -78,9 +64,7 @@
 
 ---
 
-### 💼 Michael Kumar (Senior - Core Services)
-**Role**: Senior Engineer, Core Services Lead
-
+### 💼 Srikanth
 **Primary Ownership**:
 ```
 ├── /projects/platform-api/         # Main API gateway
@@ -102,8 +86,7 @@
 
 ---
 
-### 🌐 Emma Wilson (Mid-Level - Full Stack)
-**Role**: Full Stack Engineer
+### 🌐 Praveen
 
 **Primary Ownership**:
 ```
@@ -126,8 +109,7 @@
 
 ---
 
-### ⚙️ David Park (Mid-Level - Backend Services)
-**Role**: Backend Engineer
+### ⚙️ Shivani
 
 **Primary Ownership**:
 ```
@@ -150,8 +132,7 @@
 
 ---
 
-### 🎨 Jessica Zhang (Mid-Level - Frontend)
-**Role**: Frontend Engineer
+### 🎨 Jyothi
 
 **Primary Ownership**:
 ```
@@ -175,8 +156,7 @@
 
 ---
 
-### 🚀 Ryan Thompson (Mid-Level - Platform)
-**Role**: Platform Engineer
+### 🚀 Anitha
 
 **Primary Ownership**:
 ```
@@ -200,8 +180,7 @@
 
 ---
 
-### 🔌 Olivia Brown (Junior - Backend)
-**Role**: Junior Backend Engineer
+### 🔌 Tharun
 
 **Primary Ownership**:
 ```
@@ -222,8 +201,7 @@
 
 ---
 
-### 🖼️ Nathan Lee (Junior - Frontend)
-**Role**: Junior Frontend Engineer
+### 🖼️ Tanush
 
 **Primary Ownership**:
 ```
@@ -245,8 +223,7 @@
 
 ---
 
-### 🔒 Sophia Patel (Junior - DevOps)
-**Role**: Junior DevOps Engineer
+### 🔒 Ramana
 
 **Primary Ownership**:
 ```
