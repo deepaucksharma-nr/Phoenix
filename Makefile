@@ -34,8 +34,8 @@ ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -ex
 GO_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/go.mod \; -print 2>/dev/null | xargs -n1 basename)
 NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/package.json \; -print 2>/dev/null | xargs -n1 basename)
 
-# Lean Architecture Projects (prioritized)
-LEAN_PROJECTS := phoenix-api phoenix-agent
+# Core Projects
+CORE_PROJECTS := phoenix-api phoenix-agent phoenix-cli dashboard
 
 # Include shared makefiles
 -include $(BUILD_DIR)/makefiles/*.mk
@@ -259,6 +259,23 @@ tools: ## Install development tools
 	@$(TOOLS_DIR)/install-tools.sh
 	@echo -e "$(GREEN)✓ Development tools installed$(NC)"
 
+##@ Phoenix UI (Revolutionary Experience)
+
+ui-up: dev-up ## Start Phoenix with full UI experience
+	@echo -e "$(CYAN)Starting Phoenix UI Experience...$(NC)"
+	@./scripts/start-phoenix-ui.sh
+
+ui-dev: ## Start UI development environment
+	@echo -e "$(CYAN)Starting UI development mode...$(NC)"
+	@docker-compose up -d postgres redis phoenix-api
+	@cd projects/dashboard && npm install && npm run dev
+
+ui-build: build-phoenix-api build-dashboard ## Build UI components
+	@echo -e "$(GREEN)✓ UI components built$(NC)"
+
+ui-test: test-phoenix-api test-dashboard ## Test UI components
+	@echo -e "$(GREEN)✓ UI tests passed$(NC)"
+
 ##@ Dashboard
 
 build-dashboard: ## Build dashboard
@@ -273,6 +290,19 @@ run-dashboard: ## Run dashboard in development mode
 test-dashboard: ## Test dashboard
 	@echo -e "$(CYAN)Testing dashboard...$(NC)"
 	@cd projects/dashboard && npm test
+
+##@ Phoenix Core Services
+
+run-phoenix-api: ## Run Phoenix API with WebSocket support
+	@echo -e "$(CYAN)Starting Phoenix API...$(NC)"
+	@cd projects/phoenix-api && go run cmd/api/main.go
+
+run-phoenix-agent: ## Run Phoenix Agent
+	@echo -e "$(CYAN)Starting Phoenix Agent...$(NC)"
+	@cd projects/phoenix-agent && go run cmd/phoenix-agent/main.go
+
+run-phoenix: dev-up run-phoenix-api ## Run Phoenix platform (API + dependencies)
+	@echo -e "$(GREEN)✓ Phoenix platform running$(NC)"
 
 # Project-specific targets
 $(foreach project,$(ALL_PROJECTS),$(eval $(call PROJECT_TARGET,$(project))))

@@ -47,18 +47,13 @@ TEST_DATABASE_URL=postgres://phoenix:phoenix@localhost:5433/phoenix_test?sslmode
 REDIS_URL=redis://localhost:6379/0
 
 # Service Ports
-API_PORT=8080
-CONTROLLER_PORT=8081
-GENERATOR_PORT=8082
+PHOENIX_API_PORT=8080
 DASHBOARD_PORT=3001
-
-# gRPC Ports
-GRPC_API_PORT=50051
-GRPC_CONTROLLER_PORT=50052
-GRPC_GENERATOR_PORT=50053
+PHOENIX_AGENT_PORT=8090
 
 # Monitoring
 PROMETHEUS_URL=http://localhost:9090
+PUSHGATEWAY_URL=http://localhost:9091
 GRAFANA_URL=http://localhost:3000
 
 # Logging
@@ -73,7 +68,7 @@ AUTH_ENABLED=false
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 OTEL_SERVICE_NAME=phoenix-dev
 
-# Feature Flags
+# Observability
 ENABLE_PROFILING=true
 ENABLE_METRICS=true
 ENABLE_TRACING=false
@@ -146,6 +141,12 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: phoenix-pushgateway
+    ports:
+      - "9091:9091"
 
   grafana:
     image: grafana/grafana:latest
@@ -285,9 +286,9 @@ create_procfile() {
     cat > Procfile << 'EOF'
 # Phoenix Platform Services
 
-api: cd projects/platform-api && go run cmd/api/main.go
-controller: cd projects/controller && go run cmd/main.go
-generator: cd projects/generator && go run cmd/main.go
+phoenix-api: cd projects/phoenix-api && go run cmd/api/main.go
+phoenix-agent: cd projects/phoenix-agent && go run cmd/agent/main.go
+dashboard: cd projects/dashboard && npm run dev
 EOF
     
     echo -e "${GREEN}✓ Procfile created${NC}"
@@ -402,24 +403,25 @@ EOF
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch API",
+            "name": "Launch Phoenix API",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/projects/platform-api/cmd/api",
+            "program": "${workspaceFolder}/projects/phoenix-api/cmd/api",
             "env": {
                 "LOG_LEVEL": "debug"
             },
             "args": []
         },
         {
-            "name": "Launch Controller",
+            "name": "Launch Phoenix Agent",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/projects/controller/cmd",
+            "program": "${workspaceFolder}/projects/phoenix-agent/cmd/agent",
             "env": {
-                "LOG_LEVEL": "debug"
+                "LOG_LEVEL": "debug",
+                "PHOENIX_API_URL": "http://localhost:8080"
             },
             "args": []
         }

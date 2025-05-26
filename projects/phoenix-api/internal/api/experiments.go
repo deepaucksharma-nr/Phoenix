@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/analyzer"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,12 +36,8 @@ func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	
-	// Set deployment mode based on feature flag
-	if s.config.Features.UseLeanAgents {
-		req.Config.DeploymentMode = "agent"
-	} else {
-		req.Config.DeploymentMode = "kubernetes"
-	}
+	// Always use agent deployment mode
+	req.Config.DeploymentMode = "agent"
 	
 	// Create experiment
 	exp := &models.Experiment{
@@ -132,16 +130,10 @@ func (s *Server) handleStartExperiment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
-	// Start experiment based on deployment mode
-	if s.config.Features.UseLeanAgents {
-		if err := s.expController.StartExperiment(r.Context(), exp); err != nil {
-			log.Error().Err(err).Str("experiment_id", expID).Msg("Failed to start experiment")
-			respondError(w, http.StatusInternalServerError, "Failed to start experiment")
-			return
-		}
-	} else {
-		// Legacy K8s mode - not implemented in lean architecture
-		respondError(w, http.StatusNotImplemented, "Kubernetes mode not supported in lean architecture")
+	// Start experiment using agent architecture
+	if err := s.expController.StartExperiment(r.Context(), exp); err != nil {
+		log.Error().Err(err).Str("experiment_id", expID).Msg("Failed to start experiment")
+		respondError(w, http.StatusInternalServerError, "Failed to start experiment")
 		return
 	}
 	

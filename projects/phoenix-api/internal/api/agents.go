@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
 
@@ -73,13 +74,14 @@ func (s *Server) handleTaskStatusUpdate(w http.ResponseWriter, r *http.Request) 
 	}
 	
 	// Broadcast update via WebSocket
-	s.hub.Broadcast <- websocket.Message{
+	data, _ := json.Marshal(map[string]interface{}{
+		"task_id": taskID,
+		"host_id": hostID,
+		"status":  update.Status,
+	})
+	s.hub.Broadcast <- &websocket.Message{
 		Type: "task_update",
-		Data: map[string]interface{}{
-			"task_id": taskID,
-			"host_id": hostID,
-			"status":  update.Status,
-		},
+		Data: data,
 	}
 	
 	w.WriteHeader(http.StatusNoContent)
@@ -99,16 +101,17 @@ func (s *Server) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 	heartbeat.LastHeartbeat = time.Now()
 	
 	// Update agent status
-	if err := s.store.UpdateAgentStatus(r.Context(), &heartbeat); err != nil {
+	if err := s.store.UpdateAgentHeartbeat(r.Context(), &heartbeat); err != nil {
 		log.Error().Err(err).Str("host", hostID).Msg("Failed to update agent status")
 		respondError(w, http.StatusInternalServerError, "Failed to update agent status")
 		return
 	}
 	
 	// Broadcast status update
-	s.hub.Broadcast <- websocket.Message{
+	data, _ := json.Marshal(heartbeat)
+	s.hub.Broadcast <- &websocket.Message{
 		Type: "agent_heartbeat",
-		Data: heartbeat,
+		Data: data,
 	}
 	
 	w.WriteHeader(http.StatusNoContent)
@@ -116,7 +119,7 @@ func (s *Server) handleAgentHeartbeat(w http.ResponseWriter, r *http.Request) {
 
 // POST /api/v1/agent/metrics - Push metrics from agent
 func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request) {
-	hostID := r.Context().Value("hostID").(string)
+	// hostID := r.Context().Value("hostID").(string)
 	
 	var metrics struct {
 		Timestamp time.Time                `json:"timestamp"`
@@ -128,18 +131,20 @@ func (s *Server) handleAgentMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	// TODO: Implement metric caching
 	// Store metrics in cache for faster queries
-	for _, metric := range metrics.Metrics {
-		if err := s.store.CacheMetric(r.Context(), hostID, metric); err != nil {
-			log.Error().Err(err).Str("host", hostID).Msg("Failed to cache metric")
-		}
-	}
+	// for _, metric := range metrics.Metrics {
+	// 	if err := s.store.CacheMetric(r.Context(), hostID, metric); err != nil {
+	// 		log.Error().Err(err).Str("host", hostID).Msg("Failed to cache metric")
+	// 	}
+	// }
 	
+	// TODO: Add Features field to config
 	// Also forward to Pushgateway if configured
-	if s.config.Features.UsePushgateway {
-		// TODO: Implement Pushgateway client
-		log.Debug().Str("host", hostID).Int("count", len(metrics.Metrics)).Msg("Would forward metrics to Pushgateway")
-	}
+	// if s.config.Features.UsePushgateway {
+	// 	// TODO: Implement Pushgateway client
+	// 	log.Debug().Str("host", hostID).Int("count", len(metrics.Metrics)).Msg("Would forward metrics to Pushgateway")
+	// }
 	
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -163,13 +168,14 @@ func (s *Server) handleAgentLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	// Broadcast logs via WebSocket for real-time monitoring
-	s.hub.Broadcast <- websocket.Message{
+	data, _ := json.Marshal(map[string]interface{}{
+		"host_id": hostID,
+		"task_id": logs.TaskID,
+		"logs":    logs.Logs,
+	})
+	s.hub.Broadcast <- &websocket.Message{
 		Type: "agent_logs",
-		Data: map[string]interface{}{
-			"host_id": hostID,
-			"task_id": logs.TaskID,
-			"logs":    logs.Logs,
-		},
+		Data: data,
 	}
 	
 	w.WriteHeader(http.StatusAccepted)

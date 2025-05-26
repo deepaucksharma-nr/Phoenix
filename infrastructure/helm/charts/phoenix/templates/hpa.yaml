@@ -1,4 +1,4 @@
-{{- if .Values.api.autoscaling.enabled }}
+{{- if .Values.phoenixApi.autoscaling.enabled }}
 ---
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
@@ -6,76 +6,35 @@ metadata:
   name: {{ include "phoenix.fullname" . }}-api
   labels:
     {{- include "phoenix.labels" . | nindent 4 }}
-    app.kubernetes.io/component: api
+    app.kubernetes.io/component: phoenix-api
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: {{ include "phoenix.fullname" . }}-api
-  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
+  minReplicas: {{ .Values.phoenixApi.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.phoenixApi.autoscaling.maxReplicas }}
   metrics:
-    {{- if .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if .Values.phoenixApi.autoscaling.targetCPUUtilizationPercentage }}
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.phoenixApi.autoscaling.targetCPUUtilizationPercentage }}
     {{- end }}
-    {{- if .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- if .Values.phoenixApi.autoscaling.targetMemoryUtilizationPercentage }}
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.api.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: {{ .Values.phoenixApi.autoscaling.targetMemoryUtilizationPercentage }}
     {{- end }}
-    {{- with .Values.api.autoscaling.customMetrics }}
+    {{- with .Values.phoenixApi.autoscaling.customMetrics }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
-  {{- with .Values.api.autoscaling.behavior }}
-  behavior:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-{{- end }}
----
-{{- if .Values.generator.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "phoenix.fullname" . }}-generator
-  labels:
-    {{- include "phoenix.labels" . | nindent 4 }}
-    app.kubernetes.io/component: generator
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "phoenix.fullname" . }}-generator
-  minReplicas: {{ .Values.generator.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.generator.autoscaling.maxReplicas }}
-  metrics:
-    {{- if .Values.generator.autoscaling.targetCPUUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.generator.autoscaling.targetCPUUtilizationPercentage }}
-    {{- end }}
-    {{- if .Values.generator.autoscaling.targetMemoryUtilizationPercentage }}
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.generator.autoscaling.targetMemoryUtilizationPercentage }}
-    {{- end }}
-    {{- with .Values.generator.autoscaling.customMetrics }}
-    {{- toYaml . | nindent 4 }}
-    {{- end }}
-  {{- with .Values.generator.autoscaling.behavior }}
+  {{- with .Values.phoenixApi.autoscaling.behavior }}
   behavior:
     {{- toYaml . | nindent 4 }}
   {{- end }}

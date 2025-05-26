@@ -1,278 +1,323 @@
 # Phoenix Platform Development Guide
 
-## Overview
+This guide helps you set up a development environment for the Phoenix Platform.
 
-This guide provides comprehensive information for developers working on the Phoenix Platform after the migration.
+## Prerequisites
 
-## Architecture Overview
+### Required Tools
+- **Go** 1.24+ ([install](https://golang.org/doc/install))
+- **Node.js** 18+ ([install](https://nodejs.org/))
+- **Docker** 20.10+ ([install](https://docs.docker.com/get-docker/))
+- **Docker Compose** 2.0+ (included with Docker Desktop)
+- **PostgreSQL** 15+ (or use Docker)
+- **Make** (usually pre-installed)
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│   Phoenix CLI   │────▶│   API Gateway    │────▶│   Controller    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                │                          │
-                                ▼                          ▼
-                        ┌──────────────────┐     ┌─────────────────┐
-                        │    Generator     │     │   Operators     │
-                        └──────────────────┘     └─────────────────┘
-```
+### Recommended Tools
+- **golangci-lint** - Go linter
+- **goreman** - Process manager
+- **air** - Hot reload for Go
+- **protoc** - Protocol buffer compiler
 
-## Module Structure
-
-### Core Modules
-- `pkg/common` - Shared Go packages
-- `packages/contracts` - Protocol buffer definitions
-- `projects/api` - API Gateway service
-- `projects/controller` - Experiment Controller
-- `projects/generator` - Configuration Generator
-- `projects/phoenix-cli` - Command Line Interface
-
-### Import Conventions
-```go
-// Always use the phoenix platform prefix
-import (
-    "github.com/phoenix/platform/pkg/common/auth"
-    "github.com/phoenix/platform/pkg/common/store"
-    pb "github.com/phoenix/platform/packages/contracts/proto/v1"
-)
-```
-
-## Development Workflow
-
-### 1. Setting Up Your Environment
+## 🚀 Quick Setup
 
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd Phoenix
+# Clone repository
+git clone https://github.com/phoenix/platform.git
+cd phoenix
 
-# Install dependencies
-go work sync
-go mod download
+# Install all dependencies and tools
+make setup
 
-# Install development tools
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+# Start development environment
+make dev-up
 
-# Generate protobuf files
-cd packages/contracts
-bash generate.sh
+# Verify installation
+make test
 ```
 
-### 2. Building Services
+## 📁 Repository Structure
 
-#### Build Everything
-```bash
-# Using make (if available)
-make build
-
-# Or manually
-go work sync
-cd projects/api && go build -o bin/api ./cmd/main.go
-cd ../controller && go build -o bin/controller ./cmd/controller/main.go
-cd ../generator && go build -o bin/generator ./cmd/generator/main.go
-cd ../phoenix-cli && go build -o bin/phoenix .
+```
+phoenix/
+├── pkg/                    # Shared Go packages
+├── projects/              # Microservices
+│   ├── phoenix-api/      # Control plane API
+│   ├── phoenix-agent/    # Data plane agent
+│   ├── phoenix-cli/      # CLI tool
+│   └── dashboard/        # React UI
+├── docs/                 # Documentation
+├── scripts/              # Utility scripts
+└── tests/               # Integration tests
 ```
 
-#### Build Specific Service
+## 🛠️ Development Workflow
+
+### 1. Environment Setup
+
+Create a `.env` file:
+
 ```bash
-cd projects/<service-name>
-go build -o bin/<service-name> ./cmd/...
+# Database
+DATABASE_URL=postgres://phoenix:phoenix@localhost:5432/phoenix_dev?sslmode=disable
+
+# Services
+PHOENIX_API_URL=http://localhost:8080
+PROMETHEUS_URL=http://localhost:9090
+PUSHGATEWAY_URL=http://localhost:9091
+
+# Development
+LOG_LEVEL=debug
+ENABLE_HOT_RELOAD=true
+```
+
+### 2. Database Setup
+
+```bash
+# Start PostgreSQL
+docker-compose up -d postgres
+
+# Run migrations
+make migrate
+
+# Seed test data (optional)
+make seed
 ```
 
 ### 3. Running Services
 
-#### Local Development
+#### Option A: All Services (Recommended)
 ```bash
-# Terminal 1: API Gateway
-cd projects/api
-./bin/api --config=configs/dev.yaml
+# Start everything with hot reload
+make dev-up
 
-# Terminal 2: Controller
-cd projects/controller
-./bin/controller --config=configs/dev.yaml
-
-# Terminal 3: Generator
-cd projects/generator
-./bin/generator --config=configs/dev.yaml
+# Or use goreman
+goreman start
 ```
 
-#### Using Docker Compose
+#### Option B: Individual Services
 ```bash
-cd infrastructure/docker/compose
-docker-compose -f docker-compose.dev.yml up
+# Terminal 1: Phoenix API
+cd projects/phoenix-api
+make run
+
+# Terminal 2: Phoenix Agent
+cd projects/phoenix-agent
+make run
+
+# Terminal 3: Dashboard
+cd projects/dashboard
+npm run dev
 ```
 
-### 4. Testing
+### 4. Making Changes
 
-#### Unit Tests
+1. **Create feature branch**
+   ```bash
+   git checkout -b feature/my-feature
+   ```
+
+2. **Make changes**
+   - Follow existing code patterns
+   - Add tests for new features
+   - Update documentation
+
+3. **Run checks**
+   ```bash
+   make lint        # Run linters
+   make test        # Run tests
+   make validate    # Check boundaries
+   ```
+
+4. **Commit changes**
+   ```bash
+   git add .
+   git commit -m "feat: add new feature"
+   ```
+
+## 🧪 Testing
+
+### Unit Tests
 ```bash
-# Run all unit tests
-go test ./...
+# Test everything
+make test
 
-# Run tests for specific package
-go test ./projects/api/...
+# Test specific project
+make test-phoenix-api
+make test-phoenix-agent
 
-# Run with coverage
-go test -cover ./...
-
-# Generate coverage report
-go test -coverprofile=coverage.out ./...
-go tool cover -html=coverage.out
+# With coverage
+make test-coverage
 ```
 
-#### Integration Tests
+### Integration Tests
 ```bash
-cd tests/integration
-go test -v ./...
+# Run integration tests
+make test-integration
 
 # Run specific test
-go test -v -run TestExperimentWorkflow
+go test -tags=integration ./tests/integration/... -run TestName
 ```
 
-### 5. Code Standards
+### E2E Tests
+```bash
+# Start test environment
+make test-env-up
 
-#### Go Code Style
-- Follow standard Go formatting (`go fmt`)
-- Use meaningful variable and function names
-- Add comments for exported functions and types
-- Keep functions focused and small
-- Handle errors explicitly
+# Run E2E tests
+make test-e2e
 
-#### Example:
-```go
-// CreateExperiment creates a new optimization experiment
-func (s *ExperimentService) CreateExperiment(ctx context.Context, req *pb.CreateExperimentRequest) (*pb.Experiment, error) {
-    // Validate request
-    if err := validateExperimentRequest(req); err != nil {
-        return nil, fmt.Errorf("invalid request: %w", err)
+# Clean up
+make test-env-down
+```
+
+## 🔧 Common Tasks
+
+### Building
+
+```bash
+# Build all projects
+make build
+
+# Build specific project
+make build-phoenix-api
+
+# Build Docker images
+make docker-build
+```
+
+### Database Operations
+
+```bash
+# Create new migration
+make migration-create name=add_new_table
+
+# Run migrations
+make migrate
+
+# Rollback migration
+make migrate-down
+```
+
+### Code Generation
+
+```bash
+# Generate protobuf code
+make generate
+
+# Generate mocks
+make mocks
+
+# Update OpenAPI spec
+make openapi
+```
+
+## 🐛 Debugging
+
+### VS Code Configuration
+
+`.vscode/launch.json`:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Phoenix API",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/projects/phoenix-api/cmd/api",
+      "env": {
+        "LOG_LEVEL": "debug"
+      }
     }
-    
-    // Business logic here
-    experiment := &pb.Experiment{
-        Id:          uuid.New().String(),
-        Name:        req.Name,
-        Status:      pb.ExperimentStatus_PENDING,
-        CreatedAt:   timestamppb.Now(),
-    }
-    
-    // Store in database
-    if err := s.store.CreateExperiment(ctx, experiment); err != nil {
-        return nil, fmt.Errorf("failed to store experiment: %w", err)
-    }
-    
-    return experiment, nil
+  ]
 }
 ```
 
-### 6. Adding New Features
+### Common Issues
 
-#### Adding a New Service
-1. Create service structure:
+**Port already in use?**
 ```bash
-mkdir -p projects/my-service/{cmd,internal,api,configs,docs}
-cd projects/my-service
-go mod init github.com/phoenix/platform/projects/my-service
+# Find process using port
+lsof -i :8080
+
+# Kill process
+kill -9 <PID>
 ```
 
-2. Add to workspace:
+**Database connection failed?**
 ```bash
-cd ../..
-go work use ./projects/my-service
+# Check PostgreSQL
+docker-compose ps postgres
+
+# View logs
+docker-compose logs postgres
 ```
 
-3. Implement service following existing patterns
-
-#### Adding New CLI Command
-1. Create command file in `projects/phoenix-cli/cmd/`
-2. Register command in root command
-3. Implement command logic
-4. Add tests
-
-### 7. Debugging
-
-#### Enable Debug Logging
+**Dependencies out of sync?**
 ```bash
-# Set log level
-export LOG_LEVEL=debug
+# Update Go modules
+go work sync
+go mod tidy
 
-# Run service with debug
-./bin/api --log-level=debug
+# Update Node modules
+cd projects/dashboard
+npm install
 ```
 
-#### Using Delve
-```bash
-# Install delve
-go install github.com/go-delve/delve/cmd/dlv@latest
+## 📏 Code Standards
 
-# Debug a service
-dlv debug ./cmd/main.go -- --config=configs/dev.yaml
-```
+### Go Code
+- Follow [Effective Go](https://golang.org/doc/effective_go.html)
+- Use `gofmt` and `goimports`
+- Write table-driven tests
+- Keep functions small and focused
 
-### 8. Performance Profiling
+### TypeScript/React
+- Use functional components
+- Follow React hooks best practices
+- Use TypeScript strict mode
+- Write component tests
 
+### General
+- Write clear commit messages
+- Keep PRs focused and small
+- Update documentation
+- Add tests for new features
+
+## 🚀 Advanced Topics
+
+### Performance Profiling
 ```bash
 # CPU profiling
 go test -cpuprofile=cpu.prof -bench=.
-go tool pprof cpu.prof
 
 # Memory profiling
 go test -memprofile=mem.prof -bench=.
-go tool pprof mem.prof
+
+# Analyze profile
+go tool pprof cpu.prof
 ```
 
-## Common Issues and Solutions
-
-### Module Not Found
+### Load Testing
 ```bash
-# Solution: Sync workspace
-go work sync
+# Run load tests
+make load-test
+
+# Custom load test
+hey -n 10000 -c 100 http://localhost:8080/api/v1/experiments
 ```
 
-### Import Cycle
-```bash
-# Solution: Move shared types to pkg/common/models
-```
+## 📚 Resources
 
-### Proto Generation Failed
-```bash
-# Solution: Ensure protoc is installed
-bash scripts/install-protoc.sh
-```
+- [Architecture Documentation](docs/architecture/PLATFORM_ARCHITECTURE.md)
+- [API Documentation](docs/api/)
+- [Contributing Guidelines](CONTRIBUTING.md)
+- [Phoenix CLI](projects/phoenix-cli/README.md)
 
-## Best Practices
+## 💬 Getting Help
 
-1. **Always use the workspace** - Work from the repository root
-2. **Keep modules independent** - Services should not import from each other
-3. **Use shared packages** - Common code goes in pkg/common
-4. **Write tests** - Aim for >80% coverage
-5. **Document APIs** - Use OpenAPI/Swagger for REST, proto comments for gRPC
-6. **Handle errors gracefully** - Never panic in production code
-7. **Use structured logging** - Use the common logger from pkg/common/telemetry
-
-## Contributing
-
-1. Create feature branch: `git checkout -b feature/my-feature`
-2. Make changes following code standards
-3. Add tests for new functionality
-4. Run linters: `golangci-lint run`
-5. Commit with clear messages
-6. Push and create pull request
-
-## Resources
-
-- [Go Style Guide](https://golang.org/doc/effective_go.html)
-- [Protocol Buffers](https://developers.google.com/protocol-buffers)
-- [gRPC Documentation](https://grpc.io/docs/languages/go/)
-- [Docker Compose](https://docs.docker.com/compose/)
-
-## Support
-
-For questions or issues:
-1. Check existing documentation
-2. Review code examples in tests
-3. Look at similar implementations in other services
-4. Create an issue with details
-
-Happy coding! 🚀
+- Check [Documentation](docs/)
+- Search [GitHub Issues](https://github.com/phoenix/platform/issues)
+- Join [Discord Community](https://discord.gg/phoenix)
+- Read [FAQ](docs/FAQ.md)

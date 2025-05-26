@@ -1,308 +1,142 @@
-version: '3.9'
-
 services:
+  # Phoenix API - Consolidated control plane with WebSocket
+  phoenix-api:
+    build:
+      context: .
+      dockerfile: ./projects/phoenix-api/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"  # WebSocket port
+    environment:
+      - PORT=8080
+      - WEBSOCKET_PORT=8081
+      - DATABASE_URL=postgresql://phoenix:phoenix@postgres:5432/phoenix?sslmode=disable
+      - PROMETHEUS_URL=http://prometheus:9090
+      - PUSHGATEWAY_URL=http://pushgateway:9091
+      - JWT_SECRET=development-secret
+      - ENVIRONMENT=development
+      - ENABLE_WEBSOCKET=true
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - prometheus
+      - pushgateway
+      - redis
+    networks:
+      - phoenix-network
+    volumes:
+      - ./projects/phoenix-api/migrations:/app/migrations:ro
+
+  # Phoenix Agent - Data plane agent
+  phoenix-agent:
+    build:
+      context: ./projects/phoenix-agent
+      dockerfile: Dockerfile
+    environment:
+      - PHOENIX_API_URL=http://phoenix-api:8080
+      - PHOENIX_HOST_ID=local-agent-001
+      - POLL_INTERVAL=15s
+      - LOG_LEVEL=info
+      - CONFIG_DIR=/etc/phoenix-agent
+      - PUSHGATEWAY_URL=http://pushgateway:9091
+      - OTEL_ENDPOINT=http://localhost:4318
+    depends_on:
+      - phoenix-api
+    networks:
+      - phoenix-network
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./configs/otel-templates:/etc/otel-templates:ro
+    privileged: true
+
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: phoenix-postgres
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: phoenix
-      POSTGRES_PASSWORD: phoenix
-      POSTGRES_DB: phoenix_db
-      POSTGRES_INITDB_ARGS: "-E UTF8"
+      - POSTGRES_USER=phoenix
+      - POSTGRES_PASSWORD=phoenix
+      - POSTGRES_DB=phoenix
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U phoenix"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - phoenix-network
-
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: phoenix-redis
-    restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass phoenix
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "--pass", "phoenix", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - phoenix-network
-
-  # Kafka Message Queue
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: phoenix-zookeeper
-    restart: unless-stopped
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_LOG4J_ROOT_LOGLEVEL: ERROR
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_logs:/var/lib/zookeeper/log
-    networks:
-      - phoenix-network
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: phoenix-kafka
-    restart: unless-stopped
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_JMX_PORT: 9101
-      KAFKA_JMX_HOSTNAME: localhost
-      KAFKA_LOG4J_ROOT_LOGLEVEL: ERROR
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-      - "9101:9101"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "kafka:29092", "--list"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - phoenix-network
-
-  # NATS Message Queue (Alternative to Kafka)
-  nats:
-    image: nats:2.10-alpine
-    container_name: phoenix-nats
-    restart: unless-stopped
-    command: ["-js", "-m", "8222"]
-    ports:
-      - "4222:4222"  # Client connections
-      - "8222:8222"  # Monitoring
-      - "6222:6222"  # Cluster
-    volumes:
-      - nats_data:/data
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "4222"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - phoenix-network
-
-  # MinIO Object Storage
-  minio:
-    image: minio/minio:latest
-    container_name: phoenix-minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
     networks:
       - phoenix-network
 
   # Prometheus
   prometheus:
-    image: prom/prometheus:v2.47.0
-    container_name: phoenix-prometheus
-    restart: unless-stopped
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
-    ports:
-      - "9090:9090"
     volumes:
-      - ./configs/monitoring/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
-      - ./configs/monitoring/prometheus/rules/:/etc/prometheus/rules/:ro
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     networks:
       - phoenix-network
 
-  # Grafana
-  grafana:
-    image: grafana/grafana:10.2.0
-    container_name: phoenix-grafana
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: phoenix
-      GF_USERS_ALLOW_SIGN_UP: false
-      GF_SERVER_ROOT_URL: http://localhost:3000
-      GF_SMTP_ENABLED: false
-      GF_LOG_LEVEL: warn
+  # Prometheus Pushgateway
+  pushgateway:
+    image: prom/pushgateway:latest
     ports:
-      - "3000:3000"
+      - "9091:9091"
+    networks:
+      - phoenix-network
+
+  # Grafana (optional)
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"  # Changed to avoid conflict with dashboard
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
-      - ./configs/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - ./configs/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
       - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
     networks:
       - phoenix-network
-
-  # Jaeger Tracing
-  jaeger:
-    image: jaegertracing/all-in-one:1.50
-    container_name: phoenix-jaeger
-    restart: unless-stopped
-    environment:
-      COLLECTOR_ZIPKIN_HOST_PORT: :9411
-      COLLECTOR_OTLP_ENABLED: true
+  
+  # Phoenix Dashboard (Development)
+  phoenix-dashboard:
+    build:
+      context: ./projects/dashboard
+      dockerfile: Dockerfile.dev
     ports:
-      - "5775:5775/udp"
-      - "6831:6831/udp"
-      - "6832:6832/udp"
-      - "5778:5778"
-      - "16686:16686"  # UI
-      - "14268:14268"
-      - "14250:14250"
-      - "9411:9411"
-      - "4317:4317"    # OTLP gRPC
-      - "4318:4318"    # OTLP HTTP
-    networks:
-      - phoenix-network
-
-  # OpenTelemetry Collector
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.88.0
-    container_name: phoenix-otel-collector
-    restart: unless-stopped
-    command: ["--config=/etc/otel-collector-config.yaml"]
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8080
+      - VITE_WS_URL=ws://localhost:8081
+      - NODE_ENV=development
     volumes:
-      - ./configs/otel/collectors/main.yaml:/etc/otel-collector-config.yaml:ro
-    ports:
-      - "1888:1888"   # pprof extension
-      - "8888:8888"   # Prometheus metrics exposed by the collector
-      - "8889:8889"   # Prometheus exporter metrics
-      - "13133:13133" # health_check extension
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "55679:55679" # zpages extension
+      - ./projects/dashboard:/app
+      - /app/node_modules
     depends_on:
-      - jaeger
-      - prometheus
+      - phoenix-api
     networks:
       - phoenix-network
 
-  # Nginx Reverse Proxy
-  nginx:
-    image: nginx:alpine
-    container_name: phoenix-nginx
-    restart: unless-stopped
+  # Redis (optional - for caching)
+  redis:
+    image: redis:7-alpine
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./configs/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./configs/nginx/conf.d/:/etc/nginx/conf.d/:ro
-      - nginx_cache:/var/cache/nginx
-    depends_on:
-      - grafana
+      - "6379:6379"
     networks:
       - phoenix-network
-
-  # Development Database UI (Adminer)
-  adminer:
-    image: adminer:latest
-    container_name: phoenix-adminer
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      ADMINER_DEFAULT_SERVER: postgres
-    depends_on:
-      - postgres
-    networks:
-      - phoenix-network
-    profiles:
-      - dev-tools
-
-  # Redis Commander
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: phoenix-redis-commander
-    restart: unless-stopped
-    environment:
-      REDIS_HOSTS: local:redis:6379:0:phoenix
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
-    networks:
-      - phoenix-network
-    profiles:
-      - dev-tools
-
-  # Kafka UI
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: phoenix-kafka-ui
-    restart: unless-stopped
-    ports:
-      - "8082:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    depends_on:
-      - kafka
-      - zookeeper
-    networks:
-      - phoenix-network
-    profiles:
-      - dev-tools
-
-volumes:
-  postgres_data:
-  redis_data:
-  zookeeper_data:
-  zookeeper_logs:
-  kafka_data:
-  nats_data:
-  minio_data:
-  prometheus_data:
-  grafana_data:
-  nginx_cache:
 
 networks:
   phoenix-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:

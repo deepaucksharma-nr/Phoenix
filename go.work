@@ -2,15 +2,8 @@ go 1.24.3
 
 use (
 	./pkg
-	./projects/anomaly-detector
-	./projects/benchmark
-	./projects/controller
-	./projects/loadsim-operator
-	./projects/phoenix-cli
-	./projects/pipeline-operator
-	./projects/platform-api
-	./projects/collector
-	./projects/phoenix-api
 	./projects/phoenix-agent
+	./projects/phoenix-api
+	./projects/phoenix-cli
 	./tests/e2e
 )

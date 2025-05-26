@@ -13,13 +13,6 @@ type Config struct {
 	PushgatewayURL string
 	JWTSecret      string
 	Environment    string
-	Features       Features
-}
-
-type Features struct {
-	UseLeanAgents     bool
-	UseKubernetesMode bool
-	UsePushgateway    bool
 }
 
 func Load() *Config {
@@ -30,11 +23,6 @@ func Load() *Config {
 		PushgatewayURL: getEnv("PUSHGATEWAY_URL", "http://localhost:9091"),
 		JWTSecret:      getEnv("JWT_SECRET", "phoenix-secret-key"),
 		Environment:    getEnv("ENVIRONMENT", "development"),
-		Features: Features{
-			UseLeanAgents:     getEnvBool("FEATURE_LEAN_AGENTS", true),
-			UseKubernetesMode: getEnvBool("FEATURE_K8S_MODE", false),
-			UsePushgateway:    getEnvBool("FEATURE_PUSHGATEWAY", true),
-		},
 	}
 }
 

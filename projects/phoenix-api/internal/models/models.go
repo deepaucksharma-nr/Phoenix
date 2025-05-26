@@ -25,7 +25,6 @@ type ExperimentConfig struct {
 	LoadProfile        string            `json:"load_profile,omitempty"`
 	Duration           time.Duration     `json:"duration"`
 	WarmupDuration     time.Duration     `json:"warmup_duration"`
-	DeploymentMode     string            `json:"deployment_mode"`
 }
 
 // ExperimentStatus represents the current status of an experiment

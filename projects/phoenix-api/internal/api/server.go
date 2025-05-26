@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -60,6 +61,35 @@ func (s *Server) SetupRoutes(r chi.Router) {
 
 		// WebSocket endpoint
 		r.HandleFunc("/ws", s.handleWebSocket)
+		
+		// UI-focused endpoints
+		r.Route("/metrics", func(r chi.Router) {
+			r.Get("/cost-flow", s.handleGetMetricCostFlow)
+			r.Get("/cardinality", s.handleGetCardinalityBreakdown)
+		})
+		
+		r.Route("/fleet", func(r chi.Router) {
+			r.Get("/status", s.handleGetFleetStatus)
+			r.Get("/map", s.handleGetAgentMap)
+		})
+		
+		r.Route("/experiments", func(r chi.Router) {
+			r.Post("/wizard", s.handleCreateExperimentWizard)
+			r.Post("/{id}/rollback", s.handleInstantRollback)
+		})
+		
+		r.Route("/pipelines", func(r chi.Router) {
+			r.Get("/templates", s.handleGetPipelineTemplates)
+			r.Post("/preview", s.handlePreviewPipelineImpact)
+			r.Post("/quick-deploy", s.handleQuickDeploy)
+		})
+		
+		r.Route("/tasks", func(r chi.Router) {
+			r.Get("/active", s.handleGetActiveTasks)
+			r.Get("/queue", s.handleGetTaskQueue)
+		})
+		
+		r.Get("/cost-analytics", s.handleGetCostAnalytics)
 
 		// Agent endpoints (new for lean architecture)
 		r.Route("/agent", func(r chi.Router) {

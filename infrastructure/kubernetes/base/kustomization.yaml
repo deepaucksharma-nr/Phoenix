@@ -6,12 +6,6 @@ namespace: phoenix-system
 resources:
   - namespace.yaml
   - rbac.yaml
-  - api-gateway.yaml
-  - experiment-controller.yaml
-  - config-generator.yaml
-  - pipeline-operator.yaml
-  - loadsim-operator.yaml
-  - dashboard.yaml
   - secrets.yaml
   - configmaps.yaml
   - network-policies.yaml
@@ -21,15 +15,7 @@ commonLabels:
   app.kubernetes.io/part-of: phoenix-platform
 
 images:
-  - name: phoenix/api-gateway
+  - name: phoenix/phoenix-api
     newTag: latest
-  - name: phoenix/experiment-controller
-    newTag: latest
-  - name: phoenix/config-generator
-    newTag: latest
-  - name: phoenix/pipeline-operator
-    newTag: latest
-  - name: phoenix/loadsim-operator
-    newTag: latest
-  - name: phoenix/dashboard
+  - name: phoenix/phoenix-agent
     newTag: latest

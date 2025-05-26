@@ -33,15 +33,10 @@
 /pkg/telemetry/ @phoenix/observability-team @phoenix/architects
 
 # Project-specific ownership
-/projects/platform-api/ @phoenix/api-team @phoenix/platform-team
-/projects/control-plane/ @phoenix/control-plane-team @phoenix/platform-team
-/projects/telemetry-collector/ @phoenix/observability-team @phoenix/platform-team
-/projects/experiment-controller/ @phoenix/control-plane-team @phoenix/platform-team
-/projects/pipeline-operator/ @phoenix/operators-team @phoenix/platform-team
-/projects/analytics-engine/ @phoenix/analytics-team @phoenix/platform-team
-/projects/web-dashboard/ @phoenix/frontend-team @phoenix/platform-team
-/projects/cli/ @phoenix/cli-team @phoenix/platform-team
-/projects/sdk-*/ @phoenix/sdk-team @phoenix/platform-team
+/projects/phoenix-api/ @phoenix/api-team @phoenix/platform-team
+/projects/phoenix-agent/ @phoenix/agent-team @phoenix/platform-team
+/projects/phoenix-cli/ @phoenix/cli-team @phoenix/platform-team
+/projects/dashboard/ @phoenix/frontend-team @phoenix/platform-team
 
 # Test ownership
 /tests/integration/ @phoenix/qa-team @phoenix/platform-team

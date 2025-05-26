@@ -9,16 +9,36 @@ import (
 	"github.com/phoenix/platform/pkg/common/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
+
+// AgentStatus represents agent status
+type AgentStatus struct {
+	AgentID   string    `json:"agent_id"`
+	HostName  string    `json:"host_name"`
+	Status    string    `json:"status"`
+	LastSeen  time.Time `json:"last_seen"`
+	Pipelines []string  `json:"pipelines"`
+}
+
+// AgentCondition represents agent condition
+type AgentCondition struct {
+	Type    string `json:"type"`
+	Status  string `json:"status"`
+	Reason  string `json:"reason"`
+	Message string `json:"message"`
+}
+
+// AgentClient interface for agent operations
+type AgentClient interface {
+	GetAgentStatus(ctx context.Context, agentID string) (*AgentStatus, error)
+	ListAgents(ctx context.Context) ([]*AgentStatus, error)
+}
 
 // PipelineStatusAggregator aggregates status from multiple sources
 type PipelineStatusAggregator struct {
 	store            store.PipelineDeploymentStore
 	metricsCollector MetricsCollector
-	k8sClient        kubernetes.Interface
+	agentClient      AgentClient
 	logger           *zap.Logger
 }
 
@@ -27,7 +47,7 @@ type MetricsCollector interface {
 	// GetPipelineMetrics retrieves metrics for a pipeline deployment
 	GetPipelineMetrics(ctx context.Context, deploymentID string) (*models.DeploymentMetrics, error)
 	// GetCollectorHealth retrieves health status of collectors (placeholder for now)
-	GetCollectorHealth(ctx context.Context, namespace string, selector map[string]string) (string, error)
+	GetCollectorHealth(ctx context.Context, agentID string) (string, error)
 }
 
 // NewPipelineStatusAggregator creates a new status aggregator
@@ -142,11 +162,8 @@ func (a *PipelineStatusAggregator) GetAggregatedStatus(ctx context.Context, depl
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			selector := map[string]string{
-				"deployment": deployment.DeploymentName,
-				"pipeline":   deployment.PipelineName,
-			}
-			health, err := a.metricsCollector.GetCollectorHealth(ctx, deployment.Namespace, selector)
+			// For now, use deployment ID as agent identifier
+			health, err := a.metricsCollector.GetCollectorHealth(ctx, deployment.ID)
 			if err != nil {
 				mu.Lock()
 				errors = append(errors, fmt.Errorf("health collection failed: %w", err))
@@ -159,15 +176,15 @@ func (a *PipelineStatusAggregator) GetAggregatedStatus(ctx context.Context, depl
 		}()
 	}
 
-	// Collect Kubernetes pod status if a k8s client is configured
-	if a.k8sClient != nil {
+	// Collect agent status if an agent client is configured
+	if a.agentClient != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			collectorStatuses, err := a.getCollectorStatuses(ctx, deployment)
 			if err != nil {
 				mu.Lock()
-				errors = append(errors, fmt.Errorf("pod status collection failed: %w", err))
+				errors = append(errors, fmt.Errorf("agent status collection failed: %w", err))
 				mu.Unlock()
 				return
 			}
@@ -190,47 +207,44 @@ func (a *PipelineStatusAggregator) GetAggregatedStatus(ctx context.Context, depl
 	return status, nil
 }
 
-// getCollectorStatuses retrieves status of collector pods
+// getCollectorStatuses retrieves status of agents running collectors
 func (a *PipelineStatusAggregator) getCollectorStatuses(ctx context.Context, deployment *models.PipelineDeployment) ([]CollectorStatus, error) {
-	if a.k8sClient == nil {
-		a.logger.Warn("k8s client not configured, skipping pod status collection")
+	if a.agentClient == nil {
+		a.logger.Warn("agent client not configured, skipping agent status collection")
 		return []CollectorStatus{}, nil
 	}
 
-	// List pods with deployment labels
-	labelSelector := fmt.Sprintf("deployment=%s,pipeline=%s", deployment.DeploymentName, deployment.PipelineName)
-	pods, err := a.k8sClient.CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labelSelector,
-	})
+	// List all agents
+	agents, err := a.agentClient.ListAgents(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %w", err)
+		return nil, fmt.Errorf("failed to list agents: %w", err)
 	}
 
-	statuses := make([]CollectorStatus, 0, len(pods.Items))
-	for _, pod := range pods.Items {
-		status := CollectorStatus{
-			PodName:    pod.Name,
-			NodeName:   pod.Spec.NodeName,
-			Status:     string(pod.Status.Phase),
-			Ready:      isPodReady(&pod),
-			Conditions: pod.Status.Conditions,
+	statuses := make([]CollectorStatus, 0)
+	for _, agent := range agents {
+		// Check if this agent is running the deployment's pipeline
+		for _, pipeline := range agent.Pipelines {
+			if pipeline == deployment.PipelineName {
+				status := CollectorStatus{
+					AgentID:      agent.AgentID,
+					HostName:     agent.HostName,
+					Status:       agent.Status,
+					Ready:        agent.Status == "healthy",
+					RestartCount: 0, // TODO: Track agent restarts
+					Conditions:   []AgentCondition{},
+				}
+
+				// Set start time based on last seen
+				startTime := agent.LastSeen
+				status.StartTime = &startTime
+
+				// TODO: Get collector-specific metrics from agent metrics endpoint
+				// This would require additional integration with metrics backend
+
+				statuses = append(statuses, status)
+				break
+			}
 		}
-
-		// Get container restart count
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			status.RestartCount += containerStatus.RestartCount
-		}
-
-		// Get start time
-		if pod.Status.StartTime != nil {
-			startTime := pod.Status.StartTime.Time
-			status.StartTime = &startTime
-		}
-
-		// TODO: Get collector-specific metrics from Prometheus or internal metrics endpoint
-		// This would require additional integration with metrics backend
-
-		statuses = append(statuses, status)
 	}
 
 	return statuses, nil
@@ -253,7 +267,7 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 		// Check for high restart counts
 		if collector.RestartCount > 5 {
 			summary.Issues = append(summary.Issues,
-				fmt.Sprintf("Collector %s has high restart count: %d", collector.PodName, collector.RestartCount))
+				fmt.Sprintf("Collector %s has high restart count: %d", collector.AgentID, collector.RestartCount))
 		}
 	}
 
@@ -288,15 +302,6 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 	return summary
 }
 
-// isPodReady checks if a pod is ready
-func isPodReady(pod *v1.Pod) bool {
-	for _, condition := range pod.Status.Conditions {
-		if condition.Type == v1.PodReady {
-			return condition.Status == v1.ConditionTrue
-		}
-	}
-	return false
-}
 
 // UpdateDeploymentStatusFromAggregation updates deployment status based on aggregated data
 func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx context.Context, deploymentID string) error {

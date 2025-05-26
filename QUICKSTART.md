@@ -1,247 +1,143 @@
-# 🚀 Phoenix Platform - Quick Start Guide
+# Phoenix Platform Quick Start
 
-Get Phoenix Platform up and running in 5 minutes!
-
-For a walkthrough of the entire deployment and experiment lifecycle see the [Operations Guide](./docs/operations/OPERATIONS_GUIDE_COMPLETE.md).
+Get Phoenix up and running in under 5 minutes.
 
 ## Prerequisites
 
-- Docker & Docker Compose
-- Go 1.21+ (for development)
+- Docker 20.10+
+- Docker Compose 2.0+
 - 8GB RAM minimum
-- Ports: 8080, 5432, 6379, 4222, 16686
+- Ports 3000, 8080, 9090, 9091 available
 
-## 🏃 Quick Start
-
-### 1. Clone and Setup
+## 🚀 One-Command Start
 
 ```bash
-# Clone the repository
+# Clone and start Phoenix
 git clone https://github.com/phoenix/platform.git
-cd platform
-
-# Start infrastructure services
-make dev-up
+cd phoenix
+./scripts/run-phoenix.sh
 ```
 
-### 2. Run Phoenix API
+## 📍 Access Points
+
+After startup (~30 seconds):
+
+- **Dashboard**: http://localhost:3000
+- **API**: http://localhost:8080
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3001 (admin/admin)
+
+## 🧪 Create Your First Experiment
+
+1. Open the Dashboard at http://localhost:3000
+2. Click "Create Experiment"
+3. Select target hosts (agents will auto-register)
+4. Choose optimization templates:
+   - **Baseline**: Standard metrics collection
+   - **Optimized**: 90% cardinality reduction
+5. Start the experiment and watch real-time results
+
+## 🛠️ Manual Setup
+
+If you prefer manual control:
 
 ```bash
-# Option A: Using the demo service
-cd projects/hello-phoenix
-go run main.go
+# Start infrastructure
+docker-compose up -d postgres redis prometheus pushgateway
 
-# Option B: Using make (from root)
-make run-hello-phoenix
+# Start Phoenix API
+docker-compose up -d phoenix-api
+
+# Start agents on target hosts
+docker-compose up -d phoenix-agent
+
+# Start dashboard
+docker-compose up -d phoenix-dashboard
 ```
 
-### 3. Verify Installation
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file:
 
 ```bash
-# Check health
+# Phoenix API
+PHOENIX_API_URL=http://localhost:8080
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/phoenix
+
+# Monitoring
+PROMETHEUS_URL=http://localhost:9090
+PUSHGATEWAY_URL=http://localhost:9091
+
+# Optional
+ENABLE_AUTH=false
+LOG_LEVEL=info
+```
+
+### Agent Configuration
+
+Agents self-register with the API. Deploy on target hosts:
+
+```bash
+# On each target host
+docker run -d \
+  --name phoenix-agent \
+  -e PHOENIX_API_URL=http://phoenix-api:8080 \
+  -e HOST_ID=$(hostname) \
+  phoenix/agent:latest
+```
+
+## 📊 Verify Installation
+
+Check system health:
+
+```bash
+# Check services
+docker-compose ps
+
+# Verify API
 curl http://localhost:8080/health
 
-# Get platform info
-curl http://localhost:8080/info | jq .
+# Check agent registration
+curl http://localhost:8080/api/v1/agents
 ```
 
-## 🎯 Try These Features
+## 🚨 Troubleshooting
 
-### View Active Experiments
+### Services not starting?
 ```bash
-curl http://localhost:8080/api/v1/experiments | jq .
+# Check logs
+docker-compose logs phoenix-api
+docker-compose logs phoenix-agent
+
+# Restart services
+docker-compose restart
 ```
 
-Example output:
-```json
-{
-  "experiments": [
-    {
-      "id": "exp-001",
-      "name": "Reduce Prometheus Metrics",
-      "status": "running",
-      "cost_saving_percent": 45.2
-    }
-  ]
-}
-```
-
-### Check Cost Savings
+### Port conflicts?
 ```bash
-curl http://localhost:8080/api/v1/metrics | jq .
+# Change ports in docker-compose.yml
+# Or stop conflicting services
+sudo lsof -i :8080
 ```
 
-Example output:
-```json
-{
-  "monthly_savings_usd": 45000,
-  "cardinality_reduction": "87%",
-  "metrics_processed": 1234567
-}
-```
-
-## 🛠️ Development Workflow
-
-### 1. Create New Service
+### Database issues?
 ```bash
-# Use the project generator
-./scripts/create-project.sh my-service
-
-# Or copy template
-cp -r projects/template projects/my-service
-```
-
-### 2. Add to Workspace
-```bash
-# Add to go.work
-echo "use ./projects/my-service" >> go.work
-go work sync
-```
-
-### 3. Build and Test
-```bash
-cd projects/my-service
-make build
-make test
-make run
-```
-
-## 📊 Access Points
-
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Phoenix API | http://localhost:8080 | - |
-| Jaeger UI | http://localhost:16686 | - |
-| Prometheus | http://localhost:9090 | - |
-| Grafana | http://localhost:3000 | admin/phoenix |
-| PostgreSQL | localhost:5432 | phoenix/phoenix |
-| Redis | localhost:6379 | phoenix |
-
-## 🔍 Example: Create an Experiment
-
-```bash
-# Create new optimization experiment
-curl -X POST http://localhost:8080/api/v1/experiments \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Optimize Datadog Metrics",
-    "description": "Reduce Datadog costs by optimizing tag cardinality",
-    "baseline_pipeline": "datadog-standard",
-    "candidate_pipeline": "datadog-optimized",
-    "target_namespaces": ["production", "staging"]
-  }'
-```
-
-## 🎮 Demo Commands
-
-```bash
-# Run the full demo
-./scripts/demo-phoenix.sh
-
-# Simulate experiment workflow
-./examples/experiment-simulation.sh
-
-# Check system status
-./scripts/test-system.sh
-```
-
-
-## 🖥️ Running Collectors on a VM
-
-Generate a static collector config and run it with systemd:
-
-```bash
-# Create the configuration
-phoenix pipeline vm-config process-topk-v1 \
-  --exporter-endpoint otel-phoenix.example.com:4317 \
-  --output /etc/otelcol/collector.yaml
-
-# Start the service
-sudo systemctl daemon-reload
-sudo systemctl enable --now otelcol
-```
-=======
-## 🌐 Full Workflow
-
-1. **Deploy a pipeline**
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/pipeline-deployments \
-     -H "Content-Type: application/json" \
-     -d '{"name":"demo","namespace":"default","template":"process-baseline-v1"}'
-   ```
-2. **Create an experiment**
-   ```bash
-   curl -X POST http://localhost:8080/api/v1/experiments \
-     -H "Content-Type: application/json" \
-     -d '{"name":"cost-opt","baseline_pipeline":"process-baseline-v1","candidate_pipeline":"process-intelligent-v1","target_namespaces":["default"]}'
-   ```
-3. **Analyze results**
-   ```bash
-   curl http://localhost:8080/api/v1/experiments/<id>/results | jq .
-   ```
-
-
-## 🏗️ Architecture
-
-```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Web UI    │     │     CLI     │     │   REST API  │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                    │                    │
-       └────────────────────┴────────────────────┘
-                           │
-                    ┌──────▼──────┐
-                    │ Platform API │
-                    └──────┬──────┘
-                           │
-         ┌─────────────────┼─────────────────┐
-         │                 │                 │
-    ┌────▼────┐     ┌──────▼──────┐   ┌─────▼─────┐
-    │Postgres │     │    Redis    │   │   NATS    │
-    └─────────┘     └─────────────┘   └───────────┘
-```
-
-## 🆘 Troubleshooting
-
-### Port Already in Use
-```bash
-# Check what's using the port
-lsof -i :8080
-
-# Kill the process
-kill -9 <PID>
-```
-
-### Docker Issues
-```bash
-# Reset Docker environment
+# Reset database
 docker-compose down -v
-docker system prune -af
-make dev-up
-```
-
-### Build Failures
-```bash
-# Clean and rebuild
-make clean
-go clean -cache
-go mod tidy
-make build
+docker-compose up -d
 ```
 
 ## 📚 Next Steps
 
-1. **Explore the API**: See [API Documentation](docs/API_REFERENCE.md)
-2. **Deploy to Production**: See [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
-3. **Contribute**: See [Contributing Guide](CONTRIBUTING.md)
-4. **Architecture Deep Dive**: See [Architecture Overview](docs/ARCHITECTURE_OVERVIEW.md)
+- [Development Guide](DEVELOPMENT_GUIDE.md) - Set up development environment
+- [Architecture Overview](docs/architecture/PLATFORM_ARCHITECTURE.md) - Understand the system
+- [API Documentation](docs/api/) - Integrate with Phoenix
+- [Operations Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment
 
-## 🤝 Community
+## 💬 Get Help
 
-- **GitHub**: [github.com/phoenix/platform](https://github.com/phoenix/platform)
-- **Discord**: [discord.gg/phoenix](https://discord.gg/phoenix)
-- **Twitter**: [@PhoenixPlatform](https://twitter.com/PhoenixPlatform)
-
----
-
-**Need help?** Join our Discord or open an issue on GitHub!
+- [GitHub Issues](https://github.com/phoenix/platform/issues)
+- [Discord Community](https://discord.gg/phoenix)
+- [Documentation](docs/)
