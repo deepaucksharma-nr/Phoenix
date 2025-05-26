@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
@@ -31,7 +33,7 @@ var startAndFollow bool
 
 func init() {
 	experimentCmd.AddCommand(startExperimentCmd)
-	
+
 	startExperimentCmd.Flags().BoolVarP(&startAndFollow, "follow", "f", false, "Follow experiment progress after starting")
 }
 
@@ -47,6 +49,11 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 
 	// Create API client
 	apiClient := client.NewAPIClient(cfg.GetAPIEndpoint(), token)
+
+	k8sClient, err := client.GetKubernetesClient()
+	if err != nil {
+		return fmt.Errorf("failed to create Kubernetes client: %w", err)
+	}
 
 	// Get current experiment status
 	experiment, err := apiClient.GetExperiment(experimentID)
@@ -66,14 +73,19 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start experiment: %w", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	_ = k8sClient.WaitForPipelineReady(ctx, experimentID, "baseline", "default", 2*time.Minute)
+	_ = k8sClient.WaitForPipelineReady(ctx, experimentID, "candidate", "default", 2*time.Minute)
+
 	output.PrintSuccess("Experiment started successfully!")
-	
+
 	// Show deployment information
 	fmt.Printf("\nDeployment Information:\n")
 	fmt.Printf("  Baseline Pipeline:  %s\n", experiment.BaselinePipeline)
 	fmt.Printf("  Candidate Pipeline: %s\n", experiment.CandidatePipeline)
 	fmt.Printf("  Target Nodes:       %s\n", formatTargetNodes(experiment.TargetNodes))
-	
+
 	if startAndFollow {
 		fmt.Printf("\nFollowing experiment progress...\n")
 		return followExperimentStatus(apiClient, experimentID)
@@ -81,7 +93,7 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\nTo monitor progress, run:\n")
 	fmt.Printf("  phoenix experiment status %s --follow\n", experimentID)
-	
+
 	return nil
 }
 
@@ -89,7 +101,7 @@ func formatTargetNodes(nodes map[string]string) string {
 	if len(nodes) == 0 {
 		return "none"
 	}
-	
+
 	result := ""
 	i := 0
 	for k, v := range nodes {

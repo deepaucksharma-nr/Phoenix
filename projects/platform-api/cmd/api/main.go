@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,10 +50,11 @@ func main() {
 
 	// Create experiment service
 	experimentService := services.NewExperimentService(postgresStore, nil, logger)
-	
+
 	// Create pipeline deployment store and service
 	pipelineStore := store.NewPostgresPipelineDeploymentStore(postgresStore)
 	pipelineService := services.NewPipelineDeploymentService(pipelineStore, logger)
+	pipelineAggregator := services.NewPipelineStatusAggregator(pipelineStore, nil, nil, logger)
 
 	// Create WebSocket hub
 	wsHub := ws.NewHub(logger)
@@ -60,7 +62,7 @@ func main() {
 
 	// Create HTTP router
 	r := chi.NewRouter()
-	
+
 	// Middleware
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -87,12 +89,14 @@ func main() {
 			r.Delete("/{id}", deleteExperiment(experimentService))
 			r.Put("/{id}/status", updateExperimentStatus(experimentService))
 		})
-		
+
 		// Pipeline Deployments
 		r.Route("/pipelines/deployments", func(r chi.Router) {
 			r.Get("/", listDeployments(pipelineService))
 			r.Post("/", createDeployment(pipelineService))
 			r.Get("/{id}", getDeployment(pipelineService))
+			r.Get("/{id}/status", getDeploymentStatus(pipelineAggregator))
+			r.Post("/{id}/rollback", rollbackDeployment(pipelineService))
 			r.Put("/{id}", updateDeployment(pipelineService))
 			r.Delete("/{id}", deleteDeployment(pipelineService))
 		})
@@ -120,17 +124,17 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-	
+
 	logger.Info("shutting down servers...")
-	
+
 	// Gracefully shutdown HTTP server
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
-	
+
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		logger.Error("HTTP server shutdown error", zap.Error(err))
 	}
-	
+
 	logger.Info("servers shut down successfully")
 }
 
@@ -156,13 +160,13 @@ func createExperiment(svc *services.ExperimentService) http.HandlerFunc {
 			CandidatePipeline string            `json:"candidate_pipeline"`
 			TargetNodes       map[string]string `json:"target_nodes"`
 		}
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		experiment, err := svc.CreateExperiment(r.Context(), req.Name, req.Description, 
+		experiment, err := svc.CreateExperiment(r.Context(), req.Name, req.Description,
 			req.BaselinePipeline, req.CandidatePipeline, req.TargetNodes)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -205,7 +209,7 @@ func updateExperimentStatus(svc *services.ExperimentService) http.HandlerFunc {
 		var req struct {
 			Status string `json:"status"`
 		}
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -215,7 +219,7 @@ func updateExperimentStatus(svc *services.ExperimentService) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -228,13 +232,13 @@ func listDeployments(svc *services.PipelineDeploymentService) http.HandlerFunc {
 			Status:       r.URL.Query().Get("status"),
 			PipelineName: r.URL.Query().Get("pipeline_name"),
 		}
-		
+
 		resp, err := svc.ListDeployments(r.Context(), req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}
@@ -247,13 +251,13 @@ func createDeployment(svc *services.PipelineDeploymentService) http.HandlerFunc 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		deployment, err := svc.CreateDeployment(r.Context(), &req)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(deployment)
@@ -281,12 +285,12 @@ func updateDeployment(svc *services.PipelineDeploymentService) http.HandlerFunc 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		
+
 		if err := svc.UpdateDeployment(r.Context(), id, &req); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
 	}
 }
@@ -299,6 +303,37 @@ func deleteDeployment(svc *services.PipelineDeploymentService) http.HandlerFunc 
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func getDeploymentStatus(agg *services.PipelineStatusAggregator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		status, err := agg.GetAggregatedStatus(r.Context(), id)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(status)
+	}
+}
+
+func rollbackDeployment(svc *services.PipelineDeploymentService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		var req struct {
+			Version int `json:"version"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := svc.RollbackDeployment(r.Context(), id, req.Version); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 	}
 }
 

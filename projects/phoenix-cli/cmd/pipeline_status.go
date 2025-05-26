@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -48,20 +48,20 @@ Examples:
 
 		// Create API client
 		apiClient := client.NewAPIClient(cfg.APIEndpoint, cfg.Token)
-		
+
 		// Get deployment status
-		deployment, err := apiClient.GetPipelineDeployment(deploymentID)
+		deployment, err := apiClient.GetPipelineDeploymentStatus(deploymentID)
 		if err != nil {
 			return fmt.Errorf("failed to get deployment status: %w", err)
 		}
 
 		// Display status
-		output.Success(fmt.Sprintf("Pipeline Deployment: %s", deployment.Name))
-		
+		output.Success(fmt.Sprintf("Pipeline Deployment: %s", deployment.DeploymentName))
+
 		// Basic information
 		data := [][]string{
-			{"Deployment ID", deployment.ID},
-			{"Pipeline", deployment.Pipeline},
+			{"Deployment ID", deployment.DeploymentID},
+			{"Pipeline", deployment.PipelineName},
 			{"Namespace", deployment.Namespace},
 			{"Status", deployment.Status},
 			{"Phase", deployment.Phase},
@@ -69,7 +69,7 @@ Examples:
 
 		// Instance information
 		if deployment.Instances != nil {
-			data = append(data, []string{"Instances", fmt.Sprintf("%d/%d ready", 
+			data = append(data, []string{"Instances", fmt.Sprintf("%d/%d ready",
 				deployment.Instances.Ready, deployment.Instances.Desired)})
 		}
 
@@ -82,15 +82,6 @@ Examples:
 			data = append(data, []string{"Error Rate", fmt.Sprintf("%.2f%%", deployment.Metrics.ErrorRate)})
 			data = append(data, []string{"CPU Usage", fmt.Sprintf("%.1f%%", deployment.Metrics.CPUUsage)})
 			data = append(data, []string{"Memory Usage", fmt.Sprintf("%.1f%%", deployment.Metrics.MemoryUsage)})
-		}
-
-		// Target nodes
-		if len(deployment.TargetNodes) > 0 {
-			data = append(data, []string{"", ""}) // Empty row for spacing
-			data = append(data, []string{"=== Target Nodes ===", ""})
-			for host, status := range deployment.TargetNodes {
-				data = append(data, []string{host, status})
-			}
 		}
 
 		output.Table([]string{"Field", "Value"}, data)
@@ -113,7 +104,7 @@ Examples:
 			baseline := int64(10000)
 			reduction := float64(baseline-deployment.Metrics.Cardinality) / float64(baseline) * 100
 			if reduction > 0 {
-				fmt.Printf("\nCardinality Reduction: %.1f%% (from ~%d to %d series)\n", 
+				fmt.Printf("\nCardinality Reduction: %.1f%% (from ~%d to %d series)\n",
 					reduction, baseline, deployment.Metrics.Cardinality)
 			}
 		}
@@ -125,8 +116,8 @@ Examples:
 func init() {
 	pipelineCmd.AddCommand(pipelineStatusCmd)
 
-	pipelineStatusCmd.Flags().StringVarP(&pipelineStatusNamespace, "namespace", "n", "", 
+	pipelineStatusCmd.Flags().StringVarP(&pipelineStatusNamespace, "namespace", "n", "",
 		"Filter by namespace")
-	pipelineStatusCmd.Flags().BoolVarP(&pipelineStatusWatch, "watch", "w", false, 
+	pipelineStatusCmd.Flags().BoolVarP(&pipelineStatusWatch, "watch", "w", false,
 		"Watch status updates")
 }

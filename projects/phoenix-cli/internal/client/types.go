@@ -48,12 +48,12 @@ type ListExperimentsRequest struct {
 
 // ExperimentResults represents the results of an experiment
 type ExperimentResults struct {
-	BaselineMetrics   MetricsSummary `json:"baseline_metrics"`
-	CandidateMetrics  MetricsSummary `json:"candidate_metrics"`
-	CostReduction     float64        `json:"cost_reduction"`
-	CardinalityReduction float64     `json:"cardinality_reduction"`
-	Summary           string         `json:"summary"`
-	Recommendation    string         `json:"recommendation"`
+	BaselineMetrics      MetricsSummary `json:"baseline_metrics"`
+	CandidateMetrics     MetricsSummary `json:"candidate_metrics"`
+	CostReduction        float64        `json:"cost_reduction"`
+	CardinalityReduction float64        `json:"cardinality_reduction"`
+	Summary              string         `json:"summary"`
+	Recommendation       string         `json:"recommendation"`
 }
 
 // MetricsSummary represents a summary of metrics
@@ -150,12 +150,12 @@ type DeploymentInstances struct {
 
 // DeploymentMetrics contains the latest metrics for a deployment
 type DeploymentMetrics struct {
-	Cardinality    int64   `json:"cardinality"`
-	Throughput     string  `json:"throughput"`
-	ErrorRate      float64 `json:"error_rate"`
-	CPUUsage       float64 `json:"cpu_usage"`
-	MemoryUsage    float64 `json:"memory_usage"`
-	LastUpdated    time.Time `json:"last_updated"`
+	Cardinality int64     `json:"cardinality"`
+	Throughput  string    `json:"throughput"`
+	ErrorRate   float64   `json:"error_rate"`
+	CPUUsage    float64   `json:"cpu_usage"`
+	MemoryUsage float64   `json:"memory_usage"`
+	LastUpdated time.Time `json:"last_updated"`
 }
 
 // ResourceRequirements defines resource requirements and limits
@@ -173,4 +173,18 @@ type ResourceList struct {
 // RollbackPipelineRequest represents a request to rollback a pipeline
 type RollbackPipelineRequest struct {
 	Version string `json:"version,omitempty"`
+}
+
+// DeploymentStatusResponse represents aggregated status for a deployment
+type DeploymentStatusResponse struct {
+	DeploymentID   string               `json:"deployment_id"`
+	DeploymentName string               `json:"deployment_name"`
+	PipelineName   string               `json:"pipeline_name"`
+	Namespace      string               `json:"namespace"`
+	Status         string               `json:"status"`
+	Phase          string               `json:"phase"`
+	Instances      *DeploymentInstances `json:"instances,omitempty"`
+	Metrics        *DeploymentMetrics   `json:"metrics,omitempty"`
+	HealthStatus   string               `json:"health_status,omitempty"`
+	LastUpdated    time.Time            `json:"last_updated"`
 }
