@@ -10,20 +10,18 @@ import {
 import {
   ArrowBack,
 } from '@mui/icons-material'
-import { useExperimentStore } from '../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { fetchExperimentById, promoteVariant } from '@store/slices/experimentSlice'
 import { EnhancedAnalysis } from '../components/Analysis'
 import { useExperimentUpdates } from '../hooks/useExperimentUpdates'
 
 export const Analysis: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const {
-    currentExperiment: experiment,
-    loading,
-    error,
-    fetchExperiment,
-    promoteVariant,
-  } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const { currentExperiment: experiment, loading, error } = useAppSelector(
+    (state) => state.experiments
+  )
 
   const [metrics, setMetrics] = useState<any[]>([])
 
@@ -32,9 +30,9 @@ export const Analysis: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchExperiment(id)
+      dispatch(fetchExperimentById(id))
     }
-  }, [id, fetchExperiment])
+  }, [id, dispatch])
 
   useEffect(() => {
     if (realtimeMetrics) {
@@ -48,7 +46,7 @@ export const Analysis: React.FC = () => {
 
   const handlePromoteVariant = async (variant: 'baseline' | 'candidate') => {
     if (id) {
-      await promoteVariant(id, variant)
+      await dispatch(promoteVariant({ id, variant }))
       navigate(`/experiments/${id}`)
     }
   }

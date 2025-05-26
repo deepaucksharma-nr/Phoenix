@@ -70,7 +70,8 @@ import {
   Legend,
   Filler,
 } from 'chart.js'
-import { useExperimentStore } from '../../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { fetchExperimentById } from '@store/slices/experimentSlice'
 import { useExperimentUpdates } from '../../hooks/useExperimentUpdates'
 import { Experiment, ExperimentMetrics } from '../../types/experiment'
 
@@ -181,7 +182,8 @@ export const ExperimentMonitor: React.FC<ExperimentMonitorProps> = ({
   embedded = false,
   onClose,
 }) => {
-  const { experiments, fetchExperiment } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const experiments = useAppSelector((state) => state.experiments.experiments)
   const { metrics, events, status } = useExperimentUpdates(experimentId)
   const [experiment, setExperiment] = useState<Experiment | null>(null)
   const [liveMetrics, setLiveMetrics] = useState<LiveMetrics>({
@@ -203,9 +205,13 @@ export const ExperimentMonitor: React.FC<ExperimentMonitorProps> = ({
     if (exp) {
       setExperiment(exp)
     } else {
-      fetchExperiment(experimentId).then(setExperiment)
+      dispatch(fetchExperimentById(experimentId)).then((action) => {
+        if (fetchExperimentById.fulfilled.match(action)) {
+          setExperiment(action.payload)
+        }
+      })
     }
-  }, [experimentId, experiments, fetchExperiment])
+  }, [experimentId, experiments, dispatch])
 
   useEffect(() => {
     if (!metrics) return
@@ -370,7 +376,7 @@ export const ExperimentMonitor: React.FC<ExperimentMonitorProps> = ({
               </IconButton>
             </Tooltip>
             <Tooltip title="Refresh now">
-              <IconButton onClick={() => fetchExperiment(experimentId)}>
+              <IconButton onClick={() => dispatch(fetchExperimentById(experimentId))}>
                 <Refresh />
               </IconButton>
             </Tooltip>

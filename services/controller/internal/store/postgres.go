@@ -10,7 +10,7 @@ import (
 	"github.com/lib/pq"
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/cmd/controller/internal/controller"
+	"github.com/phoenix/platform/cmd/controller/internal/controller"
 )
 
 // PostgresStore implements the ExperimentStore interface using PostgreSQL

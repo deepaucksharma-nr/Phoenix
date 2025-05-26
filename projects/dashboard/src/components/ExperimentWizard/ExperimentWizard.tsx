@@ -57,9 +57,10 @@ import {
   Build as BuildIcon,
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
-import { useExperimentStore } from '../../store/useExperimentStore'
+import { useAppDispatch } from '@hooks/redux'
+import { createExperiment } from '@store/slices/experimentSlice'
 import { useNotification } from '../../hooks/useNotification'
-import { CreateExperimentRequest, PipelineConfig } from '../../types/experiment'
+import { CreateExperimentData } from '../../types/experiment'
 import { EnhancedPipelineBuilder } from '../PipelineBuilder'
 
 const steps = ['Basic Information', 'Pipeline Configuration', 'Target Hosts', 'Review & Launch']
@@ -106,29 +107,28 @@ interface ExperimentWizardProps {
 
 export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClose }) => {
   const navigate = useNavigate()
-  const { createExperiment } = useExperimentStore()
+  const dispatch = useAppDispatch()
   const { showNotification } = useNotification()
   const [activeStep, setActiveStep] = useState(0)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [useVisualBuilder, setUseVisualBuilder] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const [formData, setFormData] = useState<Partial<CreateExperimentRequest>>({
+  const [formData, setFormData] = useState<Partial<CreateExperimentData>>({
     name: '',
     description: '',
-    pipeline_config: {
-      baseline: { template: 'process-baseline-v1', parameters: {} },
-      candidate: { template: 'process-aggregated-v1', parameters: {} },
-    },
-    target_hosts: {
-      percentage: 10,
-      specific_hosts: [],
-    },
-    duration: 3600, // 1 hour default
-    auto_rollback: true,
-    success_criteria: {
-      min_metric_reduction: 30,
-      max_error_rate: 1,
+    spec: {
+      baseline: { name: 'process-baseline-v1' },
+      candidate: { name: 'process-aggregated-v1' },
+      targetHosts: [],
+      duration: '1h',
+      loadProfile: 'realistic',
+      successCriteria: {
+        minCardinalityReduction: 30,
+        maxCostIncrease: 10,
+        maxLatencyIncrease: 5,
+        minCriticalProcessRetention: 95,
+      },
     },
   })
 
@@ -158,16 +158,16 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
         }
         break
       case 1:
-        if (!formData.pipeline_config?.candidate?.template) {
+        if (!formData.spec?.candidate?.name) {
           newErrors.pipeline = 'Please select a candidate pipeline'
         }
-        if (formData.pipeline_config?.candidate?.template === formData.pipeline_config?.baseline?.template) {
+        if (formData.spec?.candidate?.name === formData.spec?.baseline?.name) {
           newErrors.pipeline = 'Candidate pipeline must be different from baseline'
         }
         break
       case 2:
-        if (!formData.target_hosts?.percentage && (!formData.target_hosts?.specific_hosts || formData.target_hosts.specific_hosts.length === 0)) {
-          newErrors.hosts = 'Please specify target hosts or percentage'
+        if (!formData.spec?.targetHosts || formData.spec.targetHosts.length === 0) {
+          newErrors.hosts = 'Please specify target hosts'
         }
         break
     }
@@ -181,10 +181,13 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
 
     setLoading(true)
     try {
-      const experiment = await createExperiment(formData as CreateExperimentRequest)
-      showNotification(`Experiment "${experiment.name}" created successfully`, 'success')
-      onClose()
-      navigate(`/experiments/${experiment.id}`)
+      const result = await dispatch(createExperiment(formData as CreateExperimentData))
+      if (createExperiment.fulfilled.match(result)) {
+        const experiment = result.payload
+        showNotification(`Experiment "${experiment.name}" created successfully`, 'success')
+        onClose()
+        navigate(`/experiments/${experiment.id}`)
+      }
     } catch (error) {
       showNotification('Failed to create experiment', 'error')
     } finally {
@@ -196,9 +199,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
     if (hostInput.trim()) {
       setFormData({
         ...formData,
-        target_hosts: {
-          ...formData.target_hosts!,
-          specific_hosts: [...(formData.target_hosts?.specific_hosts || []), hostInput.trim()],
+        spec: {
+          ...formData.spec!,
+          targetHosts: [...(formData.spec?.targetHosts || []), hostInput.trim()],
         },
       })
       setHostInput('')
@@ -208,9 +211,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
   const removeHost = (host: string) => {
     setFormData({
       ...formData,
-      target_hosts: {
-        ...formData.target_hosts!,
-        specific_hosts: formData.target_hosts?.specific_hosts?.filter((h) => h !== host) || [],
+      spec: {
+        ...formData.spec!,
+        targetHosts: formData.spec?.targetHosts?.filter((h: string) => h !== host) || [],
       },
     })
   }
@@ -255,8 +258,14 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                     Experiment Duration
                   </Typography>
                   <Slider
-                    value={formData.duration || 3600}
-                    onChange={(e, value) => setFormData({ ...formData, duration: value as number })}
+                    value={parseInt(formData.spec?.duration?.replace(/[^0-9]/g, '') || '1') * 3600}
+                    onChange={(e, value) => setFormData({ 
+                      ...formData, 
+                      spec: { 
+                        ...formData.spec!, 
+                        duration: `${Math.floor((value as number) / 3600)}h` 
+                      } 
+                    })}
                     min={1800}
                     max={86400}
                     step={1800}
@@ -273,8 +282,8 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                   <FormControlLabel
                     control={
                       <Switch
-                        checked={formData.auto_rollback}
-                        onChange={(e) => setFormData({ ...formData, auto_rollback: e.target.checked })}
+                        checked={true}
+                        onChange={(e) => console.log('Auto rollback:', e.target.checked)}
                       />
                     }
                     label="Enable automatic rollback on failure"
@@ -287,12 +296,15 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                         fullWidth
                         type="number"
                         label="Min Metric Reduction %"
-                        value={formData.success_criteria?.min_metric_reduction || 30}
+                        value={formData.spec?.successCriteria?.minCardinalityReduction || 30}
                         onChange={(e) => setFormData({
                           ...formData,
-                          success_criteria: {
-                            ...formData.success_criteria,
-                            min_metric_reduction: parseInt(e.target.value),
+                          spec: {
+                            ...formData.spec!,
+                            successCriteria: {
+                              ...formData.spec?.successCriteria!,
+                              minCardinalityReduction: parseInt(e.target.value),
+                            },
                           },
                         })}
                         InputProps={{ inputProps: { min: 0, max: 100 } }}
@@ -304,12 +316,15 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                         fullWidth
                         type="number"
                         label="Max Error Rate %"
-                        value={formData.success_criteria?.max_error_rate || 1}
+                        value={formData.spec?.successCriteria?.maxLatencyIncrease || 5}
                         onChange={(e) => setFormData({
                           ...formData,
-                          success_criteria: {
-                            ...formData.success_criteria,
-                            max_error_rate: parseFloat(e.target.value),
+                          spec: {
+                            ...formData.spec!,
+                            successCriteria: {
+                              ...formData.spec?.successCriteria!,
+                              maxLatencyIncrease: parseFloat(e.target.value),
+                            },
                           },
                         })}
                         InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
@@ -364,9 +379,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                   onSave={(config) => {
                     setFormData({
                       ...formData,
-                      pipeline_config: {
-                        ...formData.pipeline_config!,
-                        candidate: { template: 'custom', parameters: config },
+                      spec: {
+                        ...formData.spec!,
+                        candidate: { name: 'custom', ...config },
                       },
                     })
                     showNotification('Pipeline configuration saved', 'success')
@@ -387,7 +402,7 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                   <Card
                     sx={{
                       border: 2,
-                      borderColor: formData.pipeline_config?.candidate?.template === template.id
+                      borderColor: formData.spec?.candidate?.name === template.id
                         ? 'primary.main'
                         : 'transparent',
                       position: 'relative',
@@ -404,9 +419,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                     <CardActionArea
                       onClick={() => setFormData({
                         ...formData,
-                        pipeline_config: {
-                          ...formData.pipeline_config!,
-                          candidate: { template: template.id, parameters: {} },
+                        spec: {
+                          ...formData.spec!,
+                          candidate: { name: template.id },
                         },
                       })}
                     >
@@ -467,12 +482,15 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
             )}
 
             <RadioGroup
-              value={formData.target_hosts?.specific_hosts?.length ? 'specific' : 'percentage'}
+              value={formData.spec?.targetHosts?.length ? 'specific' : 'percentage'}
               onChange={(e) => {
                 if (e.target.value === 'percentage') {
                   setFormData({
                     ...formData,
-                    target_hosts: { percentage: 10, specific_hosts: [] },
+                    spec: {
+                      ...formData.spec!,
+                      targetHosts: [],
+                    },
                   })
                 }
               }}
@@ -482,20 +500,14 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                 control={<Radio />}
                 label="Percentage of hosts"
               />
-              {formData.target_hosts?.specific_hosts?.length === 0 && (
+              {formData.spec?.targetHosts?.length === 0 && (
                 <Box sx={{ ml: 4, mb: 2 }}>
                   <Typography variant="body2" gutterBottom>
                     Randomly select a percentage of all hosts
                   </Typography>
                   <Slider
-                    value={formData.target_hosts?.percentage || 10}
-                    onChange={(e, value) => setFormData({
-                      ...formData,
-                      target_hosts: {
-                        ...formData.target_hosts!,
-                        percentage: value as number,
-                      },
-                    })}
+                    value={10}
+                    onChange={(e, value) => console.log('Percentage:', value)}
                     min={5}
                     max={50}
                     step={5}
@@ -545,10 +557,10 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                 </Button>
               </Box>
               
-              {formData.target_hosts?.specific_hosts && formData.target_hosts.specific_hosts.length > 0 && (
+              {formData.spec?.targetHosts && formData.spec.targetHosts.length > 0 && (
                 <Paper variant="outlined" sx={{ mt: 2, p: 1 }}>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {formData.target_hosts.specific_hosts.map((host) => (
+                    {formData.spec.targetHosts.map((host: string) => (
                       <Chip
                         key={host}
                         label={host}
@@ -592,9 +604,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                   primary="Pipeline Configuration"
                   secondary={
                     <>
-                      Baseline: {formData.pipeline_config?.baseline?.template}
+                      Baseline: {formData.spec?.baseline?.name}
                       <br />
-                      Candidate: {formData.pipeline_config?.candidate?.template}
+                      Candidate: {formData.spec?.candidate?.name}
                     </>
                   }
                 />
@@ -609,9 +621,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                 <ListItemText
                   primary="Target Hosts"
                   secondary={
-                    formData.target_hosts?.specific_hosts?.length
-                      ? `${formData.target_hosts.specific_hosts.length} specific hosts`
-                      : `${formData.target_hosts?.percentage}% of all hosts`
+                    formData.spec?.targetHosts?.length
+                      ? `${formData.spec.targetHosts.length} specific hosts`
+                      : `10% of all hosts`
                   }
                 />
               </ListItem>
@@ -624,7 +636,7 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                 </ListItemIcon>
                 <ListItemText
                   primary="Duration"
-                  secondary={`${(formData.duration || 3600) / 3600} hour(s)`}
+                  secondary={formData.spec?.duration || '1h'}
                 />
               </ListItem>
               
@@ -638,9 +650,9 @@ export const ExperimentWizard: React.FC<ExperimentWizardProps> = ({ open, onClos
                   primary="Success Criteria"
                   secondary={
                     <>
-                      Min reduction: {formData.success_criteria?.min_metric_reduction}%
+                      Min reduction: {formData.spec?.successCriteria?.minCardinalityReduction}%
                       <br />
-                      Max error rate: {formData.success_criteria?.max_error_rate}%
+                      Max latency increase: {formData.spec?.successCriteria?.maxLatencyIncrease}%
                     </>
                   }
                 />

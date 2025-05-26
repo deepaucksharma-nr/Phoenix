@@ -5,6 +5,8 @@ toolchain go1.24.3
 use (
 	./operators/loadsim
 	./operators/pipeline
+	./packages/contracts
+	./packages/go-common
 	./pkg
 	./projects/analytics
 	./projects/anomaly-detector

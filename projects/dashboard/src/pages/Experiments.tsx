@@ -35,7 +35,7 @@ import {
   Assessment,
 } from '@mui/icons-material'
 import { useAppSelector, useAppDispatch } from '@hooks/redux'
-import { fetchExperiments, deleteExperiment } from '@store/slices/experimentSlice'
+import { fetchExperiments, deleteExperiment, updateExperimentStatus } from '@store/slices/experimentSlice'
 import { ExperimentWizard } from '../components/ExperimentWizard'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -83,7 +83,7 @@ export const Experiments: React.FC = () => {
 
   const handleStartExperiment = async (id: string) => {
     try {
-      await startExperiment(id)
+      await dispatch(updateExperimentStatus({ id, status: 'running' })).unwrap()
     } catch (error) {
       console.error('Failed to start experiment:', error)
     }
@@ -91,7 +91,7 @@ export const Experiments: React.FC = () => {
 
   const handleStopExperiment = async (id: string) => {
     try {
-      await stopExperiment(id)
+      await dispatch(updateExperimentStatus({ id, status: 'stopped' })).unwrap()
     } catch (error) {
       console.error('Failed to stop experiment:', error)
     }
@@ -100,7 +100,7 @@ export const Experiments: React.FC = () => {
   const handleDeleteExperiment = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this experiment?')) {
       try {
-        await deleteExperiment(id)
+        await dispatch(deleteExperiment(id)).unwrap()
       } catch (error) {
         console.error('Failed to delete experiment:', error)
       }

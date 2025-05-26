@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/services/api
+module github.com/phoenix/platform/services/api
 
 go 1.21
 

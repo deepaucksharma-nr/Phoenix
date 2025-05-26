@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/phoenix-vnext/platform/cmd/controller/internal/controller"
-	pb "github.com/phoenix-vnext/platform/pkg/api/v1"
+	"github.com/phoenix/platform/cmd/controller/internal/controller"
+	pb "github.com/phoenix/platform/pkg/api/v1"
 )
 
 // AdapterServer implements the gRPC experiment service using the proto definitions

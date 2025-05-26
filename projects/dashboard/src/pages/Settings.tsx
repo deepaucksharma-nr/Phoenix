@@ -42,7 +42,7 @@ import {
   Refresh as RefreshIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAppSelector } from '@hooks/redux'
 import { useNotification } from '../hooks/useNotification'
 
 interface TabPanelProps {
@@ -68,7 +68,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const Settings: React.FC = () => {
-  const { user } = useAuthStore()
+  const user = useAppSelector(state => state.auth.user)
   const { showNotification } = useNotification()
   const [tabValue, setTabValue] = useState(0)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)

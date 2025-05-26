@@ -24,7 +24,8 @@ import {
   ExpandLess,
 } from '@mui/icons-material'
 import { useWebSocket } from '../../hooks/useWebSocket'
-import { useExperimentStore } from '../../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { updateExperiment } from '@store/slices/experimentSlice'
 import { Experiment, ExperimentStatus } from '../../types'
 
 interface RealTimeStatusProps {
@@ -59,7 +60,8 @@ export const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   showDetails = true,
 }) => {
   const { subscribe } = useWebSocket()
-  const { experiments, updateExperiment } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const experiments = useAppSelector((state) => state.experiments.experiments)
   const [metrics, setMetrics] = useState<MetricsUpdate | null>(null)
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -75,11 +77,12 @@ export const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
       console.log('Experiment update received:', update)
       setLastUpdate(new Date())
       
-      if (update.experimentId === experimentId) {
-        updateExperiment(experimentId, {
+      if (update.experimentId === experimentId && experiment) {
+        dispatch(updateExperiment({
+          ...experiment,
           status: update.status,
           progress: update.progress,
-        })
+        }))
       }
     })
 
@@ -111,7 +114,7 @@ export const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
       unsubscribeDisconnect()
       unsubscribeReconnecting()
     }
-  }, [experimentId, autoRefresh, subscribe, updateExperiment])
+  }, [experimentId, autoRefresh, subscribe, experiment, dispatch])
 
   const getStatusColor = (status: ExperimentStatus) => {
     switch (status) {

@@ -56,6 +56,30 @@ export const deleteExperiment = createAsyncThunk(
   }
 );
 
+export const startExperiment = createAsyncThunk(
+  'experiments/start',
+  async (id: string) => {
+    const response = await axiosInstance.post(`/api/experiments/${id}/start`);
+    return response.data;
+  }
+);
+
+export const stopExperiment = createAsyncThunk(
+  'experiments/stop',
+  async (id: string) => {
+    const response = await axiosInstance.post(`/api/experiments/${id}/stop`);
+    return response.data;
+  }
+);
+
+export const promoteVariant = createAsyncThunk(
+  'experiments/promoteVariant',
+  async ({ id, variant }: { id: string; variant: 'baseline' | 'candidate' }) => {
+    const response = await axiosInstance.post(`/api/experiments/${id}/promote`, { variant });
+    return response.data;
+  }
+);
+
 const initialState: ExperimentState = {
   experiments: [],
   currentExperiment: null,
@@ -183,6 +207,36 @@ const experimentSlice = createSlice({
         state.experiments = state.experiments.filter(exp => exp.id !== action.payload);
         if (state.currentExperiment?.id === action.payload) {
           state.currentExperiment = null;
+        }
+      })
+      // Start experiment
+      .addCase(startExperiment.fulfilled, (state, action) => {
+        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
+        if (index !== -1) {
+          state.experiments[index] = action.payload;
+        }
+        if (state.currentExperiment?.id === action.payload.id) {
+          state.currentExperiment = action.payload;
+        }
+      })
+      // Stop experiment
+      .addCase(stopExperiment.fulfilled, (state, action) => {
+        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
+        if (index !== -1) {
+          state.experiments[index] = action.payload;
+        }
+        if (state.currentExperiment?.id === action.payload.id) {
+          state.currentExperiment = action.payload;
+        }
+      })
+      // Promote variant
+      .addCase(promoteVariant.fulfilled, (state, action) => {
+        const index = state.experiments.findIndex(exp => exp.id === action.payload.id);
+        if (index !== -1) {
+          state.experiments[index] = action.payload;
+        }
+        if (state.currentExperiment?.id === action.payload.id) {
+          state.currentExperiment = action.payload;
         }
       });
   },

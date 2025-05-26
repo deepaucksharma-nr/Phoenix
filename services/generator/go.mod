@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/services/generator
+module github.com/phoenix/platform/services/generator
 
 go 1.21
 

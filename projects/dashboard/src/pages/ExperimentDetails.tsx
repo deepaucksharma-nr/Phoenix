@@ -39,7 +39,14 @@ import {
   CloudUpload,
   Visibility,
 } from '@mui/icons-material'
-import { useExperimentStore } from '../store/useExperimentStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import {
+  fetchExperimentById,
+  startExperiment,
+  stopExperiment,
+  deleteExperiment,
+  promoteVariant,
+} from '@store/slices/experimentSlice'
 import { format, formatDistanceToNow } from 'date-fns'
 import { PipelineViewer } from '../components/PipelineBuilder/PipelineViewer'
 import { ExperimentMonitor } from '../components/ExperimentMonitor'
@@ -70,16 +77,10 @@ function TabPanel(props: TabPanelProps) {
 export const ExperimentDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const {
-    currentExperiment: experiment,
-    loading,
-    error,
-    fetchExperiment,
-    startExperiment,
-    stopExperiment,
-    deleteExperiment,
-    promoteVariant,
-  } = useExperimentStore()
+  const dispatch = useAppDispatch()
+  const { currentExperiment: experiment, loading, error } = useAppSelector(
+    (state) => state.experiments
+  )
 
   const [activeTab, setActiveTab] = useState(0)
   const [promotingVariant, setPromotingVariant] = useState<string | null>(null)
@@ -90,9 +91,9 @@ export const ExperimentDetails: React.FC = () => {
 
   useEffect(() => {
     if (id) {
-      fetchExperiment(id)
+      dispatch(fetchExperimentById(id))
     }
-  }, [id, fetchExperiment])
+  }, [id, dispatch])
 
   const handleBack = () => {
     navigate('/experiments')
@@ -100,19 +101,19 @@ export const ExperimentDetails: React.FC = () => {
 
   const handleStart = async () => {
     if (id) {
-      await startExperiment(id)
+      await dispatch(startExperiment(id))
     }
   }
 
   const handleStop = async () => {
     if (id) {
-      await stopExperiment(id)
+      await dispatch(stopExperiment(id))
     }
   }
 
   const handleDelete = async () => {
     if (id && window.confirm('Are you sure you want to delete this experiment?')) {
-      await deleteExperiment(id)
+      await dispatch(deleteExperiment(id))
       navigate('/experiments')
     }
   }
@@ -121,7 +122,7 @@ export const ExperimentDetails: React.FC = () => {
     if (id) {
       setPromotingVariant(variant)
       try {
-        await promoteVariant(id, variant)
+        await dispatch(promoteVariant({ id, variant }))
         setPromotingVariant(null)
       } catch (error) {
         setPromotingVariant(null)

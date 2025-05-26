@@ -13,7 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/pkg/generator"
+	"github.com/phoenix/platform/pkg/generator"
 )
 
 const (
