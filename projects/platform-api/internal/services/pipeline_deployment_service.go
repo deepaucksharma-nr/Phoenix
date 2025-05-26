@@ -143,3 +143,130 @@ func (s *PipelineDeploymentService) DeleteDeployment(ctx context.Context, deploy
 	s.logger.Info("deployment deleted successfully", zap.String("deployment_id", deploymentID))
 	return nil
 }
+
+// GetDeploymentStatus retrieves the current status of a deployment
+func (s *PipelineDeploymentService) GetDeploymentStatus(ctx context.Context, deploymentID string) (*models.DeploymentStatus, error) {
+	s.logger.Info("getting deployment status", zap.String("deployment_id", deploymentID))
+
+	deployment, err := s.store.GetDeployment(ctx, deploymentID)
+	if err != nil {
+		s.logger.Error("failed to get deployment", zap.Error(err))
+		return nil, err
+	}
+
+	// Build status response
+	status := &models.DeploymentStatus{
+		DeploymentID: deployment.ID,
+		Status:       deployment.Status,
+		Phase:        deployment.Phase,
+		Message:      deployment.StatusMessage,
+		UpdatedAt:    deployment.UpdatedAt,
+	}
+
+	// Add metrics if available
+	if deployment.Metrics != nil {
+		status.Metrics = deployment.Metrics
+	}
+
+	// Add health information if available
+	if deployment.Health != nil {
+		status.Health = deployment.Health
+	}
+
+	// Add instances information if available
+	if deployment.Instances != nil {
+		status.Instances = deployment.Instances
+	}
+
+	return status, nil
+}
+
+// RollbackDeployment rolls back a deployment to a previous version
+func (s *PipelineDeploymentService) RollbackDeployment(ctx context.Context, deploymentID string, version int) error {
+	s.logger.Info("rolling back deployment",
+		zap.String("deployment_id", deploymentID),
+		zap.Int("target_version", version))
+
+	// Get current deployment
+	deployment, err := s.store.GetDeployment(ctx, deploymentID)
+	if err != nil {
+		s.logger.Error("failed to get deployment", zap.Error(err))
+		return err
+	}
+
+	// Validate version
+	if version <= 0 || version >= deployment.Version {
+		return fmt.Errorf("invalid version %d: must be between 1 and %d", version, deployment.Version-1)
+	}
+
+	// Get deployment history for the target version
+	history, err := s.store.GetDeploymentHistory(ctx, deploymentID, version)
+	if err != nil {
+		s.logger.Error("failed to get deployment history", zap.Error(err))
+		return err
+	}
+
+	// Create rollback update request
+	updateReq := &models.UpdateDeploymentRequest{
+		Status:        models.DeploymentStatusRollingBack,
+		Phase:         models.DeploymentPhaseRollingBack,
+		StatusMessage: fmt.Sprintf("Rolling back to version %d", version),
+		UpdatedBy:     "system", // This should come from context
+		
+		// Restore configuration from history
+		Parameters:    history.Parameters,
+		Resources:     history.Resources,
+		PipelineName:  history.PipelineName,
+	}
+
+	// Update deployment with rollback configuration
+	if err := s.store.UpdateDeployment(ctx, deploymentID, updateReq); err != nil {
+		s.logger.Error("failed to update deployment for rollback", zap.Error(err))
+		return err
+	}
+
+	// Record rollback event
+	event := &models.DeploymentEvent{
+		DeploymentID: deploymentID,
+		EventType:    "rollback",
+		Message:      fmt.Sprintf("Rollback initiated to version %d", version),
+		Timestamp:    time.Now(),
+	}
+	
+	if err := s.store.RecordDeploymentEvent(ctx, event); err != nil {
+		s.logger.Warn("failed to record rollback event", zap.Error(err))
+		// Don't fail the rollback if event recording fails
+	}
+
+	s.logger.Info("deployment rollback initiated successfully",
+		zap.String("deployment_id", deploymentID),
+		zap.Int("target_version", version))
+
+	return nil
+}
+
+// UpdateDeploymentMetrics updates the metrics for a deployment
+func (s *PipelineDeploymentService) UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *models.DeploymentMetrics) error {
+	s.logger.Info("updating deployment metrics", zap.String("deployment_id", deploymentID))
+
+	// Update metrics in store
+	if err := s.store.UpdateDeploymentMetrics(ctx, deploymentID, metrics); err != nil {
+		s.logger.Error("failed to update deployment metrics", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+// UpdateDeploymentHealth updates the health status of a deployment
+func (s *PipelineDeploymentService) UpdateDeploymentHealth(ctx context.Context, deploymentID string, health *models.DeploymentHealth) error {
+	s.logger.Info("updating deployment health", zap.String("deployment_id", deploymentID))
+
+	// Update health in store
+	if err := s.store.UpdateDeploymentHealth(ctx, deploymentID, health); err != nil {
+		s.logger.Error("failed to update deployment health", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
