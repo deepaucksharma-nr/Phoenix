@@ -1,0 +1,149 @@
+graph TB
+    subgraph "External Network"
+        INTERNET[Internet]
+        CDN[CDN/Load Balancer]
+    end
+    
+    subgraph "DMZ"
+        INGRESS[Ingress Controller<br/>nginx/traefik]
+        WAF[Web Application<br/>Firewall]
+    end
+    
+    subgraph "Application Network (10.0.1.0/24)"
+        subgraph "API Tier"
+            API_SVC[platform-api<br/>10.0.1.10:8080<br/>10.0.1.10:5050]
+            WS_SVC[websocket<br/>10.0.1.10:8080/ws]
+        end
+        
+        subgraph "Core Services Tier"
+            CTRL_SVC[controller<br/>10.0.1.20:8080<br/>10.0.1.20:50051]
+            GEN_SVC[generator<br/>10.0.1.21:8080<br/>10.0.1.21:50052]
+        end
+        
+        subgraph "Processing Tier"
+            ANALYTICS_SVC[analytics<br/>10.0.1.30:8080]
+            BENCH_SVC[benchmark<br/>10.0.1.31:8080]
+            VAL_SVC[validator<br/>10.0.1.32:8080]
+            ANOMALY_SVC[anomaly-detector<br/>10.0.1.33:8080]
+        end
+        
+        subgraph "Control Plane Tier"
+            OBS_SVC[observer<br/>10.0.1.40:8080]
+            ACT_SVC[actuator<br/>10.0.1.41:8080]
+        end
+    end
+    
+    subgraph "Data Network (10.0.2.0/24)"
+        subgraph "Telemetry Collection"
+            OTEL_MAIN[otel-collector-main<br/>10.0.2.10:4317<br/>10.0.2.10:4318]
+            OTEL_OBS[otel-collector-observer<br/>10.0.2.11:4317<br/>10.0.2.11:4318]
+        end
+        
+        subgraph "Monitoring Stack"
+            PROM_SVC[prometheus<br/>10.0.2.20:9090]
+            GRAF_SVC[grafana<br/>10.0.2.21:3000]
+            ALERT_MGR[alertmanager<br/>10.0.2.22:9093]
+        end
+        
+        subgraph "Data Stores"
+            PG_PRIMARY[(PostgreSQL Primary<br/>10.0.2.30:5432)]
+            PG_REPLICA[(PostgreSQL Replica<br/>10.0.2.31:5432)]
+            REDIS_MASTER[(Redis Master<br/>10.0.2.40:6379)]
+            REDIS_REPLICA[(Redis Replica<br/>10.0.2.41:6379)]
+        end
+    end
+    
+    subgraph "Kubernetes Control Network (10.0.3.0/24)"
+        K8S_API[Kubernetes API<br/>10.0.3.10:6443]
+        ETCD[(etcd cluster<br/>10.0.3.20-22:2379)]
+        
+        subgraph "Operators"
+            PIPE_OP[pipeline-operator<br/>10.0.3.30:8080]
+            LOAD_OP[loadsim-operator<br/>10.0.3.31:8080]
+        end
+    end
+    
+    subgraph "Service Mesh (Optional)"
+        ISTIO_GW[Istio Gateway]
+        ISTIO_PILOT[Istio Pilot]
+        ENVOY[Envoy Sidecars]
+    end
+
+    %% External connections
+    INTERNET --> CDN
+    CDN --> WAF
+    WAF --> INGRESS
+    
+    %% Ingress routing
+    INGRESS -->|HTTP/HTTPS| API_SVC
+    INGRESS -->|WebSocket| WS_SVC
+    INGRESS -->|Metrics| GRAF_SVC
+    
+    %% API to Core Services
+    API_SVC -->|gRPC:50051| CTRL_SVC
+    API_SVC -->|TCP:5432| PG_PRIMARY
+    API_SVC -->|TCP:6379| REDIS_MASTER
+    
+    %% Controller connections
+    CTRL_SVC -->|gRPC:50052| GEN_SVC
+    CTRL_SVC -->|HTTPS:6443| K8S_API
+    CTRL_SVC -->|TCP:5432| PG_PRIMARY
+    CTRL_SVC -->|TCP:6379| REDIS_MASTER
+    
+    %% Processing services
+    ANALYTICS_SVC -->|HTTP:9090| PROM_SVC
+    BENCH_SVC -->|HTTP:9090| PROM_SVC
+    VAL_SVC -->|HTTP:9090| PROM_SVC
+    ANOMALY_SVC -->|HTTP:9090| PROM_SVC
+    
+    %% Control plane
+    OBS_SVC -->|HTTP:9090| PROM_SVC
+    OBS_SVC -->|TCP:6379| REDIS_MASTER
+    ACT_SVC -->|HTTPS:6443| K8S_API
+    
+    %% Operators
+    PIPE_OP -->|HTTPS:6443| K8S_API
+    LOAD_OP -->|HTTPS:6443| K8S_API
+    K8S_API --> ETCD
+    
+    %% Telemetry flow
+    API_SVC -->|OTLP:4317| OTEL_MAIN
+    CTRL_SVC -->|OTLP:4317| OTEL_MAIN
+    GEN_SVC -->|OTLP:4317| OTEL_MAIN
+    ANALYTICS_SVC -->|OTLP:4317| OTEL_MAIN
+    OBS_SVC -->|OTLP:4318| OTEL_OBS
+    ACT_SVC -->|OTLP:4318| OTEL_OBS
+    
+    %% Collector to storage
+    OTEL_MAIN -->|Remote Write| PROM_SVC
+    OTEL_OBS -->|Remote Write| PROM_SVC
+    
+    %% Data replication
+    PG_PRIMARY -.->|Streaming Replication| PG_REPLICA
+    REDIS_MASTER -.->|Replication| REDIS_REPLICA
+    
+    %% Monitoring
+    PROM_SVC --> GRAF_SVC
+    PROM_SVC --> ALERT_MGR
+    
+    %% Service mesh (if enabled)
+    ISTIO_GW -.-> INGRESS
+    ISTIO_PILOT -.-> ENVOY
+    ENVOY -.-> API_SVC
+    ENVOY -.-> CTRL_SVC
+    ENVOY -.-> GEN_SVC
+
+    %% Network policies
+    classDef external fill:#ff9999,stroke:#333,stroke-width:2px
+    classDef dmz fill:#ffcc99,stroke:#333,stroke-width:2px
+    classDef app fill:#99ccff,stroke:#333,stroke-width:2px
+    classDef data fill:#99ff99,stroke:#333,stroke-width:2px
+    classDef k8s fill:#cc99ff,stroke:#333,stroke-width:2px
+    classDef mesh fill:#ffff99,stroke:#333,stroke-width:2px
+    
+    class INTERNET,CDN external
+    class INGRESS,WAF dmz
+    class API_SVC,WS_SVC,CTRL_SVC,GEN_SVC,ANALYTICS_SVC,BENCH_SVC,VAL_SVC,ANOMALY_SVC,OBS_SVC,ACT_SVC app
+    class OTEL_MAIN,OTEL_OBS,PROM_SVC,GRAF_SVC,ALERT_MGR,PG_PRIMARY,PG_REPLICA,REDIS_MASTER,REDIS_REPLICA data
+    class K8S_API,ETCD,PIPE_OP,LOAD_OP k8s
+    class ISTIO_GW,ISTIO_PILOT,ENVOY mesh
