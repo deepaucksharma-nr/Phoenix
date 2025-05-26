@@ -10,5 +10,7 @@ use (
 	./projects/pipeline-operator
 	./projects/platform-api
 	./projects/collector
+	./projects/phoenix-api
+	./projects/phoenix-agent
 	./tests/e2e
 )

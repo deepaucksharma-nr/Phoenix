@@ -1,0 +1,158 @@
+# Candidate OTel Collector Configuration with Top-K approximation
+# This configuration reduces cardinality by keeping only top contributors
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+      paging:
+      processes:
+  
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['localhost:8888']
+
+processors:
+  # Add experiment metadata
+  attributes:
+    actions:
+      - key: experiment_id
+        value: ${EXPERIMENT_ID}
+        action: insert
+      - key: variant
+        value: ${VARIANT}
+        action: insert
+      - key: host
+        value: ${HOST_ID}
+        action: insert
+  
+  # Group metrics by key attributes for cardinality analysis
+  groupbyattrs:
+    keys: 
+      - service.name
+      - http.route
+      - http.method
+      - http.status_code
+      - db.operation
+      - rpc.method
+  
+  # Filter out low-value metrics (adaptive filtering)
+  filter/adaptive:
+    error_mode: ignore
+    metrics:
+      metric:
+        # Drop metrics with very low values
+        - 'name == "process.cpu.utilization" and value < 0.01'
+        - 'name == "process.memory.usage" and value < 10485760'  # 10MB
+        - 'name == "http.server.duration" and attributes["http.status_code"] == "200" and value < 10'  # <10ms for successful requests
+      datapoint:
+        # Drop metrics from health check endpoints
+        - 'attributes["http.route"] == "/health" or attributes["http.route"] == "/metrics"'
+  
+  # Transform processor for advanced filtering and aggregation
+  transform:
+    error_mode: ignore
+    metric_statements:
+      - context: metric
+        statements:
+          # For high-cardinality metrics, keep only significant contributors
+          - |
+            set(attributes["cardinality_key"], Concat([attributes["service.name"], attributes["http.route"]], ":"))
+      
+      - context: datapoint
+        statements:
+          # Add percentile ranking for request duration metrics
+          - |
+            where name == "http.server.duration" 
+            set(attributes["duration_bucket"], 
+              case(value < 50, "fast",
+                   value < 200, "normal", 
+                   value < 1000, "slow",
+                   "very_slow"))
+  
+  # Tail sampling to keep only top contributors
+  # This approximates the top-k functionality
+  probabilistic_sampler:
+    sampling_percentage: 10
+    attribute_source: record
+  
+  # Aggregate similar metrics to reduce cardinality
+  metricstransform:
+    transforms:
+      - include: http.server.request_count
+        match_type: strict
+        action: update
+        operations:
+          - action: aggregate_labels
+            label_set: [service.name, http.method, http.status_code]
+            aggregation_type: sum
+      
+      - include: http.server.duration
+        match_type: strict  
+        action: update
+        operations:
+          - action: aggregate_label_values
+            label: http.route
+            aggregated_values: [/api/v1/users/*, /api/v1/orders/*]
+            new_value: /api/v1/*
+  
+  # Resource detection
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 2s
+    override: false
+  
+  # Batch for efficiency
+  batch:
+    timeout: ${BATCH_TIMEOUT}
+    send_batch_size: ${BATCH_SIZE}
+
+exporters:
+  # Push to Prometheus Pushgateway
+  prometheusremotewrite:
+    endpoint: ${METRICS_PUSHGATEWAY_URL}/metrics/job/phoenix-candidate/instance/${HOST_ID}
+    external_labels:
+      experiment_id: ${EXPERIMENT_ID}
+      variant: candidate
+    resource_to_telemetry_conversion:
+      enabled: true
+    add_metric_suffixes: false
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics, prometheus]
+      processors: 
+        - attributes
+        - resourcedetection
+        - groupbyattrs
+        - filter/adaptive
+        - transform
+        - metricstransform
+        - probabilistic_sampler
+        - batch
+      exporters: [prometheusremotewrite]
+  
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888

@@ -34,6 +34,9 @@ ALL_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -ex
 GO_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/go.mod \; -print 2>/dev/null | xargs -n1 basename)
 NODE_PROJECTS := $(shell find $(PROJECTS_DIR) -mindepth 1 -maxdepth 1 -type d -exec test -f {}/package.json \; -print 2>/dev/null | xargs -n1 basename)
 
+# Lean Architecture Projects (prioritized)
+LEAN_PROJECTS := phoenix-api phoenix-agent
+
 # Include shared makefiles
 -include $(BUILD_DIR)/makefiles/*.mk
 

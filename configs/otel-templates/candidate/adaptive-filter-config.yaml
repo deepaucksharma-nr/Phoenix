@@ -1,0 +1,134 @@
+# Candidate OTel Collector Configuration with Adaptive Filtering
+# This configuration dynamically filters metrics based on thresholds
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+
+processors:
+  # Add experiment metadata
+  attributes:
+    actions:
+      - key: experiment_id
+        value: ${EXPERIMENT_ID}
+        action: insert
+      - key: variant
+        value: ${VARIANT}
+        action: insert
+      - key: host
+        value: ${HOST_ID}
+        action: insert
+  
+  # Adaptive filtering based on metric values and patterns
+  filter/adaptive:
+    error_mode: ignore
+    metrics:
+      metric:
+        # CPU filtering - drop if below threshold
+        - 'name == "system.cpu.utilization" and value < ${CPU_THRESHOLD:0.05}'
+        - 'name == "process.cpu.utilization" and value < ${CPU_THRESHOLD:0.05}'
+        
+        # Memory filtering - drop if below threshold  
+        - 'name == "system.memory.utilization" and value < ${MEMORY_THRESHOLD:0.10}'
+        - 'name == "process.memory.usage" and value < ${MEMORY_BYTES_THRESHOLD:52428800}'  # 50MB default
+        
+        # Network filtering - drop if no significant traffic
+        - 'name == "system.network.io" and value < ${NETWORK_THRESHOLD:1024}'  # 1KB/s
+        
+        # Disk filtering - drop if minimal I/O
+        - 'name == "system.disk.io" and value < ${DISK_THRESHOLD:1024}'  # 1KB/s
+        
+      datapoint:
+        # Filter by attribute patterns
+        - 'attributes["service.name"] == "health-checker"'
+        - 'attributes["http.route"] =~ "/(health|ready|alive)"'
+        - 'attributes["db.statement"] =~ "SELECT 1"'  # Health check queries
+  
+  # Smart sampling based on metric importance
+  transform:
+    error_mode: ignore
+    metric_statements:
+      - context: metric
+        statements:
+          # Mark high-priority metrics that should always be kept
+          - |
+            where name =~ ".*error.*" or name =~ ".*fail.*"
+            set(attributes["priority"], "high")
+          
+          # Mark metrics with anomalies
+          - |
+            where name == "http.server.duration" and value > 1000
+            set(attributes["priority"], "high")
+            
+      - context: datapoint
+        statements:
+          # Calculate rolling averages for adaptive thresholds
+          - |
+            where attributes["priority"] != "high"
+            set(attributes["keep_probability"], 
+              case(value > attributes["p99"], 1.0,
+                   value > attributes["p95"], 0.8,
+                   value > attributes["p90"], 0.5,
+                   0.1))
+  
+  # Probabilistic sampling based on calculated probabilities
+  probabilistic_sampler:
+    sampling_percentage: 20
+    attribute_source: record
+    from_attribute: keep_probability
+  
+  # Resource detection
+  resourcedetection:
+    detectors: [env, system, docker]
+    timeout: 2s
+  
+  # Batch for efficiency
+  batch:
+    timeout: ${BATCH_TIMEOUT}
+    send_batch_size: ${BATCH_SIZE}
+
+exporters:
+  # Push to Prometheus Pushgateway
+  prometheusremotewrite:
+    endpoint: ${METRICS_PUSHGATEWAY_URL}/metrics/job/phoenix-adaptive/instance/${HOST_ID}
+    external_labels:
+      experiment_id: ${EXPERIMENT_ID}
+      variant: candidate
+      filter_type: adaptive
+    resource_to_telemetry_conversion:
+      enabled: true
+    add_metric_suffixes: false
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics]
+      processors: 
+        - attributes
+        - resourcedetection
+        - filter/adaptive
+        - transform
+        - probabilistic_sampler
+        - batch
+      exporters: [prometheusremotewrite]
+  
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888

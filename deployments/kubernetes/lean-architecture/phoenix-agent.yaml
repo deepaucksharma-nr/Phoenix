@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phoenix-agent-config
+  namespace: phoenix-system
+data:
+  PHOENIX_API_URL: "http://phoenix-api:8080"
+  POLL_INTERVAL: "15s"
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  CONFIG_DIR: "/etc/phoenix-agent"
+  PUSHGATEWAY_URL: "http://prometheus-pushgateway:9091"
+  OTEL_ENDPOINT: "http://localhost:4318"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: phoenix-agent
+  namespace: phoenix-system
+  labels:
+    app: phoenix-agent
+    component: data-plane
+spec:
+  selector:
+    matchLabels:
+      app: phoenix-agent
+  template:
+    metadata:
+      labels:
+        app: phoenix-agent
+        component: data-plane
+    spec:
+      serviceAccountName: phoenix-agent
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: phoenix-agent
+        image: phoenix/agent:latest
+        imagePullPolicy: Always
+        env:
+        - name: PHOENIX_HOST_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        envFrom:
+        - configMapRef:
+            name: phoenix-agent-config
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - SYS_PTRACE
+            - NET_ADMIN
+        volumeMounts:
+        - name: dockersock
+          mountPath: /var/run/docker.sock
+        - name: cgroup
+          mountPath: /sys/fs/cgroup
+          readOnly: true
+        - name: config
+          mountPath: /etc/phoenix-agent
+        - name: otel-collector-contrib
+          mountPath: /usr/local/bin/otelcol-contrib
+          subPath: otelcol-contrib
+      initContainers:
+      - name: download-otel-collector
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          curl -L https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v0.95.0/otelcol-contrib_0.95.0_linux_amd64.tar.gz | \
+          tar -xz -C /tmp && \
+          mv /tmp/otelcol-contrib /otel-bin/otelcol-contrib && \
+          chmod +x /otel-bin/otelcol-contrib
+        volumeMounts:
+        - name: otel-collector-contrib
+          mountPath: /otel-bin
+      volumes:
+      - name: dockersock
+        hostPath:
+          path: /var/run/docker.sock
+          type: Socket
+      - name: cgroup
+        hostPath:
+          path: /sys/fs/cgroup
+      - name: config
+        emptyDir: {}
+      - name: otel-collector-contrib
+        emptyDir: {}
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      priorityClassName: system-node-critical
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: phoenix-agent
+  namespace: phoenix-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: phoenix-agent
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "pods", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["nodes/metrics", "nodes/stats"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: phoenix-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: phoenix-agent
+subjects:
+- kind: ServiceAccount
+  name: phoenix-agent
+  namespace: phoenix-system

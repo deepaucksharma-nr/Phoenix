@@ -1,0 +1,173 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: phoenix-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: phoenix-api-config
+  namespace: phoenix-system
+data:
+  PORT: "8080"
+  ENVIRONMENT: "production"
+  PROMETHEUS_URL: "http://prometheus:9090"
+  PUSHGATEWAY_URL: "http://prometheus-pushgateway:9091"
+  FEATURE_LEAN_AGENTS: "true"
+  FEATURE_K8S_MODE: "false"
+  FEATURE_PUSHGATEWAY: "true"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: phoenix-api-secrets
+  namespace: phoenix-system
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://phoenix:phoenix@postgres:5432/phoenix?sslmode=require"
+  JWT_SECRET: "change-me-in-production"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: phoenix-api
+  namespace: phoenix-system
+  labels:
+    app: phoenix-api
+    component: control-plane
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: phoenix-api
+  template:
+    metadata:
+      labels:
+        app: phoenix-api
+        component: control-plane
+    spec:
+      serviceAccountName: phoenix-api
+      containers:
+      - name: phoenix-api
+        image: phoenix/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        envFrom:
+        - configMapRef:
+            name: phoenix-api-config
+        - secretRef:
+            name: phoenix-api-secrets
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        volumeMounts:
+        - name: migrations
+          mountPath: /app/migrations
+          readOnly: true
+      volumes:
+      - name: migrations
+        configMap:
+          name: phoenix-migrations
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: phoenix-api
+  namespace: phoenix-system
+  labels:
+    app: phoenix-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: phoenix-api
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: phoenix-api
+  namespace: phoenix-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: phoenix-api
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["nodes", "pods"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: phoenix-api
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: phoenix-api
+subjects:
+- kind: ServiceAccount
+  name: phoenix-api
+  namespace: phoenix-system
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: phoenix-api
+  namespace: phoenix-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: phoenix-api
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: phoenix-api
+  namespace: phoenix-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: phoenix-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
