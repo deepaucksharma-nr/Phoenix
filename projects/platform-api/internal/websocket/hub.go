@@ -61,9 +61,9 @@ type Hub struct {
 func NewHub(logger *zap.Logger) *Hub {
 	return &Hub{
 		clients:    make(map[string]*Client),
-		broadcast:  make(chan *Message, 256),
-		register:   make(chan *Client, 16),
-		unregister: make(chan *Client, 16),
+		Broadcast:  make(chan *Message, 256),
+		Register:   make(chan *Client, 16),
+		Unregister: make(chan *Client, 16),
 		topics:     make(map[string]map[string]*Client),
 		logger:     logger,
 	}
