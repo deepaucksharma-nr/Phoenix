@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/client"
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/output"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

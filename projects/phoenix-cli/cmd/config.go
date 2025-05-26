@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/phoenix-vnext/platform/cmd/phoenix-cli/internal/config"
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
