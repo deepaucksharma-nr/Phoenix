@@ -19,12 +19,14 @@ import {
   Email as EmailIcon,
   Lock as LockIcon,
 } from '@mui/icons-material'
-import { useAuthStore } from '../store/useAuthStore'
+import { useAppSelector, useAppDispatch } from '@hooks/redux'
+import { login, setError } from '@store/slices/authSlice'
 
 export const Login: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, loading, error, clearError, isAuthenticated } = useAuthStore()
+  const dispatch = useAppDispatch()
+  const { isAuthenticated, loading, error } = useAppSelector(state => state.auth)
 
   const [formData, setFormData] = useState({
     email: '',
