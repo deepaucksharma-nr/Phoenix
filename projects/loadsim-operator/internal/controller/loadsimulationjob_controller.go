@@ -83,7 +83,7 @@ func (r *LoadSimulationJobReconciler) handlePending(ctx context.Context, loadSim
 
 	// Create the Kubernetes Job
 	job := r.createJob(loadSimJob)
-	
+
 	// Set LoadSimulationJob as the owner
 	if err := controllerutil.SetControllerReference(loadSimJob, job, r.Scheme); err != nil {
 		return ctrl.Result{}, err
@@ -115,7 +115,7 @@ func (r *LoadSimulationJobReconciler) handlePending(ctx context.Context, loadSim
 	loadSimJob.Status.StartTime = &metav1.Time{Time: time.Now()}
 	loadSimJob.Status.ActiveProcesses = 0
 	loadSimJob.Status.Message = "Load simulation started"
-	
+
 	if err := r.Status().Update(ctx, loadSimJob); err != nil {
 		r.Logger.Error("failed to update status", zap.Error(err))
 		return ctrl.Result{}, err
@@ -165,7 +165,13 @@ func (r *LoadSimulationJobReconciler) handleRunning(ctx context.Context, loadSim
 		// Still running, check duration
 		if loadSimJob.Status.StartTime != nil {
 			duration, err := parseDuration(loadSimJob.Spec.Duration)
-			if err == nil {
+			if err != nil {
+				r.Logger.Error("invalid duration value", zap.Error(err))
+				loadSimJob.Status.Phase = phoenixv1alpha1.LoadSimPhasesFailed
+				loadSimJob.Status.Message = "Invalid duration"
+				loadSimJob.Status.CompletionTime = &metav1.Time{Time: time.Now()}
+				loadSimJob.Status.ActiveProcesses = 0
+			} else {
 				elapsed := time.Since(loadSimJob.Status.StartTime.Time)
 				if elapsed > duration {
 					// Duration exceeded, stop the job
@@ -224,7 +230,7 @@ func (r *LoadSimulationJobReconciler) handleDeletion(ctx context.Context, loadSi
 // createJob creates a Kubernetes Job for the load simulation
 func (r *LoadSimulationJobReconciler) createJob(loadSimJob *phoenixv1alpha1.LoadSimulationJob) *batchv1.Job {
 	jobName := fmt.Sprintf("loadsim-%s", loadSimJob.Name)
-	
+
 	// Build environment variables
 	envVars := []corev1.EnvVar{
 		{
@@ -260,18 +266,18 @@ func (r *LoadSimulationJobReconciler) createJob(loadSimJob *phoenixv1alpha1.Load
 			Name:      jobName,
 			Namespace: loadSimJob.Namespace,
 			Labels: map[string]string{
-				"app":                   "phoenix-loadsim",
-				"loadsimulationjob":     loadSimJob.Name,
-				"experiment":            loadSimJob.Spec.ExperimentID,
+				"app":               "phoenix-loadsim",
+				"loadsimulationjob": loadSimJob.Name,
+				"experiment":        loadSimJob.Spec.ExperimentID,
 			},
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":                   "phoenix-loadsim",
-						"loadsimulationjob":     loadSimJob.Name,
-						"experiment":            loadSimJob.Spec.ExperimentID,
+						"app":               "phoenix-loadsim",
+						"loadsimulationjob": loadSimJob.Name,
+						"experiment":        loadSimJob.Spec.ExperimentID,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -304,6 +310,9 @@ func (r *LoadSimulationJobReconciler) createJob(loadSimJob *phoenixv1alpha1.Load
 
 // parseDuration parses duration string like "1h" or "30m"
 func parseDuration(durationStr string) (time.Duration, error) {
+	if durationStr == "" {
+		return 0, fmt.Errorf("duration string is empty")
+	}
 	return time.ParseDuration(durationStr)
 }
 
