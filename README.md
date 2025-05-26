@@ -228,7 +228,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 🏷️ Version
 
-Current version: v2.0.0 (Post-migration monorepo structure)
+Current version: 0.1.0 (Post-migration monorepo structure)
 
 ---
 
