@@ -180,3 +180,88 @@ function Test-E2ETests {
         }
     }
 }
+
+# Function to check required services for E2E
+function Test-RequiredServices {
+    Write-Warning "`nChecking required services configuration..."
+    
+    # Check docker-compose.yml
+    if (Test-Path "docker-compose.yml") {
+        Write-Success "✓ Found docker-compose.yml"
+        $dockerCompose = Get-Content "docker-compose.yml" -Raw
+        if ($dockerCompose -match "postgres") {
+            Write-Success "  ✓ PostgreSQL service configured"
+        }
+        else {
+            Write-Warning "  ⚠ PostgreSQL service not found in docker-compose"
+        }
+    }
+    else {
+        Write-Warning "⚠ docker-compose.yml not found"
+    }
+    
+    # Check for service configurations
+    $services = @(
+        "platform-api",
+        "controller",
+        "pipeline-operator"
+    )
+    
+    foreach ($service in $services) {
+        if (Test-Path "projects\$service") {
+            Write-Success "✓ Found service: $service"
+        }
+        else {
+            Write-Warning "⚠ Service directory not found: $service"
+        }
+    }
+}
+
+# Function to validate E2E test dependencies
+function Test-E2EDependencies {
+    Write-Warning "`nValidating E2E test dependencies..."
+    
+    # Required Go packages for E2E tests
+    $requiredPackages = @(
+        "github.com/stretchr/testify",
+        "github.com/google/uuid",
+        "google.golang.org/grpc",
+        "k8s.io/client-go"
+    )
+    
+    # Get all go.mod files
+    $goModFiles = @()
+    if (Test-Path "pkg\go.mod") {
+        $goModFiles += Get-Item "pkg\go.mod"
+    }
+    $projectMods = Get-ChildItem -Path "projects" -Filter "go.mod" -Recurse -ErrorAction SilentlyContinue
+    if ($projectMods) {
+        $goModFiles += $projectMods
+    }
+    
+    $foundPackages = 0
+    foreach ($pkg in $requiredPackages) {
+        $found = $false
+        foreach ($modFile in $goModFiles) {
+            if ($modFile -and (Get-Content $modFile.FullName -Raw) -match [regex]::Escape($pkg)) {
+                $found = $true
+                break
+            }
+        }
+        
+        if ($found) {
+            Write-Success "✓ Found dependency: $pkg"
+            $foundPackages++
+        }
+        else {
+            Write-Warning "⚠ Dependency not found in go.mod files: $pkg"
+        }
+    }
+    
+    if ($foundPackages -eq $requiredPackages.Count) {
+        Write-Success "✓ All E2E test dependencies found"
+    }
+    else {
+        Write-Warning "⚠ Some E2E test dependencies might be missing"
+    }
+}
