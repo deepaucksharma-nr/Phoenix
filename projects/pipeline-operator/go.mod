@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/projects/pipeline-operator
+module github.com/phoenix/platform/projects/pipeline-operator
 
 go 1.24.0
 

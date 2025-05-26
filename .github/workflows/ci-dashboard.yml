@@ -1,0 +1,30 @@
+name: CI - Dashboard
+
+on:
+  push:
+    paths:
+      - 'projects/dashboard/**'
+      - '.github/workflows/ci-dashboard.yml'
+  pull_request:
+    paths:
+      - 'projects/dashboard/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: projects/dashboard/package-lock.json
+      - name: Install dependencies
+        working-directory: projects/dashboard
+        run: npm ci
+      - name: Run tests
+        working-directory: projects/dashboard
+        run: npm test
+      - name: Build
+        working-directory: projects/dashboard
+        run: npm run build 

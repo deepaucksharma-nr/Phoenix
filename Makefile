@@ -256,5 +256,20 @@ tools: ## Install development tools
 	@$(TOOLS_DIR)/install-tools.sh
 	@echo -e "$(GREEN)✓ Development tools installed$(NC)"
 
+##@ Dashboard
+
+build-dashboard: ## Build dashboard
+	@echo -e "$(CYAN)Building dashboard...$(NC)"
+	@cd projects/dashboard && npm install && npm run build
+	@echo -e "$(GREEN)✓ Dashboard built$(NC)"
+
+run-dashboard: ## Run dashboard in development mode
+	@echo -e "$(CYAN)Starting dashboard...$(NC)"
+	@cd projects/dashboard && npm run dev
+
+test-dashboard: ## Test dashboard
+	@echo -e "$(CYAN)Testing dashboard...$(NC)"
+	@cd projects/dashboard && npm test
+
 # Project-specific targets
 $(foreach project,$(ALL_PROJECTS),$(eval $(call PROJECT_TARGET,$(project))))

@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/pkg
+module github.com/phoenix/platform/pkg
 
 go 1.24.0
 
