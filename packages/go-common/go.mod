@@ -1,4 +1,4 @@
-module github.com/phoenix-vnext/platform/packages/go-common
+module github.com/phoenix/platform/packages/go-common
 
 go 1.21
 
