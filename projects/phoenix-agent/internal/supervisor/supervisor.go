@@ -3,7 +3,9 @@ package supervisor
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/phoenix/platform/projects/phoenix-agent/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-agent/internal/poller"
@@ -37,6 +39,8 @@ func (s *Supervisor) ExecuteTask(ctx context.Context, task *poller.Task) (map[st
 	switch task.Type {
 	case "collector":
 		return s.executeCollectorTask(ctx, task)
+	case "deployment":
+		return s.executePipelineDeploymentTask(ctx, task)
 	case "loadsim":
 		return s.executeLoadSimTask(ctx, task)
 	case "command":
@@ -146,6 +150,116 @@ func (s *Supervisor) executeLoadSimTask(ctx context.Context, task *poller.Task) 
 		
 	default:
 		return nil, fmt.Errorf("unknown loadsim action: %s", task.Action)
+	}
+}
+
+func (s *Supervisor) executePipelineDeploymentTask(ctx context.Context, task *poller.Task) (map[string]interface{}, error) {
+	config := task.Config
+	
+	deploymentID, ok := config["deployment_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing deployment_id in config")
+	}
+	
+	deploymentName, ok := config["deployment_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("missing deployment_name in config")
+	}
+	
+	pipelineConfig, ok := config["pipeline_config"].(string)
+	if !ok || pipelineConfig == "" {
+		return nil, fmt.Errorf("missing or empty pipeline_config in config")
+	}
+	
+	switch task.Action {
+	case "deploy":
+		// Create a unique ID for this collector instance
+		collectorID := fmt.Sprintf("dep-%s-%s", deploymentID, s.config.HostID)
+		
+		// Write pipeline config to a temporary file
+		configPath := fmt.Sprintf("/tmp/pipeline-%s.yaml", collectorID)
+		if err := os.WriteFile(configPath, []byte(pipelineConfig), 0644); err != nil {
+			return nil, fmt.Errorf("failed to write pipeline config: %w", err)
+		}
+		
+		// Use collector manager to deploy the pipeline
+		vars := make(map[string]string)
+		if params, ok := config["parameters"].(map[string]interface{}); ok {
+			for k, v := range params {
+				vars[k] = fmt.Sprintf("%v", v)
+			}
+		}
+		
+		// Start collector with the pipeline config
+		if err := s.collectorManager.Start(collectorID, deploymentName, "file://"+configPath, vars); err != nil {
+			os.Remove(configPath) // Clean up temp file
+			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
+		}
+		
+		// Clean up temp file after a delay (give collector time to read it)
+		go func() {
+			time.Sleep(5 * time.Second)
+			os.Remove(configPath)
+		}()
+		
+		return map[string]interface{}{
+			"status":        "deployed",
+			"deployment_id": deploymentID,
+			"collector_id":  collectorID,
+			"pid":           s.collectorManager.GetProcessInfo(collectorID),
+		}, nil
+		
+	case "undeploy":
+		collectorID := fmt.Sprintf("dep-%s-%s", deploymentID, s.config.HostID)
+		
+		if err := s.collectorManager.Stop(collectorID); err != nil {
+			return nil, fmt.Errorf("failed to undeploy pipeline: %w", err)
+		}
+		
+		return map[string]interface{}{
+			"status":        "undeployed",
+			"deployment_id": deploymentID,
+		}, nil
+		
+	case "update":
+		// Stop and redeploy with new config
+		collectorID := fmt.Sprintf("dep-%s-%s", deploymentID, s.config.HostID)
+		s.collectorManager.Stop(collectorID)
+		
+		// Write new pipeline config
+		configPath := fmt.Sprintf("/tmp/pipeline-%s.yaml", collectorID)
+		if err := os.WriteFile(configPath, []byte(pipelineConfig), 0644); err != nil {
+			return nil, fmt.Errorf("failed to write pipeline config: %w", err)
+		}
+		
+		// Restart with new config
+		vars := make(map[string]string)
+		if params, ok := config["parameters"].(map[string]interface{}); ok {
+			for k, v := range params {
+				vars[k] = fmt.Sprintf("%v", v)
+			}
+		}
+		
+		if err := s.collectorManager.Start(collectorID, deploymentName, "file://"+configPath, vars); err != nil {
+			os.Remove(configPath)
+			return nil, fmt.Errorf("failed to update pipeline: %w", err)
+		}
+		
+		// Clean up temp file after a delay
+		go func() {
+			time.Sleep(5 * time.Second)
+			os.Remove(configPath)
+		}()
+		
+		return map[string]interface{}{
+			"status":        "updated",
+			"deployment_id": deploymentID,
+			"collector_id":  collectorID,
+			"pid":           s.collectorManager.GetProcessInfo(collectorID),
+		}, nil
+		
+	default:
+		return nil, fmt.Errorf("unknown deployment action: %s", task.Action)
 	}
 }
 

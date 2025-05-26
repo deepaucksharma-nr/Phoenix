@@ -42,13 +42,6 @@ services:
       - ./apps/control-actuator-go:/app:cached  # Source code mount for hot reload
       - ./configs/control:/configs/control
 
-  # Anomaly Detector - Development Settings
-  anomaly-detector:
-    environment:
-      - LOG_LEVEL=debug
-      - CHECK_INTERVAL_SECONDS=30  # Faster anomaly checks
-    volumes:
-      - ./apps/anomaly-detector:/app:cached
 
   # Benchmark Controller - Development Settings
   benchmark-controller:
@@ -95,13 +88,6 @@ services:
       - SYNTHETIC_METRIC_EMIT_INTERVAL_S=10  # More frequent for faster feedback
       - LOG_LEVEL=debug
 
-  # Analytics Service - Development Settings (if present)
-  analytics:
-    environment:
-      - LOG_LEVEL=debug
-    volumes:
-      - ./services/analytics:/app:cached
-    profiles: []  # Enable in dev
 
 # Development volumes with local driver
 volumes:

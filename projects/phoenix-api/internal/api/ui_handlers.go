@@ -183,19 +183,6 @@ func (s *Server) handleCreateExperimentWizard(w http.ResponseWriter, r *http.Req
 	respondJSON(w, http.StatusCreated, experiment)
 }
 
-// handleGetPipelineTemplates returns available pipeline templates
-func (s *Server) handleGetPipelineTemplates(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	
-	templates, err := s.store.GetPipelineTemplates(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get pipeline templates")
-		respondError(w, http.StatusInternalServerError, "Failed to get templates")
-		return
-	}
-	
-	respondJSON(w, http.StatusOK, templates)
-}
 
 // handlePreviewPipelineImpact calculates impact without deploying
 func (s *Server) handlePreviewPipelineImpact(w http.ResponseWriter, r *http.Request) {

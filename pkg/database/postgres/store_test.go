@@ -32,7 +32,7 @@ func TestNewPostgresStore(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			store, err := NewPostgresStore(tt.dbURL)
-			
+
 			if tt.shouldErr {
 				assert.Error(t, err)
 				assert.Nil(t, store)
@@ -70,13 +70,10 @@ func TestExperimentCRUD(t *testing.T) {
 			Description:       "Test Description",
 			BaselinePipeline:  "baseline-v1",
 			CandidatePipeline: "candidate-v1",
-			Status:            models.ExperimentStatusPending,
-			TargetNodes: map[string]string{
-				"node1": "active",
-				"node2": "active",
-			},
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			Status:            models.StatusPending,
+			TargetNodes:       []string{"node1", "node2"},
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 
 		// Create experiment
@@ -103,12 +100,10 @@ func TestExperimentCRUD(t *testing.T) {
 			Description:       "Test Description 2",
 			BaselinePipeline:  "baseline-v1",
 			CandidatePipeline: "candidate-v1",
-			Status:            models.ExperimentStatusPending,
-			TargetNodes: map[string]string{
-				"node1": "active",
-			},
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			Status:            models.StatusPending,
+			TargetNodes:       []string{"node1"},
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 
 		// Create experiment
@@ -116,7 +111,7 @@ func TestExperimentCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		// Update experiment
-		exp.Status = models.ExperimentStatusRunning
+		exp.Status = models.StatusRunning
 		exp.Description = "Updated Description"
 		startTime := time.Now()
 		exp.StartedAt = &startTime
@@ -127,7 +122,7 @@ func TestExperimentCRUD(t *testing.T) {
 		// Get updated experiment
 		retrieved, err := store.GetExperiment(ctx, exp.ID)
 		require.NoError(t, err)
-		assert.Equal(t, models.ExperimentStatusRunning, retrieved.Status)
+		assert.Equal(t, models.StatusRunning, retrieved.Status)
 		assert.Equal(t, "Updated Description", retrieved.Description)
 		assert.NotNil(t, retrieved.StartedAt)
 		assert.True(t, retrieved.UpdatedAt.After(retrieved.CreatedAt))
@@ -141,8 +136,8 @@ func TestExperimentCRUD(t *testing.T) {
 				Name:              "List Test 1",
 				BaselinePipeline:  "baseline-v1",
 				CandidatePipeline: "candidate-v1",
-				Status:            models.ExperimentStatusPending,
-				TargetNodes:       map[string]string{"node1": "active"},
+				Status:            models.StatusPending,
+				TargetNodes:       []string{"node1"},
 				CreatedAt:         time.Now().Add(-2 * time.Hour),
 				UpdatedAt:         time.Now().Add(-2 * time.Hour),
 			},
@@ -151,8 +146,8 @@ func TestExperimentCRUD(t *testing.T) {
 				Name:              "List Test 2",
 				BaselinePipeline:  "baseline-v1",
 				CandidatePipeline: "candidate-v1",
-				Status:            models.ExperimentStatusRunning,
-				TargetNodes:       map[string]string{"node2": "active"},
+				Status:            models.StatusRunning,
+				TargetNodes:       []string{"node2"},
 				CreatedAt:         time.Now().Add(-1 * time.Hour),
 				UpdatedAt:         time.Now().Add(-1 * time.Hour),
 			},
@@ -161,8 +156,8 @@ func TestExperimentCRUD(t *testing.T) {
 				Name:              "List Test 3",
 				BaselinePipeline:  "baseline-v1",
 				CandidatePipeline: "candidate-v1",
-				Status:            models.ExperimentStatusCompleted,
-				TargetNodes:       map[string]string{"node3": "active"},
+				Status:            models.StatusCompleted,
+				TargetNodes:       []string{"node3"},
 				CreatedAt:         time.Now(),
 				UpdatedAt:         time.Now(),
 			},
@@ -177,10 +172,10 @@ func TestExperimentCRUD(t *testing.T) {
 		// List experiments
 		retrieved, err := store.ListExperiments(ctx, 10, 0)
 		require.NoError(t, err)
-		
+
 		// Should return experiments in reverse chronological order (newest first)
 		assert.GreaterOrEqual(t, len(retrieved), 3)
-		
+
 		// Find our test experiments
 		var foundExps []*models.Experiment
 		for _, exp := range retrieved {
@@ -188,17 +183,17 @@ func TestExperimentCRUD(t *testing.T) {
 				foundExps = append(foundExps, exp)
 			}
 		}
-		
+
 		assert.Len(t, foundExps, 3)
-		
+
 		// Check pagination
 		page1, err := store.ListExperiments(ctx, 2, 0)
 		require.NoError(t, err)
 		assert.LessOrEqual(t, len(page1), 2)
-		
+
 		page2, err := store.ListExperiments(ctx, 2, 2)
 		require.NoError(t, err)
-		
+
 		// Ensure different pages return different results
 		if len(page1) > 0 && len(page2) > 0 {
 			assert.NotEqual(t, page1[0].ID, page2[0].ID)
@@ -213,28 +208,23 @@ func TestExperimentCRUD(t *testing.T) {
 }
 
 func TestJSONSerialization(t *testing.T) {
-	// Test that TargetNodes map serializes/deserializes correctly
-	targetNodes := map[string]string{
-		"node1": "active",
-		"node2": "standby",
-		"node3": "active",
-	}
+	// Test that TargetNodes slice serializes/deserializes correctly
+	targetNodes := []string{"node1", "node2", "node3"}
 
 	exp := &models.Experiment{
 		ID:                "json-test-1",
 		Name:              "JSON Test",
 		BaselinePipeline:  "baseline-v1",
 		CandidatePipeline: "candidate-v1",
-		Status:            models.ExperimentStatusPending,
+		Status:            models.StatusPending,
 		TargetNodes:       targetNodes,
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
 	}
 
 	// This test validates our JSON marshaling logic
-	// In a real test with database, we'd create and retrieve the experiment
 	assert.Equal(t, 3, len(exp.TargetNodes))
-	assert.Equal(t, "active", exp.TargetNodes["node1"])
-	assert.Equal(t, "standby", exp.TargetNodes["node2"])
-	assert.Equal(t, "active", exp.TargetNodes["node3"])
+	assert.Contains(t, exp.TargetNodes, "node1")
+	assert.Contains(t, exp.TargetNodes, "node2")
+	assert.Contains(t, exp.TargetNodes, "node3")
 }

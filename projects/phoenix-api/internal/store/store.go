@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/phoenix/platform/pkg/common/models"
 	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
@@ -33,6 +34,8 @@ type Store interface {
 	GetPendingTasksForHost(ctx context.Context, hostID string) ([]*internalModels.Task, error)
 	GetTasksByExperiment(ctx context.Context, experimentID string) ([]*internalModels.Task, error)
 	GetTaskStats(ctx context.Context) (map[string]interface{}, error)
+	GetStaleTasks(ctx context.Context, threshold time.Duration) ([]*internalModels.Task, error)
+	DeleteOldTasks(ctx context.Context, before time.Time) error
 
 	// Agent operations
 	UpsertAgent(ctx context.Context, agent *internalModels.AgentStatus) error

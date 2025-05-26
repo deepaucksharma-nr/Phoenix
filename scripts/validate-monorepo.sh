@@ -78,15 +78,15 @@ check "[ '$VERSION_FILE' = '$README_VERSION' ]" "Version in README ($README_VERS
 echo ""
 echo -e "${BLUE}5. Checking service implementations...${NC}"
 # Check for services mentioned in README
-EXPECTED_SERVICES=("platform-api" "controller" "benchmark" "pipeline-operator" "loadsim-operator" "phoenix-cli")
+EXPECTED_SERVICES=("phoenix-api" "phoenix-agent" "phoenix-cli" "dashboard")
 for service in "${EXPECTED_SERVICES[@]}"; do
     check "[ -d projects/$service ]" "Service $service exists"
 done
 
-# Check for missing services mentioned in docs
-MISSING_SERVICES=("analytics" "anomaly-detector" "generator" "api")
-for service in "${MISSING_SERVICES[@]}"; do
-    check "[ -d projects/$service ]" "Service $service exists" "warning"
+# Check for core services
+CORE_SERVICES=("phoenix-api" "phoenix-agent" "phoenix-cli")
+for service in "${CORE_SERVICES[@]}"; do
+    check "[ -d projects/$service ]" "Core service $service exists"
 done
 
 echo ""

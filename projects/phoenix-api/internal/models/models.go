@@ -6,34 +6,35 @@ import (
 
 // Experiment represents an experiment in the system
 type Experiment struct {
-	ID          string             `json:"id" db:"id"`
-	Name        string             `json:"name" db:"name"`
-	Description string             `json:"description" db:"description"`
-	Phase       string             `json:"phase" db:"phase"`
-	Config      ExperimentConfig   `json:"config" db:"config"`
-	Status      ExperimentStatus   `json:"status" db:"status"`
+	ID          string                 `json:"id" db:"id"`
+	Name        string                 `json:"name" db:"name"`
+	Description string                 `json:"description" db:"description"`
+	Phase       string                 `json:"phase" db:"phase"`
+	Config      ExperimentConfig       `json:"config" db:"config"`
+	Status      ExperimentStatus       `json:"status" db:"status"`
 	Metadata    map[string]interface{} `json:"metadata" db:"metadata"`
-	CreatedAt   time.Time          `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time          `json:"updated_at" db:"updated_at"`
+	CreatedAt   time.Time              `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time              `json:"updated_at" db:"updated_at"`
 }
 
 // ExperimentConfig contains the configuration for an experiment
 type ExperimentConfig struct {
-	TargetHosts        []string          `json:"target_hosts"`
-	BaselineTemplate   PipelineTemplate  `json:"baseline_template"`
-	CandidateTemplate  PipelineTemplate  `json:"candidate_template"`
-	LoadProfile        string            `json:"load_profile,omitempty"`
-	Duration           time.Duration     `json:"duration"`
-	WarmupDuration     time.Duration     `json:"warmup_duration"`
+	TargetHosts       []string         `json:"target_hosts"`
+	BaselineTemplate  PipelineTemplate `json:"baseline_template"`
+	CandidateTemplate PipelineTemplate `json:"candidate_template"`
+	LoadProfile       string           `json:"load_profile,omitempty"`
+	Duration          time.Duration    `json:"duration"`
+	WarmupDuration    time.Duration    `json:"warmup_duration"`
+	CriticalProcesses []string         `json:"critical_processes,omitempty"`
 }
 
 // ExperimentStatus represents the current status of an experiment
 type ExperimentStatus struct {
-	StartTime      *time.Time             `json:"start_time,omitempty"`
-	EndTime        *time.Time             `json:"end_time,omitempty"`
-	KPIs           map[string]float64     `json:"kpis,omitempty"`
-	Error          string                 `json:"error,omitempty"`
-	ActiveHosts    int                    `json:"active_hosts"`
+	StartTime   *time.Time         `json:"start_time,omitempty"`
+	EndTime     *time.Time         `json:"end_time,omitempty"`
+	KPIs        map[string]float64 `json:"kpis,omitempty"`
+	Error       string             `json:"error,omitempty"`
+	ActiveHosts int                `json:"active_hosts"`
 }
 
 // ExperimentEvent represents an event in the experiment lifecycle
@@ -99,12 +100,12 @@ type AgentStatus struct {
 
 // AgentHeartbeat represents a heartbeat from an agent
 type AgentHeartbeat struct {
-	HostID        string                 `json:"host_id"`
-	AgentVersion  string                 `json:"agent_version"`
-	Status        string                 `json:"status"`
-	ActiveTasks   []string               `json:"active_tasks"`
-	ResourceUsage ResourceUsage          `json:"resource_usage"`
-	LastHeartbeat time.Time              `json:"-"`
+	HostID        string        `json:"host_id"`
+	AgentVersion  string        `json:"agent_version"`
+	Status        string        `json:"status"`
+	ActiveTasks   []string      `json:"active_tasks"`
+	ResourceUsage ResourceUsage `json:"resource_usage"`
+	LastHeartbeat time.Time     `json:"-"`
 }
 
 // ResourceUsage represents resource usage metrics
@@ -135,15 +136,15 @@ type ActivePipeline struct {
 
 // MetricCache represents cached metrics for faster queries
 type MetricCache struct {
-	ID           int                    `json:"id" db:"id"`
-	ExperimentID string                 `json:"experiment_id" db:"experiment_id"`
-	Timestamp    time.Time              `json:"timestamp" db:"timestamp"`
-	MetricName   string                 `json:"metric_name" db:"metric_name"`
-	Variant      string                 `json:"variant" db:"variant"`
-	HostID       string                 `json:"host_id" db:"host_id"`
-	Value        float64                `json:"value" db:"value"`
-	Labels       map[string]string      `json:"labels" db:"labels"`
-	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
+	ID           int               `json:"id" db:"id"`
+	ExperimentID string            `json:"experiment_id" db:"experiment_id"`
+	Timestamp    time.Time         `json:"timestamp" db:"timestamp"`
+	MetricName   string            `json:"metric_name" db:"metric_name"`
+	Variant      string            `json:"variant" db:"variant"`
+	HostID       string            `json:"host_id" db:"host_id"`
+	Value        float64           `json:"value" db:"value"`
+	Labels       map[string]string `json:"labels" db:"labels"`
+	CreatedAt    time.Time         `json:"created_at" db:"created_at"`
 }
 
 // KPIResult represents the calculated KPIs for an experiment
@@ -167,6 +168,30 @@ type KPIResult struct {
 		Candidate float64 `json:"candidate"`
 		Reduction float64 `json:"reduction"`
 	} `json:"ingest_rate"`
-	DataAccuracy float64              `json:"data_accuracy"`
-	Errors       []string             `json:"errors,omitempty"`
+	DataAccuracy float64  `json:"data_accuracy"`
+	Errors       []string `json:"errors,omitempty"`
 }
+
+// Metric represents a generic metric
+type Metric struct {
+	ID           string                 `json:"id" db:"id"`
+	Name         string                 `json:"name" db:"name"`
+	Type         string                 `json:"type" db:"type"`
+	Value        float64                `json:"value" db:"value"`
+	Unit         string                 `json:"unit" db:"unit"`
+	Labels       map[string]string      `json:"labels" db:"labels"`
+	Timestamp    time.Time              `json:"timestamp" db:"timestamp"`
+	Source       string                 `json:"source" db:"source"`
+	Metadata     map[string]interface{} `json:"metadata" db:"metadata"`
+	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
+}
+
+// Experiment phase constants
+const (
+	PhasePending   = "pending"
+	PhaseRunning   = "running"
+	PhaseCompleted = "completed"
+	PhaseFailed    = "failed"
+	PhaseStopped   = "stopped"
+	PhaseDeleted   = "deleted"
+)

@@ -47,37 +47,35 @@ test_go_build() {
 
 # Test shared packages
 echo "=== Testing Shared Packages ==="
-test_go_build "go-common" "packages/go-common"
-test_go_build "contracts" "packages/contracts"
+test_go_build "pkg" "pkg"
 
 # Test core services
 echo -e "\n=== Testing Core Services ==="
-test_go_build "api" "services/api"
-test_go_build "controller" "services/controller"
-test_go_build "generator" "services/generator"
+test_go_build "phoenix-api" "projects/phoenix-api"
+test_go_build "phoenix-agent" "projects/phoenix-agent"
+test_go_build "phoenix-cli" "projects/phoenix-cli"
 
-# Test analytics services
-echo -e "\n=== Testing Analytics Services ==="
-for svc in analytics anomaly-detector benchmark validator; do
-    if [ -d "services/$svc" ]; then
-        test_go_build "$svc" "services/$svc"
+# Test additional projects
+echo -e "\n=== Testing Additional Projects ==="
+for project in projects/*/; do
+    if [ -f "$project/go.mod" ]; then
+        name=$(basename "$project")
+        if [[ "$name" != "phoenix-api" && "$name" != "phoenix-agent" && "$name" != "phoenix-cli" ]]; then
+            test_go_build "$name" "$project"
+        fi
     fi
 done
 
-# Test operators
-echo -e "\n=== Testing Operators ==="
-test_go_build "loadsim-operator" "operators/loadsim"
-test_go_build "pipeline-operator" "operators/pipeline"
 
 # Test Node.js services
 echo -e "\n=== Testing Node.js Services ==="
-if [ -f "services/dashboard/package.json" ]; then
+if [ -f "projects/dashboard/package.json" ]; then
     echo -n "Testing dashboard... "
-    if [ -f "services/dashboard/Dockerfile" ]; then
+    if [ -f "projects/dashboard/tsconfig.json" ]; then
         echo -e "${GREEN}✓ Valid${NC}"
         ((PASSED++))
     else
-        echo -e "${RED}✗ No Dockerfile${NC}"
+        echo -e "${RED}✗ No tsconfig.json${NC}"
         ((FAILED++))
     fi
 else

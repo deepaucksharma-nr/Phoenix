@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	commonModels "github.com/phoenix/platform/pkg/common/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/tasks"
@@ -30,12 +29,12 @@ func NewExperimentController(store store.Store, taskQueue *tasks.Queue) *Experim
 // StartExperiment initiates an experiment by creating tasks for agents
 func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.Experiment) error {
 	log.Info().Str("experiment_id", exp.ID).Msg("Starting experiment")
-	
+
 	// Use state machine for phase transition
 	if err := c.stateMachine.TransitionExperiment(ctx, exp.ID, "deploying"); err != nil {
 		return fmt.Errorf("failed to transition experiment: %w", err)
 	}
-	
+
 	// Create tasks for each target host
 	for _, host := range exp.Config.TargetHosts {
 		// Baseline collector task
@@ -52,11 +51,11 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 				"vars":      exp.Config.BaselineTemplate.Variables,
 			},
 		}
-		
+
 		if err := c.taskQueue.Enqueue(ctx, baselineTask); err != nil {
 			return fmt.Errorf("failed to enqueue baseline task for host %s: %w", host, err)
 		}
-		
+
 		// Candidate collector task
 		candidateTask := &models.Task{
 			HostID:       host,
@@ -71,11 +70,11 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 				"vars":      exp.Config.CandidateTemplate.Variables,
 			},
 		}
-		
+
 		if err := c.taskQueue.Enqueue(ctx, candidateTask); err != nil {
 			return fmt.Errorf("failed to enqueue candidate task for host %s: %w", host, err)
 		}
-		
+
 		// Load simulation task if configured
 		if exp.Config.LoadProfile != "" {
 			loadTask := &models.Task{
@@ -89,13 +88,13 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 					"duration": exp.Config.Duration.String(),
 				},
 			}
-			
+
 			if err := c.taskQueue.Enqueue(ctx, loadTask); err != nil {
 				return fmt.Errorf("failed to enqueue load simulation task for host %s: %w", host, err)
 			}
 		}
 	}
-	
+
 	// Create experiment event
 	event := &models.ExperimentEvent{
 		ExperimentID: exp.ID,
@@ -103,24 +102,24 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 		Phase:        "deploying",
 		Message:      fmt.Sprintf("Experiment started with %d hosts", len(exp.Config.TargetHosts)),
 	}
-	
+
 	if err := c.store.CreateExperimentEvent(ctx, event); err != nil {
 		log.Error().Err(err).Msg("Failed to create experiment event")
 	}
-	
+
 	return nil
 }
 
 // StopExperiment stops all tasks related to an experiment
 func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID string) error {
 	log.Info().Str("experiment_id", experimentID).Msg("Stopping experiment")
-	
+
 	// Get experiment
 	exp, err := c.store.GetExperiment(ctx, experimentID)
 	if err != nil {
 		return fmt.Errorf("failed to get experiment: %w", err)
 	}
-	
+
 	// Create stop tasks for each host
 	for _, host := range exp.Config.TargetHosts {
 		// Stop baseline collector
@@ -134,11 +133,11 @@ func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID 
 				"id": fmt.Sprintf("%s-baseline", experimentID),
 			},
 		}
-		
+
 		if err := c.taskQueue.Enqueue(ctx, stopBaselineTask); err != nil {
 			log.Error().Err(err).Str("host", host).Msg("Failed to enqueue stop baseline task")
 		}
-		
+
 		// Stop candidate collector
 		stopCandidateTask := &models.Task{
 			HostID:       host,
@@ -150,11 +149,11 @@ func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID 
 				"id": fmt.Sprintf("%s-candidate", experimentID),
 			},
 		}
-		
+
 		if err := c.taskQueue.Enqueue(ctx, stopCandidateTask); err != nil {
 			log.Error().Err(err).Str("host", host).Msg("Failed to enqueue stop candidate task")
 		}
-		
+
 		// Stop load simulation if running
 		stopLoadTask := &models.Task{
 			HostID:       host,
@@ -164,35 +163,35 @@ func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID 
 			Priority:     2,
 			Config:       map[string]interface{}{},
 		}
-		
+
 		if err := c.taskQueue.Enqueue(ctx, stopLoadTask); err != nil {
 			log.Error().Err(err).Str("host", host).Msg("Failed to enqueue stop load task")
 		}
 	}
-	
+
 	// Use state machine for phase transition
 	if err := c.stateMachine.TransitionExperiment(ctx, experimentID, "stopping"); err != nil {
 		return fmt.Errorf("failed to transition experiment: %w", err)
 	}
-	
+
 	return nil
 }
 
 // PromoteExperiment promotes the candidate configuration to production
 func (c *ExperimentController) PromoteExperiment(ctx context.Context, experimentID string) error {
 	log.Info().Str("experiment_id", experimentID).Msg("Promoting experiment")
-	
+
 	// Get experiment
 	exp, err := c.store.GetExperiment(ctx, experimentID)
 	if err != nil {
 		return fmt.Errorf("failed to get experiment: %w", err)
 	}
-	
+
 	// Verify experiment is in completed phase
-	if exp.Phase != "completed" {
+	if exp.Phase != models.PhaseCompleted {
 		return fmt.Errorf("experiment must be in completed phase to promote")
 	}
-	
+
 	// TODO: Implement UpsertPipelineTemplate in store interface
 	// Update production pipeline template
 	// template := &models.PipelineTemplate{
@@ -208,12 +207,12 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 	// if err := c.store.UpsertPipelineTemplate(ctx, template); err != nil {
 	// 	return fmt.Errorf("failed to update production template: %w", err)
 	// }
-	
+
 	// Update experiment phase
 	if err := c.store.UpdateExperimentPhase(ctx, experimentID, "promoted"); err != nil {
 		return fmt.Errorf("failed to update experiment phase: %w", err)
 	}
-	
+
 	// Create promotion event
 	event := &models.ExperimentEvent{
 		ExperimentID: experimentID,
@@ -221,46 +220,37 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 		Phase:        "promoted",
 		Message:      "Candidate configuration promoted to production",
 	}
-	
+
 	if err := c.store.CreateExperimentEvent(ctx, event); err != nil {
 		log.Error().Err(err).Msg("Failed to create promotion event")
 	}
-	
+
 	return nil
 }
 
 // CheckExperimentStatus monitors active pipelines and updates experiment phase
 func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experimentID string) error {
 	// TODO: Implement GetActivePipelines in store interface
-	// pipelines, err := c.store.GetActivePipelines(ctx, experimentID)
-	pipelines := []*commonModels.PipelineDeployment{}
-	var err error
-	if err != nil {
-		return fmt.Errorf("failed to get active pipelines: %w", err)
-	}
-	
-	// Count running pipelines by variant
-	baselineRunning := 0
-	candidateRunning := 0
-	
-	for _, pipeline := range pipelines {
-		if pipeline.Status == "running" {
-			if pipeline.Variant == "baseline" {
-				baselineRunning++
-			} else if pipeline.Variant == "candidate" {
-				candidateRunning++
-			}
-		}
-	}
-	
-	// Get experiment
+	// For now, we'll assume pipelines are running if the experiment is in running phase
 	exp, err := c.store.GetExperiment(ctx, experimentID)
 	if err != nil {
 		return fmt.Errorf("failed to get experiment: %w", err)
 	}
+
+	// For now, we'll assume all pipelines are running if experiment is in appropriate phase
+	// In a real implementation, we would check the actual pipeline status
+	baselineRunning := 0
+	candidateRunning := 0
 	
+	// TODO: When GetActivePipelines is implemented, count actual running pipelines
+	// For now, assume they're running based on experiment phase
+	if exp.Phase == "running" || exp.Phase == "deploying" {
+		baselineRunning = len(exp.Config.TargetHosts)
+		candidateRunning = len(exp.Config.TargetHosts)
+	}
+
 	expectedHosts := len(exp.Config.TargetHosts)
-	
+
 	// Update phase based on pipeline status
 	switch exp.Phase {
 	case "deploying":
@@ -269,7 +259,7 @@ func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experi
 			if err := c.store.UpdateExperimentPhase(ctx, experimentID, "running"); err != nil {
 				return fmt.Errorf("failed to update phase to running: %w", err)
 			}
-			
+
 			// Start monitoring phase after configured warmup
 			go func() {
 				time.Sleep(exp.Config.WarmupDuration)
@@ -278,7 +268,7 @@ func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experi
 				}
 			}()
 		}
-		
+
 	case "stopping":
 		if baselineRunning == 0 && candidateRunning == 0 {
 			// All pipelines have stopped
@@ -287,6 +277,6 @@ func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experi
 			}
 		}
 	}
-	
+
 	return nil
 }
