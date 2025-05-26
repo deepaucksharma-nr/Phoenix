@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -51,13 +51,13 @@ Examples:
 		apiClient := client.NewAPIClient(cfg.APIEndpoint, cfg.Token)
 
 		// Get current deployment info
-		deployment, err := apiClient.GetPipelineDeployment(deploymentID)
+		deployment, err := apiClient.GetPipelineDeploymentStatus(deploymentID)
 		if err != nil {
 			return fmt.Errorf("failed to get deployment: %w", err)
 		}
 
-		output.Info(fmt.Sprintf("Current deployment: %s", deployment.Name))
-		fmt.Printf("Pipeline: %s\n", deployment.Pipeline)
+		output.Info(fmt.Sprintf("Current deployment: %s", deployment.DeploymentName))
+		fmt.Printf("Pipeline: %s\n", deployment.PipelineName)
 		fmt.Printf("Status: %s\n", deployment.Status)
 		fmt.Printf("Namespace: %s\n\n", deployment.Namespace)
 
@@ -67,7 +67,7 @@ Examples:
 			if targetVersion == "" {
 				targetVersion = "previous"
 			}
-			
+
 			confirmed, err := output.Confirm(fmt.Sprintf("Are you sure you want to rollback to %s version?", targetVersion))
 			if err != nil {
 				return err
@@ -84,20 +84,25 @@ Examples:
 		}
 
 		output.Info("Initiating rollback...")
-		
-		newDeployment, err := apiClient.RollbackPipeline(deploymentID, rollbackReq)
+
+		_, err = apiClient.RollbackPipeline(deploymentID, rollbackReq)
 		if err != nil {
 			return fmt.Errorf("failed to rollback pipeline: %w", err)
 		}
 
 		output.Success("Pipeline rollback initiated successfully")
-		
+
+		status, err := apiClient.GetPipelineDeploymentStatus(deploymentID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve deployment status: %w", err)
+		}
+
 		// Show new status
 		data := [][]string{
-			{"Deployment ID", newDeployment.ID},
-			{"Pipeline", newDeployment.Pipeline},
-			{"Status", newDeployment.Status},
-			{"Phase", newDeployment.Phase},
+			{"Deployment ID", status.DeploymentID},
+			{"Pipeline", status.PipelineName},
+			{"Status", status.Status},
+			{"Phase", status.Phase},
 		}
 
 		if rollbackVersion != "" {
@@ -116,8 +121,8 @@ Examples:
 func init() {
 	pipelineCmd.AddCommand(pipelineRollbackCmd)
 
-	pipelineRollbackCmd.Flags().StringVarP(&rollbackVersion, "version", "v", "", 
+	pipelineRollbackCmd.Flags().StringVarP(&rollbackVersion, "version", "v", "",
 		"Specific version to rollback to (default: previous)")
-	pipelineRollbackCmd.Flags().BoolVarP(&rollbackForce, "force", "f", false, 
+	pipelineRollbackCmd.Flags().BoolVarP(&rollbackForce, "force", "f", false,
 		"Force rollback without confirmation")
 }

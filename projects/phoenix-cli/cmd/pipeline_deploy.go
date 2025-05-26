@@ -11,15 +11,15 @@ import (
 )
 
 var (
-	deploymentName    string
-	deployPipeline    string
-	deployNamespace   string
-	deploySelector    map[string]string
-	deployParams      map[string]string
-	deployCPURequest  string
-	deployCPULimit    string
-	deployMemRequest  string
-	deployMemLimit    string
+	deploymentName   string
+	deployPipeline   string
+	deployNamespace  string
+	deploySelector   map[string]string
+	deployParams     map[string]string
+	deployCPURequest string
+	deployCPULimit   string
+	deployMemRequest string
+	deployMemLimit   string
 )
 
 // deployPipelineCmd represents the pipeline deploy command
@@ -62,7 +62,7 @@ func init() {
 	pipelineDeployCmd.Flags().StringVar(&deployPipeline, "pipeline", "", "Pipeline template to deploy (required)")
 	pipelineDeployCmd.Flags().StringVar(&deployNamespace, "namespace", "default", "Kubernetes namespace")
 	pipelineDeployCmd.Flags().StringToStringVar(&deploySelector, "selector", nil, "Target node selector labels (required)")
-	
+
 	pipelineDeployCmd.MarkFlagRequired("name")
 	pipelineDeployCmd.MarkFlagRequired("pipeline")
 	pipelineDeployCmd.MarkFlagRequired("selector")
@@ -122,7 +122,7 @@ func runPipelineDeploy(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  Pipeline:  %s\n", deployPipeline)
 	fmt.Printf("  Namespace: %s\n", deployNamespace)
 	fmt.Printf("  Selectors: %s\n", formatSelector(deploySelector))
-	
+
 	if len(parameters) > 0 {
 		fmt.Println("  Parameters:")
 		for k, v := range parameters {
@@ -138,16 +138,21 @@ func runPipelineDeploy(cmd *cobra.Command, args []string) error {
 	}
 
 	output.PrintSuccess("Pipeline deployment created successfully!")
-	
+
+	status, err := apiClient.GetPipelineDeploymentStatus(deployment.ID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve deployment status: %w", err)
+	}
+
 	// Display deployment info
 	fmt.Printf("\nDeployment Details:\n")
-	fmt.Printf("  ID:     %s\n", deployment.ID)
-	fmt.Printf("  Status: %s\n", deployment.Status)
-	fmt.Printf("  Phase:  %s\n", deployment.Phase)
+	fmt.Printf("  ID:     %s\n", status.DeploymentID)
+	fmt.Printf("  Status: %s\n", status.Status)
+	fmt.Printf("  Phase:  %s\n", status.Phase)
 
 	fmt.Printf("\nTo check deployment status:\n")
-	fmt.Printf("  phoenix pipeline get-deployment %s\n", deployment.ID)
-	
+	fmt.Printf("  phoenix pipeline status %s\n", status.DeploymentID)
+
 	fmt.Printf("\nTo list all deployments:\n")
 	fmt.Printf("  phoenix pipeline list-deployments --namespace %s\n", deployNamespace)
 
@@ -158,7 +163,7 @@ func formatSelector(selector map[string]string) string {
 	if len(selector) == 0 {
 		return "none"
 	}
-	
+
 	parts := []string{}
 	for k, v := range selector {
 		parts = append(parts, fmt.Sprintf("%s=%s", k, v))

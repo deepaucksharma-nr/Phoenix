@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
@@ -15,7 +16,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
-
 )
 
 var (
@@ -43,6 +43,7 @@ type PhoenixV1alpha1Interface interface {
 type Interface interface {
 	PhoenixV1alpha1() PhoenixV1alpha1Interface
 	Kubernetes() kubernetes.Interface
+	WaitForPipelineReady(ctx context.Context, experimentID, pipelineType, namespace string, timeout time.Duration) error
 }
 
 // kubernetesClient implements the Interface
@@ -184,4 +185,17 @@ func getKubeConfig() (*rest.Config, error) {
 	}
 
 	return config, nil
+}
+
+// WaitForPipelineReady waits until a pipeline appears ready
+func (c *kubernetesClient) WaitForPipelineReady(ctx context.Context, experimentID, pipelineType, namespace string, timeout time.Duration) error {
+	// Placeholder implementation until CRDs are available
+	select {
+	case <-time.After(timeout):
+		return fmt.Errorf("timeout waiting for pipeline to be ready")
+	case <-time.After(2 * time.Second):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

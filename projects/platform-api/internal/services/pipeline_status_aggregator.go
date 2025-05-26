@@ -47,50 +47,50 @@ func NewPipelineStatusAggregator(
 
 // AggregatedStatus contains comprehensive pipeline status
 type AggregatedStatus struct {
-	DeploymentID      string                        `json:"deployment_id"`
-	DeploymentName    string                        `json:"deployment_name"`
-	PipelineName      string                        `json:"pipeline_name"`
-	Namespace         string                        `json:"namespace"`
-	Status            string                        `json:"status"`
-	Phase             string                        `json:"phase"`
-	Instances         *models.DeploymentInstances   `json:"instances,omitempty"`
-	Metrics           *models.DeploymentMetrics     `json:"metrics,omitempty"`
-	HealthStatus      string                        `json:"health_status,omitempty"`
-	CollectorStatuses []CollectorStatus             `json:"collector_statuses,omitempty"`
-	LastUpdated       time.Time                     `json:"last_updated"`
-	Summary           StatusSummary                 `json:"summary"`
+	DeploymentID      string                      `json:"deployment_id"`
+	DeploymentName    string                      `json:"deployment_name"`
+	PipelineName      string                      `json:"pipeline_name"`
+	Namespace         string                      `json:"namespace"`
+	Status            string                      `json:"status"`
+	Phase             string                      `json:"phase"`
+	Instances         *models.DeploymentInstances `json:"instances,omitempty"`
+	Metrics           *models.DeploymentMetrics   `json:"metrics,omitempty"`
+	HealthStatus      string                      `json:"health_status,omitempty"`
+	CollectorStatuses []CollectorStatus           `json:"collector_statuses,omitempty"`
+	LastUpdated       time.Time                   `json:"last_updated"`
+	Summary           StatusSummary               `json:"summary"`
 }
 
 // CollectorStatus represents individual collector status
 type CollectorStatus struct {
-	PodName     string                 `json:"pod_name"`
-	NodeName    string                 `json:"node_name"`
-	Status      string                 `json:"status"`
-	Ready       bool                   `json:"ready"`
-	RestartCount int32                 `json:"restart_count"`
-	StartTime   *time.Time             `json:"start_time,omitempty"`
-	Conditions  []v1.PodCondition      `json:"conditions,omitempty"`
-	Metrics     *CollectorMetrics      `json:"metrics,omitempty"`
+	PodName      string            `json:"pod_name"`
+	NodeName     string            `json:"node_name"`
+	Status       string            `json:"status"`
+	Ready        bool              `json:"ready"`
+	RestartCount int32             `json:"restart_count"`
+	StartTime    *time.Time        `json:"start_time,omitempty"`
+	Conditions   []v1.PodCondition `json:"conditions,omitempty"`
+	Metrics      *CollectorMetrics `json:"metrics,omitempty"`
 }
 
 // CollectorMetrics contains collector-specific metrics
 type CollectorMetrics struct {
-	ProcessedMetrics   int64   `json:"processed_metrics"`
-	DroppedMetrics     int64   `json:"dropped_metrics"`
-	ExportErrors       int64   `json:"export_errors"`
-	CPUUsagePercent    float64 `json:"cpu_usage_percent"`
-	MemoryUsageMB      float64 `json:"memory_usage_mb"`
+	ProcessedMetrics int64   `json:"processed_metrics"`
+	DroppedMetrics   int64   `json:"dropped_metrics"`
+	ExportErrors     int64   `json:"export_errors"`
+	CPUUsagePercent  float64 `json:"cpu_usage_percent"`
+	MemoryUsageMB    float64 `json:"memory_usage_mb"`
 }
 
 // StatusSummary provides a high-level summary
 type StatusSummary struct {
-	HealthyCollectors   int     `json:"healthy_collectors"`
-	UnhealthyCollectors int     `json:"unhealthy_collectors"`
-	TotalMetricsRate    float64 `json:"total_metrics_rate"`
-	ErrorRate           float64 `json:"error_rate"`
-	CardinalityReduction float64 `json:"cardinality_reduction,omitempty"`
-	IsHealthy           bool    `json:"is_healthy"`
-	Issues              []string `json:"issues,omitempty"`
+	HealthyCollectors    int      `json:"healthy_collectors"`
+	UnhealthyCollectors  int      `json:"unhealthy_collectors"`
+	TotalMetricsRate     float64  `json:"total_metrics_rate"`
+	ErrorRate            float64  `json:"error_rate"`
+	CardinalityReduction float64  `json:"cardinality_reduction,omitempty"`
+	IsHealthy            bool     `json:"is_healthy"`
+	Issues               []string `json:"issues,omitempty"`
 }
 
 // GetAggregatedStatus retrieves comprehensive status for a deployment
@@ -119,57 +119,63 @@ func (a *PipelineStatusAggregator) GetAggregatedStatus(ctx context.Context, depl
 	var mu sync.Mutex
 	errors := make([]error, 0)
 
-	// Collect metrics
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		metrics, err := a.metricsCollector.GetPipelineMetrics(ctx, deploymentID)
-		if err != nil {
+	// Collect metrics if a collector is configured
+	if a.metricsCollector != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			metrics, err := a.metricsCollector.GetPipelineMetrics(ctx, deploymentID)
+			if err != nil {
+				mu.Lock()
+				errors = append(errors, fmt.Errorf("metrics collection failed: %w", err))
+				mu.Unlock()
+				return
+			}
 			mu.Lock()
-			errors = append(errors, fmt.Errorf("metrics collection failed: %w", err))
+			status.Metrics = metrics
 			mu.Unlock()
-			return
-		}
-		mu.Lock()
-		status.Metrics = metrics
-		mu.Unlock()
-	}()
+		}()
+	}
 
-	// Collect health status
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		selector := map[string]string{
-			"deployment": deployment.DeploymentName,
-			"pipeline":   deployment.PipelineName,
-		}
-		health, err := a.metricsCollector.GetCollectorHealth(ctx, deployment.Namespace, selector)
-		if err != nil {
+	// Collect health status if a collector is configured
+	if a.metricsCollector != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			selector := map[string]string{
+				"deployment": deployment.DeploymentName,
+				"pipeline":   deployment.PipelineName,
+			}
+			health, err := a.metricsCollector.GetCollectorHealth(ctx, deployment.Namespace, selector)
+			if err != nil {
+				mu.Lock()
+				errors = append(errors, fmt.Errorf("health collection failed: %w", err))
+				mu.Unlock()
+				return
+			}
 			mu.Lock()
-			errors = append(errors, fmt.Errorf("health collection failed: %w", err))
+			status.HealthStatus = health
 			mu.Unlock()
-			return
-		}
-		mu.Lock()
-		status.HealthStatus = health
-		mu.Unlock()
-	}()
+		}()
+	}
 
-	// Collect Kubernetes pod status
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		collectorStatuses, err := a.getCollectorStatuses(ctx, deployment)
-		if err != nil {
+	// Collect Kubernetes pod status if a k8s client is configured
+	if a.k8sClient != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			collectorStatuses, err := a.getCollectorStatuses(ctx, deployment)
+			if err != nil {
+				mu.Lock()
+				errors = append(errors, fmt.Errorf("pod status collection failed: %w", err))
+				mu.Unlock()
+				return
+			}
 			mu.Lock()
-			errors = append(errors, fmt.Errorf("pod status collection failed: %w", err))
+			status.CollectorStatuses = collectorStatuses
 			mu.Unlock()
-			return
-		}
-		mu.Lock()
-		status.CollectorStatuses = collectorStatuses
-		mu.Unlock()
-	}()
+		}()
+	}
 
 	wg.Wait()
 
@@ -186,6 +192,11 @@ func (a *PipelineStatusAggregator) GetAggregatedStatus(ctx context.Context, depl
 
 // getCollectorStatuses retrieves status of collector pods
 func (a *PipelineStatusAggregator) getCollectorStatuses(ctx context.Context, deployment *models.PipelineDeployment) ([]CollectorStatus, error) {
+	if a.k8sClient == nil {
+		a.logger.Warn("k8s client not configured, skipping pod status collection")
+		return []CollectorStatus{}, nil
+	}
+
 	// List pods with deployment labels
 	labelSelector := fmt.Sprintf("deployment=%s,pipeline=%s", deployment.DeploymentName, deployment.PipelineName)
 	pods, err := a.k8sClient.CoreV1().Pods(deployment.Namespace).List(ctx, metav1.ListOptions{
@@ -241,7 +252,7 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 
 		// Check for high restart counts
 		if collector.RestartCount > 5 {
-			summary.Issues = append(summary.Issues, 
+			summary.Issues = append(summary.Issues,
 				fmt.Sprintf("Collector %s has high restart count: %d", collector.PodName, collector.RestartCount))
 		}
 	}
@@ -249,14 +260,14 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 	// Calculate metrics if available
 	if status.Metrics != nil {
 		// TODO: Add MetricsPerSecond field to DeploymentMetrics model
-	// summary.TotalMetricsRate = status.Metrics.MetricsPerSecond
+		// summary.TotalMetricsRate = status.Metrics.MetricsPerSecond
 		summary.ErrorRate = status.Metrics.ErrorRate
 		// TODO: Add CardinalityReduction field to DeploymentMetrics model
 		// summary.CardinalityReduction = status.Metrics.CardinalityReduction
 
 		// Check for high error rates
 		if summary.ErrorRate > 0.05 { // 5% error rate threshold
-			summary.Issues = append(summary.Issues, 
+			summary.Issues = append(summary.Issues,
 				fmt.Sprintf("High error rate detected: %.2f%%", summary.ErrorRate*100))
 		}
 	}
@@ -264,14 +275,14 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 	// Check instance health
 	if status.Instances != nil {
 		if status.Instances.Ready < status.Instances.Desired {
-			summary.Issues = append(summary.Issues, 
+			summary.Issues = append(summary.Issues,
 				fmt.Sprintf("Only %d/%d instances are ready", status.Instances.Ready, status.Instances.Desired))
 		}
 	}
 
 	// Determine overall health
-	summary.IsHealthy = summary.UnhealthyCollectors == 0 && 
-		summary.ErrorRate < 0.05 && 
+	summary.IsHealthy = summary.UnhealthyCollectors == 0 &&
+		summary.ErrorRate < 0.05 &&
 		len(summary.Issues) == 0
 
 	return summary
@@ -298,7 +309,7 @@ func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx con
 	// Prepare update request
 	updateReq := &models.UpdateDeploymentRequest{
 		// TODO: Add UpdatedBy field to UpdateDeploymentRequest model
-	// UpdatedBy: "system-aggregator",
+		// UpdatedBy: "system-aggregator",
 	}
 
 	// Update status based on summary
@@ -316,7 +327,7 @@ func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx con
 	// Update metrics if available
 	if aggregatedStatus.Metrics != nil {
 		// TODO: Implement UpdateDeploymentMetrics method in store
-		a.logger.Debug("would update deployment metrics here", 
+		a.logger.Debug("would update deployment metrics here",
 			zap.String("deployment_id", deploymentID),
 			zap.Float64("cardinality", float64(aggregatedStatus.Metrics.Cardinality)))
 	}
