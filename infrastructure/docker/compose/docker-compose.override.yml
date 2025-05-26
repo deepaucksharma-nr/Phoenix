@@ -1,4 +1,4 @@
-# Phoenix-vNext Development Override Configuration
+# Phoenix Development Override Configuration
 # This file is automatically loaded by docker-compose for local development
 # It provides debug settings, faster feedback loops, and development tools
 

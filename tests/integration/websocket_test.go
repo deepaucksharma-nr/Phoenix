@@ -16,8 +16,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	"github.com/phoenix-vnext/platform/pkg/api"
-	"github.com/phoenix-vnext/platform/pkg/interfaces"
+	"github.com/phoenix/platform/pkg/api"
+	"github.com/phoenix/platform/pkg/interfaces"
 )
 
 type WebSocketTestSuite struct {

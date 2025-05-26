@@ -18,9 +18,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/phoenix-vnext/platform/pkg/api"
-	pb "github.com/phoenix-vnext/platform/pkg/api/v1"
-	"github.com/phoenix-vnext/platform/pkg/store"
+	"github.com/phoenix/platform/pkg/api"
+	pb "github.com/phoenix/platform/pkg/api/v1"
+	"github.com/phoenix/platform/pkg/store"
 )
 
 type APIServiceTestSuite struct {

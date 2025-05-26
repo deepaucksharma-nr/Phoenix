@@ -2,25 +2,27 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/lib/pq"
-	"github.com/phoenix-vnext/platform/packages/go-common/database/postgres"
+	_ "github.com/lib/pq" // PostgreSQL driver
+	"github.com/phoenix-vnext/platform/packages/go-common/store"
 	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
 	"go.uber.org/zap"
 )
 
 // PostgresStore implements the ExperimentStore interface using PostgreSQL
 type PostgresStore struct {
-	store  *postgres.PostgresStore
+	store  *store.PostgresStore
 	logger *zap.Logger
 }
 
 // NewPostgresStore creates a new PostgreSQL-backed experiment store
 func NewPostgresStore(connectionString string, logger *zap.Logger) (*PostgresStore, error) {
-	baseStore, err := postgres.NewPostgresStore(connectionString)
+	baseStore, err := store.NewPostgresStore(connectionString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create postgres store: %w", err)
 	}
@@ -31,7 +33,7 @@ func NewPostgresStore(connectionString string, logger *zap.Logger) (*PostgresSto
 	db.SetMaxIdleConns(5)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
-	store := &PostgresStore{
+	s := &PostgresStore{
 		store:  baseStore,
 		logger: logger,
 	}
@@ -39,11 +41,11 @@ func NewPostgresStore(connectionString string, logger *zap.Logger) (*PostgresSto
 	// Run migrations
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := store.migrate(ctx); err != nil {
+	if err := s.migrate(ctx); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	return store, nil
+	return s, nil
 }
 
 // Close closes the database connection
@@ -130,9 +132,9 @@ func (s *PostgresStore) GetExperiment(ctx context.Context, id string) (*controll
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("experiment not found: %s", id)
-	}
-	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("experiment not found: %s", id)
+		}
 		return nil, fmt.Errorf("failed to query experiment: %w", err)
 	}
 
@@ -302,6 +304,13 @@ func (s *PostgresStore) ListExperiments(ctx context.Context, filter controller.E
 
 	return experiments, nil
 }
+
+// DB returns the underlying database connection from the base store
+func (s *PostgresStore) DB() *sql.DB {
+    return s.store.DB()
+}
+
+// Close method is already defined above at line 52
 
 // migrate runs database migrations
 func (s *PostgresStore) migrate(ctx context.Context) error {

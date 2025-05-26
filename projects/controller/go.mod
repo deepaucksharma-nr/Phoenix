@@ -3,6 +3,7 @@ module github.com/phoenix-vnext/platform/projects/controller
 go 1.21
 
 require (
+	github.com/go-chi/chi/v5 v5.0.11
 	github.com/google/uuid v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/phoenix-vnext/platform/packages/go-common v0.0.0
@@ -63,5 +64,3 @@ require (
 )
 
 replace github.com/phoenix-vnext/platform/packages/go-common => ../../packages/go-common
-
-replace github.com/phoenix-vnext/platform/packages/contracts => ../../packages/contracts

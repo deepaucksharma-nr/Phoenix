@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v3"
 
-	"github.com/phoenix-vnext/platform/pkg/generator"
+	"github.com/phoenix/platform/pkg/generator"
 )
 
 // TestConfigGeneratorIntegration tests the config generator service

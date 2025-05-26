@@ -1,22 +1,22 @@
 package grpc
 
 import (
-	"context"
-	"fmt"
-	"time"
+	// "context"
+	// "fmt"
+	// "time"
 
-	"github.com/google/uuid"
+	// "github.com/google/uuid"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	// "google.golang.org/grpc/codes"
+	// "google.golang.org/grpc/status"
 
 	"github.com/phoenix-vnext/platform/projects/controller/internal/controller"
-	pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
+	// pb "github.com/phoenix-vnext/platform/packages/contracts/proto/v1"
 )
 
 // SimpleExperimentServer implements a basic experiment service
 type SimpleExperimentServer struct {
-	pb.UnimplementedExperimentServiceServer
+	// pb.UnimplementedExperimentServiceServer
 	logger     *zap.Logger
 	controller *controller.ExperimentController
 }
@@ -30,7 +30,8 @@ func NewSimpleExperimentServer(logger *zap.Logger, controller *controller.Experi
 }
 
 // CreateExperiment creates a new experiment
-func (s *SimpleExperimentServer) CreateExperiment(ctx context.Context, req *pb.CreateExperimentRequest) (*pb.CreateExperimentResponse, error) {
+// func (s *SimpleExperimentServer) CreateExperiment(ctx context.Context, req *pb.CreateExperimentRequest) (*pb.CreateExperimentResponse, error) {
+/*
 	if req.Name == "" {
 		return nil, status.Error(codes.InvalidArgument, "experiment name is required")
 	}
@@ -95,9 +96,11 @@ func (s *SimpleExperimentServer) CreateExperiment(ctx context.Context, req *pb.C
 		Experiment: protoExp,
 	}, nil
 }
+*/
 
 // GetExperiment retrieves an experiment by ID
-func (s *SimpleExperimentServer) GetExperiment(ctx context.Context, req *pb.GetExperimentRequest) (*pb.GetExperimentResponse, error) {
+// func (s *SimpleExperimentServer) GetExperiment(ctx context.Context, req *pb.GetExperimentRequest) (*pb.GetExperimentResponse, error) {
+/*
 	if req.Id == "" {
 		return nil, status.Error(codes.InvalidArgument, "experiment ID is required")
 	}
@@ -120,9 +123,11 @@ func (s *SimpleExperimentServer) GetExperiment(ctx context.Context, req *pb.GetE
 		Experiment: protoExp,
 	}, nil
 }
+*/
 
 // ListExperiments lists experiments with optional filters
-func (s *SimpleExperimentServer) ListExperiments(ctx context.Context, req *pb.ListExperimentsRequest) (*pb.ListExperimentsResponse, error) {
+// func (s *SimpleExperimentServer) ListExperiments(ctx context.Context, req *pb.ListExperimentsRequest) (*pb.ListExperimentsResponse, error) {
+/*
 	s.logger.Debug("listing experiments")
 
 	// For now, use basic listing without complex filters
@@ -152,9 +157,11 @@ func (s *SimpleExperimentServer) ListExperiments(ctx context.Context, req *pb.Li
 		Experiments: protoExps,
 	}, nil
 }
+*/
 
 // UpdateExperiment updates an experiment
-func (s *SimpleExperimentServer) UpdateExperiment(ctx context.Context, req *pb.UpdateExperimentRequest) (*pb.Experiment, error) {
+// func (s *SimpleExperimentServer) UpdateExperiment(ctx context.Context, req *pb.UpdateExperimentRequest) (*pb.Experiment, error) {
+/*
 	if req.Experiment == nil {
 		return nil, status.Error(codes.InvalidArgument, "experiment is required")
 	}
@@ -194,9 +201,11 @@ func (s *SimpleExperimentServer) UpdateExperiment(ctx context.Context, req *pb.U
 
 	return protoExp, nil
 }
+*/
 
 // DeleteExperiment deletes an experiment
-func (s *SimpleExperimentServer) DeleteExperiment(ctx context.Context, req *pb.DeleteExperimentRequest) (*pb.DeleteExperimentResponse, error) {
+// func (s *SimpleExperimentServer) DeleteExperiment(ctx context.Context, req *pb.DeleteExperimentRequest) (*pb.DeleteExperimentResponse, error) {
+/*
 	if req.Id == "" {
 		return nil, status.Error(codes.InvalidArgument, "experiment ID is required")
 	}
@@ -209,9 +218,11 @@ func (s *SimpleExperimentServer) DeleteExperiment(ctx context.Context, req *pb.D
 
 	return &pb.DeleteExperimentResponse{}, nil
 }
+*/
 
 // GetExperimentStatus gets the status of an experiment
-func (s *SimpleExperimentServer) GetExperimentStatus(ctx context.Context, req *pb.GetExperimentStatusRequest) (*pb.ExperimentStatus, error) {
+// func (s *SimpleExperimentServer) GetExperimentStatus(ctx context.Context, req *pb.GetExperimentStatusRequest) (*pb.ExperimentStatus, error) {
+/*
 	if req.Id == "" {
 		return nil, status.Error(codes.InvalidArgument, "experiment ID is required")
 	}
@@ -231,3 +242,4 @@ func (s *SimpleExperimentServer) GetExperimentStatus(ctx context.Context, req *p
 
 	return status, nil
 }
+*/

@@ -15,6 +15,7 @@ import (
 type ExperimentService struct {
 	store     store.Store
 	logger    *zap.Logger
+	wsHub     interface{} // WebSocket hub interface
 }
 
 // NewExperimentService creates a new experiment service
@@ -93,4 +94,9 @@ func (s *ExperimentService) UpdateExperimentStatus(ctx context.Context, id strin
 func (s *ExperimentService) DeleteExperiment(ctx context.Context, id string) error {
 	// For now, we'll just mark it as deleted by updating status
 	return s.UpdateExperimentStatus(ctx, id, "deleted")
+}
+
+// SetWebSocketHub sets the WebSocket hub for broadcasting updates
+func (s *ExperimentService) SetWebSocketHub(hub interface{}) {
+	s.wsHub = hub
 }

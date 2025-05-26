@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	
-	"github.com/phoenix-vnext/platform/pkg/adapters"
-	"github.com/phoenix-vnext/platform/pkg/eventbus"
-	"github.com/phoenix-vnext/platform/pkg/interfaces"
-	"github.com/phoenix-vnext/platform/pkg/mocks"
+	"github.com/phoenix/platform/pkg/adapters"
+	"github.com/phoenix/platform/pkg/eventbus"
+	"github.com/phoenix/platform/pkg/interfaces"
+	"github.com/phoenix/platform/pkg/mocks"
 )
 
 // TestInterfaceIntegration demonstrates how the interfaces work together

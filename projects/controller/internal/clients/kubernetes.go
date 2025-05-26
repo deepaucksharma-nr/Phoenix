@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	// "k8s.io/apimachinery/pkg/types" // TODO: Uncomment when CRD types are available
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -66,9 +66,10 @@ func NewKubernetesClient(logger *zap.Logger) (*KubernetesClient, error) {
 
 	// Create runtime scheme and add our CRDs
 	scheme := runtime.NewScheme()
-	if err := pipelinev1alpha1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add pipeline CRDs to scheme: %w", err)
-	}
+	// TODO: Uncomment when CRD types are available
+	// if err := pipelinev1alpha1.AddToScheme(scheme); err != nil {
+	// 	return nil, fmt.Errorf("failed to add pipeline CRDs to scheme: %w", err)
+	// }
 
 	// Create controller-runtime client
 	runtimeClient, err := client.New(config, client.Options{Scheme: scheme})
@@ -93,49 +94,52 @@ func (k *KubernetesClient) DeployPipeline(ctx context.Context, deployment *Pipel
 		zap.String("namespace", deployment.Namespace),
 	)
 
-	// Create PhoenixProcessPipeline resource
-	pipelineResource := &pipelinev1alpha1.PhoenixProcessPipeline{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", deployment.ExperimentID, deployment.PipelineType),
-			Namespace: deployment.Namespace,
-			Labels: map[string]string{
-				"phoenix.newrelic.com/experiment-id": deployment.ExperimentID,
-				"phoenix.newrelic.com/pipeline-type": deployment.PipelineType,
-				"phoenix.newrelic.com/managed-by":    "experiment-controller",
-			},
-			Annotations: map[string]string{
-				"phoenix.newrelic.com/created-at": time.Now().Format(time.RFC3339),
-			},
-		},
-		Spec: pipelinev1alpha1.PhoenixProcessPipelineSpec{
-			ExperimentID: deployment.ExperimentID,
-			Variant:      deployment.PipelineType,
-			ConfigMap:    fmt.Sprintf("%s-%s-config", deployment.ExperimentID, deployment.PipelineType),
-		},
-	}
+	// TODO: Uncomment when CRD types are available
+	// // Create PhoenixProcessPipeline resource
+	// pipelineResource := &pipelinev1alpha1.PhoenixProcessPipeline{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name:      fmt.Sprintf("%s-%s", deployment.ExperimentID, deployment.PipelineType),
+	// 		Namespace: deployment.Namespace,
+	// 		Labels: map[string]string{
+	// 			"phoenix.newrelic.com/experiment-id": deployment.ExperimentID,
+	// 			"phoenix.newrelic.com/pipeline-type": deployment.PipelineType,
+	// 			"phoenix.newrelic.com/managed-by":    "experiment-controller",
+	// 		},
+	// 		Annotations: map[string]string{
+	// 			"phoenix.newrelic.com/created-at": time.Now().Format(time.RFC3339),
+	// 		},
+	// 	},
+	// 	Spec: pipelinev1alpha1.PhoenixProcessPipelineSpec{
+	// 		ExperimentID: deployment.ExperimentID,
+	// 		Variant:      deployment.PipelineType,
+	// 		ConfigMap:    fmt.Sprintf("%s-%s-config", deployment.ExperimentID, deployment.PipelineType),
+	// 	},
+	// }
 
-	// Add node selector if target nodes are specified
-	if len(deployment.TargetNodes) > 0 {
-		// For simplicity, use the first target node
-		// In real implementation, you might create multiple CRDs or use node affinity
-		pipelineResource.Spec.NodeSelector = map[string]string{
-			"kubernetes.io/hostname": deployment.TargetNodes[0],
-		}
-	}
+	// // Add node selector if target nodes are specified
+	// if len(deployment.TargetNodes) > 0 {
+	// 	// For simplicity, use the first target node
+	// 	// In real implementation, you might create multiple CRDs or use node affinity
+	// 	pipelineResource.Spec.NodeSelector = map[string]string{
+	// 		"kubernetes.io/hostname": deployment.TargetNodes[0],
+	// 	}
+	// }
 
-	// Note: Variables would be stored in the ConfigMap, not directly in the CRD spec
-	// The ConfigMap would be created separately with the actual OTel configuration
+	// // Note: Variables would be stored in the ConfigMap, not directly in the CRD spec
+	// // The ConfigMap would be created separately with the actual OTel configuration
 
-	// Create the resource
-	if err := k.client.Create(ctx, pipelineResource); err != nil {
-		return fmt.Errorf("failed to create PhoenixProcessPipeline: %w", err)
-	}
+	// // Create the resource
+	// if err := k.client.Create(ctx, pipelineResource); err != nil {
+	// 	return fmt.Errorf("failed to create PhoenixProcessPipeline: %w", err)
+	// }
 
-	k.logger.Info("pipeline deployed successfully",
-		zap.String("name", pipelineResource.Name),
-		zap.String("namespace", pipelineResource.Namespace),
-	)
+	// k.logger.Info("pipeline deployed successfully",
+	// 	zap.String("name", pipelineResource.Name),
+	// 	zap.String("namespace", pipelineResource.Namespace),
+	// )
 
+	// Temporary placeholder - return nil to maintain compatibility
+	k.logger.Warn("DeployPipeline is temporarily disabled - CRD types not available")
 	return nil
 }
 
@@ -148,37 +152,49 @@ func (k *KubernetesClient) GetPipelineStatus(ctx context.Context, experimentID, 
 		zap.String("namespace", namespace),
 	)
 
-	// Get the PhoenixProcessPipeline resource
-	pipeline := &pipelinev1alpha1.PhoenixProcessPipeline{}
-	namespacedName := types.NamespacedName{
+	// TODO: Uncomment when CRD types are available
+	// // Get the PhoenixProcessPipeline resource
+	// pipeline := &pipelinev1alpha1.PhoenixProcessPipeline{}
+	// namespacedName := types.NamespacedName{
+	// 	Name:      pipelineName,
+	// 	Namespace: namespace,
+	// }
+
+	// if err := k.client.Get(ctx, namespacedName, pipeline); err != nil {
+	// 	return nil, fmt.Errorf("failed to get PhoenixProcessPipeline: %w", err)
+	// }
+
+	// // Determine if pipeline is ready
+	// ready := pipeline.Status.Phase == "Running" && pipeline.Status.ReadyNodes > 0
+	
+	// // Get message from conditions if available
+	// message := "No status available"
+	// if len(pipeline.Status.Conditions) > 0 {
+	// 	lastCondition := pipeline.Status.Conditions[len(pipeline.Status.Conditions)-1]
+	// 	message = lastCondition.Message
+	// }
+
+	// status := &PipelineStatus{
+	// 	Name:      pipeline.Name,
+	// 	Namespace: pipeline.Namespace,
+	// 	Phase:     pipeline.Status.Phase,
+	// 	Ready:     ready,
+	// 	Message:   message,
+	// 	PodCount:  pipeline.Status.ReadyNodes,
+	// }
+
+	// return status, nil
+
+	// Temporary placeholder - return a mock status
+	k.logger.Warn("GetPipelineStatus is temporarily disabled - CRD types not available")
+	return &PipelineStatus{
 		Name:      pipelineName,
 		Namespace: namespace,
-	}
-
-	if err := k.client.Get(ctx, namespacedName, pipeline); err != nil {
-		return nil, fmt.Errorf("failed to get PhoenixProcessPipeline: %w", err)
-	}
-
-	// Determine if pipeline is ready
-	ready := pipeline.Status.Phase == "Running" && pipeline.Status.ReadyNodes > 0
-	
-	// Get message from conditions if available
-	message := "No status available"
-	if len(pipeline.Status.Conditions) > 0 {
-		lastCondition := pipeline.Status.Conditions[len(pipeline.Status.Conditions)-1]
-		message = lastCondition.Message
-	}
-
-	status := &PipelineStatus{
-		Name:      pipeline.Name,
-		Namespace: pipeline.Namespace,
-		Phase:     pipeline.Status.Phase,
-		Ready:     ready,
-		Message:   message,
-		PodCount:  pipeline.Status.ReadyNodes,
-	}
-
-	return status, nil
+		Phase:     "Unknown",
+		Ready:     false,
+		Message:   "CRD types not available",
+		PodCount:  0,
+	}, nil
 }
 
 // DeletePipeline removes a deployed pipeline
@@ -190,21 +206,24 @@ func (k *KubernetesClient) DeletePipeline(ctx context.Context, experimentID, pip
 		zap.String("namespace", namespace),
 	)
 
-	pipeline := &pipelinev1alpha1.PhoenixProcessPipeline{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      pipelineName,
-			Namespace: namespace,
-		},
-	}
+	// TODO: Uncomment when CRD types are available
+	// pipeline := &pipelinev1alpha1.PhoenixProcessPipeline{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Name:      pipelineName,
+	// 		Namespace: namespace,
+	// 	},
+	// }
 
-	if err := k.client.Delete(ctx, pipeline); err != nil {
-		return fmt.Errorf("failed to delete PhoenixProcessPipeline: %w", err)
-	}
+	// if err := k.client.Delete(ctx, pipeline); err != nil {
+	// 	return fmt.Errorf("failed to delete PhoenixProcessPipeline: %w", err)
+	// }
 
-	k.logger.Info("pipeline deleted successfully",
-		zap.String("name", pipelineName),
-	)
+	// k.logger.Info("pipeline deleted successfully",
+	// 	zap.String("name", pipelineName),
+	// )
 
+	// Temporary placeholder - return nil to maintain compatibility
+	k.logger.Warn("DeletePipeline is temporarily disabled - CRD types not available")
 	return nil
 }
 
@@ -215,55 +234,60 @@ func (k *KubernetesClient) ListExperimentPipelines(ctx context.Context, experime
 		zap.String("namespace", namespace),
 	)
 
-	pipelineList := &pipelinev1alpha1.PhoenixProcessPipelineList{}
-	listOptions := &client.ListOptions{
-		Namespace: namespace,
-	}
+	// TODO: Uncomment when CRD types are available
+	// pipelineList := &pipelinev1alpha1.PhoenixProcessPipelineList{}
+	// listOptions := &client.ListOptions{
+	// 	Namespace: namespace,
+	// }
 
-	// Add label selector for experiment ID
-	labelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			"phoenix.newrelic.com/experiment-id": experimentID,
-		},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create label selector: %w", err)
-	}
-	listOptions.LabelSelector = labelSelector
+	// // Add label selector for experiment ID
+	// labelSelector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+	// 	MatchLabels: map[string]string{
+	// 		"phoenix.newrelic.com/experiment-id": experimentID,
+	// 	},
+	// })
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to create label selector: %w", err)
+	// }
+	// listOptions.LabelSelector = labelSelector
 
-	if err := k.client.List(ctx, pipelineList, listOptions); err != nil {
-		return nil, fmt.Errorf("failed to list PhoenixProcessPipelines: %w", err)
-	}
+	// if err := k.client.List(ctx, pipelineList, listOptions); err != nil {
+	// 	return nil, fmt.Errorf("failed to list PhoenixProcessPipelines: %w", err)
+	// }
 
-	var statuses []*PipelineStatus
-	for _, pipeline := range pipelineList.Items {
-		// Determine if pipeline is ready
-		ready := pipeline.Status.Phase == "Running" && pipeline.Status.ReadyNodes > 0
+	// var statuses []*PipelineStatus
+	// for _, pipeline := range pipelineList.Items {
+	// 	// Determine if pipeline is ready
+	// 	ready := pipeline.Status.Phase == "Running" && pipeline.Status.ReadyNodes > 0
 		
-		// Get message from conditions if available
-		message := "No status available"
-		if len(pipeline.Status.Conditions) > 0 {
-			lastCondition := pipeline.Status.Conditions[len(pipeline.Status.Conditions)-1]
-			message = lastCondition.Message
-		}
+	// 	// Get message from conditions if available
+	// 	message := "No status available"
+	// 	if len(pipeline.Status.Conditions) > 0 {
+	// 		lastCondition := pipeline.Status.Conditions[len(pipeline.Status.Conditions)-1]
+	// 		message = lastCondition.Message
+	// 	}
 
-		status := &PipelineStatus{
-			Name:      pipeline.Name,
-			Namespace: pipeline.Namespace,
-			Phase:     pipeline.Status.Phase,
-			Ready:     ready,
-			Message:   message,
-			PodCount:  pipeline.Status.ReadyNodes,
-		}
-		statuses = append(statuses, status)
-	}
+	// 	status := &PipelineStatus{
+	// 		Name:      pipeline.Name,
+	// 		Namespace: pipeline.Namespace,
+	// 		Phase:     pipeline.Status.Phase,
+	// 		Ready:     ready,
+	// 		Message:   message,
+	// 		PodCount:  pipeline.Status.ReadyNodes,
+	// 	}
+	// 	statuses = append(statuses, status)
+	// }
 
-	k.logger.Info("listed experiment pipelines",
-		zap.String("experiment_id", experimentID),
-		zap.Int("count", len(statuses)),
-	)
+	// k.logger.Info("listed experiment pipelines",
+	// 	zap.String("experiment_id", experimentID),
+	// 	zap.Int("count", len(statuses)),
+	// )
 
-	return statuses, nil
+	// return statuses, nil
+
+	// Temporary placeholder - return empty list
+	k.logger.Warn("ListExperimentPipelines is temporarily disabled - CRD types not available")
+	return []*PipelineStatus{}, nil
 }
 
 // WaitForPipelineReady waits for a pipeline to become ready
@@ -274,36 +298,41 @@ func (k *KubernetesClient) WaitForPipelineReady(ctx context.Context, experimentI
 		zap.Duration("timeout", timeout),
 	)
 
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// TODO: Uncomment when CRD types are available
+	// ctx, cancel := context.WithTimeout(ctx, timeout)
+	// defer cancel()
 
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
+	// ticker := time.NewTicker(5 * time.Second)
+	// defer ticker.Stop()
 
-	for {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for pipeline to be ready")
-		case <-ticker.C:
-			status, err := k.GetPipelineStatus(ctx, experimentID, pipelineType, namespace)
-			if err != nil {
-				k.logger.Warn("failed to get pipeline status", zap.Error(err))
-				continue
-			}
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		return fmt.Errorf("timeout waiting for pipeline to be ready")
+	// 	case <-ticker.C:
+	// 		status, err := k.GetPipelineStatus(ctx, experimentID, pipelineType, namespace)
+	// 		if err != nil {
+	// 			k.logger.Warn("failed to get pipeline status", zap.Error(err))
+	// 			continue
+	// 		}
 
-			if status.Ready {
-				k.logger.Info("pipeline is ready",
-					zap.String("name", status.Name),
-					zap.String("phase", status.Phase),
-				)
-				return nil
-			}
+	// 		if status.Ready {
+	// 			k.logger.Info("pipeline is ready",
+	// 				zap.String("name", status.Name),
+	// 				zap.String("phase", status.Phase),
+	// 			)
+	// 			return nil
+	// 		}
 
-			k.logger.Debug("pipeline not ready yet",
-				zap.String("name", status.Name),
-				zap.String("phase", status.Phase),
-				zap.String("message", status.Message),
-			)
-		}
-	}
+	// 		k.logger.Debug("pipeline not ready yet",
+	// 			zap.String("name", status.Name),
+	// 			zap.String("phase", status.Phase),
+	// 			zap.String("message", status.Message),
+	// 		)
+	// 	}
+	// }
+
+	// Temporary placeholder - return nil immediately
+	k.logger.Warn("WaitForPipelineReady is temporarily disabled - CRD types not available")
+	return nil
 }

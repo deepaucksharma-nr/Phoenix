@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 
-	pb "github.com/phoenix-vnext/platform/pkg/api/v1"
-	"github.com/phoenix-vnext/platform/pkg/interfaces"
+	pb "github.com/phoenix/platform/pkg/api/v1"
+	"github.com/phoenix/platform/pkg/interfaces"
 )
 
 type E2ETestSuite struct {

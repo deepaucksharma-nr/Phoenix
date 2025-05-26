@@ -17,12 +17,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 
-	"github.com/phoenix-vnext/platform/cmd/controller/internal/controller"
-	controllergrpc "github.com/phoenix-vnext/platform/cmd/controller/internal/grpc"
-	"github.com/phoenix-vnext/platform/cmd/generator/internal/config"
-	generatorgrpc "github.com/phoenix-vnext/platform/cmd/generator/internal/grpc"
-	controlgrpc "github.com/phoenix-vnext/platform/cmd/control-service/internal/grpc"
-	pb "github.com/phoenix-vnext/platform/pkg/api/v1"
+	"github.com/phoenix/platform/cmd/controller/internal/controller"
+	controllergrpc "github.com/phoenix/platform/cmd/controller/internal/grpc"
+	"github.com/phoenix/platform/cmd/generator/internal/config"
+	generatorgrpc "github.com/phoenix/platform/cmd/generator/internal/grpc"
+	controlgrpc "github.com/phoenix/platform/cmd/control-service/internal/grpc"
+	pb "github.com/phoenix/platform/pkg/api/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 

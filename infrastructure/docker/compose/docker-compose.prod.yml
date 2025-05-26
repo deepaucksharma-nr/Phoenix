@@ -1,4 +1,4 @@
-# Phoenix-vNext Production Override Configuration
+# Phoenix Production Override Configuration
 # Use with: docker-compose -f docker-compose.yaml -f docker-compose.prod.yml up
 # This provides production-grade security, resource limits, and configurations
 
