@@ -37,13 +37,13 @@ type AgentClient interface {
 // PipelineStatusAggregator aggregates status from multiple sources
 type PipelineStatusAggregator struct {
 	store            store.PipelineDeploymentStore
-	metricsCollector MetricsCollector
+	metricsCollector PipelineMetricsCollector
 	agentClient      AgentClient
 	logger           *zap.Logger
 }
 
-// MetricsCollector interface for collecting metrics
-type MetricsCollector interface {
+// PipelineMetricsCollector interface for collecting metrics
+type PipelineMetricsCollector interface {
 	// GetPipelineMetrics retrieves metrics for a pipeline deployment
 	GetPipelineMetrics(ctx context.Context, deploymentID string) (*models.DeploymentMetrics, error)
 	// GetCollectorHealth retrieves health status of collectors (placeholder for now)
@@ -53,7 +53,7 @@ type MetricsCollector interface {
 // NewPipelineStatusAggregator creates a new status aggregator
 func NewPipelineStatusAggregator(
 	store store.PipelineDeploymentStore,
-	metricsCollector MetricsCollector,
+	metricsCollector PipelineMetricsCollector,
 	agentClient AgentClient,
 	logger *zap.Logger,
 ) *PipelineStatusAggregator {

@@ -206,3 +206,64 @@ func (q *Queue) GetTaskStats(ctx context.Context) (map[string]interface{}, error
 	}
 	return stats, nil
 }
+
+// Run starts the background worker for task queue maintenance
+func (q *Queue) Run(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
+	log.Info().Msg("Task queue background worker started")
+	
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info().Msg("Task queue background worker stopping")
+			return
+			
+		case <-ticker.C:
+			// Process stale tasks
+			if err := q.processStaleTask(ctx); err != nil {
+				log.Error().Err(err).Msg("Failed to process stale tasks")
+			}
+			
+			// Clean up old completed tasks
+			if err := q.cleanupOldTasks(ctx); err != nil {
+				log.Error().Err(err).Msg("Failed to cleanup old tasks")
+			}
+		}
+	}
+}
+
+// processStaleTask marks assigned tasks that haven't been updated as failed
+func (q *Queue) processStaleTask(ctx context.Context) error {
+	// Get tasks that have been assigned for more than 5 minutes without update
+	staleTasks, err := q.store.GetStaleTasks(ctx, 5*time.Minute)
+	if err != nil {
+		return fmt.Errorf("failed to get stale tasks: %w", err)
+	}
+	
+	for _, task := range staleTasks {
+		log.Warn().
+			Str("task_id", task.ID).
+			Str("host_id", task.HostID).
+			Str("status", task.Status).
+			Msg("Marking stale task as failed")
+			
+		if err := q.UpdateTaskStatusWithResult(ctx, task.ID, "failed", nil, "Task timed out"); err != nil {
+			log.Error().Err(err).Str("task_id", task.ID).Msg("Failed to mark task as failed")
+		}
+	}
+	
+	return nil
+}
+
+// cleanupOldTasks removes completed tasks older than 24 hours
+func (q *Queue) cleanupOldTasks(ctx context.Context) error {
+	cutoff := time.Now().Add(-24 * time.Hour)
+	err := q.store.DeleteOldTasks(ctx, cutoff)
+	if err != nil {
+		return fmt.Errorf("failed to delete old tasks: %w", err)
+	}
+	
+	return nil
+}

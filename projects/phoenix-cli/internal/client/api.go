@@ -399,3 +399,32 @@ func (c *APIClient) DeleteExperiment(id string) error {
 	}
 	return c.parseResponse(resp, nil)
 }
+
+// RollbackExperiment rolls back an experiment
+func (c *APIClient) RollbackExperiment(id string, instant bool, reason string) (map[string]interface{}, error) {
+	endpoint := "/api/v1/experiments/" + id + "/rollback"
+	if instant {
+		endpoint += "/instant"
+	}
+	
+	params := url.Values{}
+	if reason != "" {
+		params.Add("reason", reason)
+	}
+	
+	if len(params) > 0 {
+		endpoint += "?" + params.Encode()
+	}
+	
+	resp, err := c.doRequest("POST", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	
+	var result map[string]interface{}
+	if err := c.parseResponse(resp, &result); err != nil {
+		return nil, err
+	}
+	
+	return result, nil
+}

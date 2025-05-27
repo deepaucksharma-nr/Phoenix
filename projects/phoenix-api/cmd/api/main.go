@@ -92,7 +92,13 @@ func main() {
 	compositeStore := store.NewCompositeStore(postgresStore, pipelineStore)
 	
 	// Initialize API server
-	apiServer := api.NewServer(compositeStore, hub, cfg)
+	apiServer, err := api.NewServer(compositeStore, hub, cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to create API server")
+	}
+
+	// Start task queue background worker
+	go apiServer.GetTaskQueue().Run(context.Background())
 
 	// Setup routes
 	apiServer.SetupRoutes(r)

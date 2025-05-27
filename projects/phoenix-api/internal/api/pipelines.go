@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/pkg/common/models"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/services"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
@@ -356,4 +359,160 @@ func (s *Server) loadPipelineConfig(configPath string) (map[string]interface{}, 
 	}
 
 	return config, nil
+}
+
+// POST /api/v1/pipelines/validate - Validate a pipeline configuration
+func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Config map[string]interface{} `json:"config"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	
+	// Convert map to PipelineConfig struct for validation
+	config := &services.PipelineConfig{
+		Receivers:  make(map[string]interface{}),
+		Processors: []services.ProcessorConfig{},
+		Exporters:  make(map[string]interface{}),
+		Service:    services.ServiceConfig{Pipelines: make(map[string]services.PipelineService)},
+	}
+	
+	// Parse receivers
+	if receivers, ok := req.Config["receivers"].(map[string]interface{}); ok {
+		config.Receivers = receivers
+	}
+	
+	// Parse processors
+	if processors, ok := req.Config["processors"].(map[string]interface{}); ok {
+		for name, procConfig := range processors {
+			if cfg, ok := procConfig.(map[string]interface{}); ok {
+				procType := "unknown"
+				if pType, exists := cfg["type"].(string); exists {
+					procType = pType
+				}
+				config.Processors = append(config.Processors, services.ProcessorConfig{
+					Name:   name,
+					Type:   procType,
+					Config: cfg,
+				})
+			}
+		}
+	}
+	
+	// Parse exporters
+	if exporters, ok := req.Config["exporters"].(map[string]interface{}); ok {
+		config.Exporters = exporters
+	}
+	
+	// Parse service
+	if service, ok := req.Config["service"].(map[string]interface{}); ok {
+		if pipelines, ok := service["pipelines"].(map[string]interface{}); ok {
+			for name, pipeline := range pipelines {
+				if p, ok := pipeline.(map[string]interface{}); ok {
+					ps := services.PipelineService{}
+					
+					// Parse receivers
+					if receivers, ok := p["receivers"].([]interface{}); ok {
+						for _, r := range receivers {
+							if recv, ok := r.(string); ok {
+								ps.Receivers = append(ps.Receivers, recv)
+							}
+						}
+					}
+					
+					// Parse processors
+					if processors, ok := p["processors"].([]interface{}); ok {
+						for _, proc := range processors {
+							if p, ok := proc.(string); ok {
+								ps.Processors = append(ps.Processors, p)
+							}
+						}
+					}
+					
+					// Parse exporters
+					if exporters, ok := p["exporters"].([]interface{}); ok {
+						for _, exp := range exporters {
+							if e, ok := exp.(string); ok {
+								ps.Exporters = append(ps.Exporters, e)
+							}
+						}
+					}
+					
+					config.Service.Pipelines[name] = ps
+				}
+			}
+		}
+	}
+	
+	// Validate the configuration
+	if err := s.templateRenderer.ValidatePipelineConfig(config); err != nil {
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"valid": false,
+			"error": err.Error(),
+		})
+		return
+	}
+	
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"valid": true,
+		"message": "Pipeline configuration is valid",
+	})
+}
+
+// POST /api/v1/pipelines/render - Render a pipeline template with parameters
+func (s *Server) handleRenderPipeline(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Template     string                 `json:"template"`
+		ExperimentID string                 `json:"experiment_id"`
+		Variant      string                 `json:"variant"`
+		HostID       string                 `json:"host_id"`
+		Parameters   map[string]interface{} `json:"parameters"`
+	}
+	
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	
+	// Validate required fields
+	if req.Template == "" {
+		respondError(w, http.StatusBadRequest, "Template name is required")
+		return
+	}
+	
+	// Create template data
+	templateData := services.TemplateData{
+		ExperimentID: req.ExperimentID,
+		Variant:      req.Variant,
+		HostID:       req.HostID,
+		Config:       req.Parameters,
+	}
+	
+	// Default values
+	if templateData.Variant == "" {
+		templateData.Variant = "candidate"
+	}
+	
+	// Render the template
+	rendered, err := s.templateRenderer.RenderTemplate(r.Context(), req.Template, templateData)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, fmt.Sprintf("Failed to render template: %v", err))
+		return
+	}
+	
+	// Parse the rendered YAML to validate it
+	var config map[string]interface{}
+	if err := yaml.Unmarshal([]byte(rendered), &config); err != nil {
+		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Rendered template is not valid YAML: %v", err))
+		return
+	}
+	
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"rendered": rendered,
+		"config":   config,
+		"template": req.Template,
+	})
 }

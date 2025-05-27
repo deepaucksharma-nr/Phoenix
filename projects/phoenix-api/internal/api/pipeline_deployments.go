@@ -10,6 +10,8 @@ import (
 	
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/pkg/common/models"
+	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/services"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -38,7 +40,7 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 	
 	// Create deployment
 	deployment := &models.PipelineDeployment{
-		ID:             generateID("dep"),
+		ID:             fmt.Sprintf("dep-%d", time.Now().UnixNano()),
 		DeploymentName: req.DeploymentName,
 		PipelineName:   req.PipelineName,
 		Namespace:      req.Namespace,
@@ -56,7 +58,7 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 		deployment.Namespace = "default"
 	}
 	if deployment.Parameters == nil {
-		deployment.Parameters = make(map[string]string)
+		deployment.Parameters = make(map[string]interface{})
 	}
 	if deployment.Resources == nil {
 		deployment.Resources = &models.ResourceRequirements{}
@@ -71,18 +73,50 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 	
 	// Create deployment tasks for each target node
 	for nodeName, nodeSelector := range deployment.TargetNodes {
-		task := &models.Task{
+		// Render pipeline configuration for this deployment
+		templateData := services.TemplateData{
+			ExperimentID: "", // No experiment ID for direct deployments
+			Variant:      deployment.Variant,
+			HostID:       nodeSelector,
+			Config:       deployment.Parameters,
+		}
+		
+		// Default variant if not specified
+		if templateData.Variant == "" {
+			templateData.Variant = "candidate"
+		}
+		
+		// Use the specified pipeline template or default to baseline
+		templateName := deployment.PipelineName
+		if templateName == "" {
+			templateName = "baseline"
+		}
+		
+		// Render the pipeline configuration
+		pipelineConfig, err := s.templateRenderer.RenderTemplate(r.Context(), templateName, templateData)
+		if err != nil {
+			log.Error().Err(err).
+				Str("deployment_id", deployment.ID).
+				Str("template", templateName).
+				Msg("Failed to render pipeline template")
+			// Fall back to raw config if template rendering fails
+			pipelineConfig = ""
+		}
+		
+		task := &internalModels.Task{
 			HostID:       nodeSelector,
 			Type:         "deployment",
 			Action:       "deploy",
 			Priority:     1,
 			Config: map[string]interface{}{
-				"deployment_id":   deployment.ID,
-				"deployment_name": deployment.DeploymentName,
-				"pipeline_name":   deployment.PipelineName,
-				"node_name":       nodeName,
-				"parameters":      deployment.Parameters,
-				"resources":       deployment.Resources,
+				"deployment_id":     deployment.ID,
+				"deployment_name":   deployment.DeploymentName,
+				"pipeline_name":     deployment.PipelineName,
+				"node_name":         nodeName,
+				"parameters":        deployment.Parameters,
+				"resources":         deployment.Resources,
+				"pipeline_config":   pipelineConfig,
+				"rendered_template": templateName,
 			},
 		}
 		
@@ -111,24 +145,21 @@ func (s *Server) handleListDeployments(w http.ResponseWriter, r *http.Request) {
 		Namespace:    r.URL.Query().Get("namespace"),
 		PipelineName: r.URL.Query().Get("pipeline"),
 		Status:       r.URL.Query().Get("status"),
-		TargetNode:   r.URL.Query().Get("node"),
 	}
 	
 	// Parse pagination
-	if limit := r.URL.Query().Get("limit"); limit != "" {
-		if l, err := strconv.Atoi(limit); err == nil {
-			req.Limit = l
-		}
-	}
-	if offset := r.URL.Query().Get("offset"); offset != "" {
-		if o, err := strconv.Atoi(offset); err == nil {
-			req.Offset = o
-		}
-	}
+	limit := 20
 	
-	// Default limit
-	if req.Limit == 0 {
-		req.Limit = 20
+	if pageSize := r.URL.Query().Get("page_size"); pageSize != "" {
+		if ps, err := strconv.Atoi(pageSize); err == nil && ps > 0 {
+			limit = ps
+			req.PageSize = ps
+		}
+	}
+	if page := r.URL.Query().Get("page"); page != "" {
+		if p, err := strconv.Atoi(page); err == nil && p > 0 {
+			req.Page = p
+		}
 	}
 	
 	// Get deployments
@@ -143,8 +174,8 @@ func (s *Server) handleListDeployments(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"deployments": deployments,
 		"total":       total,
-		"limit":       req.Limit,
-		"offset":      req.Offset,
+		"page":        req.Page,
+		"page_size":   limit,
 	})
 }
 
@@ -218,7 +249,7 @@ func (s *Server) handleDeleteDeployment(w http.ResponseWriter, r *http.Request) 
 	
 	// Create undeploy tasks for each target node
 	for nodeName, nodeSelector := range deployment.TargetNodes {
-		task := &models.Task{
+		task := &internalModels.Task{
 			HostID:   nodeSelector,
 			Type:     "deployment",
 			Action:   "undeploy",
@@ -291,7 +322,7 @@ func (s *Server) handleRollbackDeployment(w http.ResponseWriter, r *http.Request
 	// Get previous version (if versioning is implemented)
 	// For now, we'll just create a rollback task
 	for nodeName, nodeSelector := range deployment.TargetNodes {
-		task := &models.Task{
+		task := &internalModels.Task{
 			HostID:   nodeSelector,
 			Type:     "deployment",
 			Action:   "rollback",

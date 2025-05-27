@@ -3,10 +3,8 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/phoenix/platform/projects/phoenix-api/internal/analyzer"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
@@ -175,91 +173,3 @@ func (s *Server) handlePromoteExperiment(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// POST /api/v1/experiments/{id}/kpis - Calculate KPIs for an experiment
-func (s *Server) handleCalculateKPIs(w http.ResponseWriter, r *http.Request) {
-	expID := chi.URLParam(r, "id")
-
-	var req struct {
-		Duration string `json:"duration"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		req.Duration = "30m" // Default duration
-	}
-
-	duration, err := time.ParseDuration(req.Duration)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid duration format")
-		return
-	}
-
-	// Calculate KPIs
-	kpiCalculator, err := analyzer.NewKPICalculator(s.config.PrometheusURL)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to create KPI calculator")
-		respondError(w, http.StatusInternalServerError, "Failed to initialize KPI calculator")
-		return
-	}
-
-	result, err := kpiCalculator.CalculateExperimentKPIs(r.Context(), expID, duration)
-	if err != nil {
-		log.Error().Err(err).Str("experiment_id", expID).Msg("Failed to calculate KPIs")
-		respondError(w, http.StatusInternalServerError, "Failed to calculate KPIs")
-		return
-	}
-
-	// Store KPI results
-	exp, _ := s.store.GetExperiment(r.Context(), expID)
-	if exp != nil {
-		exp.Status.KPIs = map[string]float64{
-			"cardinality_reduction": result.CardinalityReduction,
-			"cost_reduction":        result.CostReduction,
-			"cpu_reduction":         result.CPUUsage.Reduction,
-			"memory_reduction":      result.MemoryUsage.Reduction,
-			"data_accuracy":         result.DataAccuracy,
-		}
-		s.store.UpdateExperiment(r.Context(), exp)
-	}
-
-	respondJSON(w, http.StatusOK, result)
-}
-
-// GET /api/v1/experiments/{id}/kpis - Get cached KPIs
-func (s *Server) handleGetKPIs(w http.ResponseWriter, r *http.Request) {
-	expID := chi.URLParam(r, "id")
-
-	exp, err := s.store.GetExperiment(r.Context(), expID)
-	if err != nil {
-		respondError(w, http.StatusNotFound, "Experiment not found")
-		return
-	}
-
-	if exp.Status.KPIs == nil || len(exp.Status.KPIs) == 0 {
-		respondError(w, http.StatusNotFound, "KPIs not yet calculated")
-		return
-	}
-
-	respondJSON(w, http.StatusOK, exp.Status.KPIs)
-}
-
-// POST /api/v1/experiments/{id}/analyze - Run analysis on experiment
-func (s *Server) handleAnalyzeExperiment(w http.ResponseWriter, r *http.Request) {
-	expID := chi.URLParam(r, "id")
-
-	// Get experiment
-	exp, err := s.store.GetExperiment(r.Context(), expID)
-	if err != nil {
-		respondError(w, http.StatusNotFound, "Experiment not found")
-		return
-	}
-
-	// TODO: Implement experiment analysis
-	// For now, return a placeholder analysis
-	analysis := map[string]interface{}{
-		"experiment_id": exp.ID,
-		"status":        "analysis_pending",
-		"message":       "Analysis functionality is being implemented",
-	}
-
-	respondJSON(w, http.StatusOK, analysis)
-}

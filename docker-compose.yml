@@ -7,11 +7,9 @@ services:
       context: ./projects/phoenix-api
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
-      - "8081:8081"  # WebSocket port
+      - "8080:8080"  # API and WebSocket on same port
     environment:
       - PORT=8080
-      - WEBSOCKET_PORT=8081
       - DATABASE_URL=postgresql://phoenix:phoenix@postgres:5432/phoenix?sslmode=disable
       - PROMETHEUS_URL=http://prometheus:9090
       - PUSHGATEWAY_URL=http://pushgateway:9091

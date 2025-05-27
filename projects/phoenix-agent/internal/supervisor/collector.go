@@ -208,6 +208,17 @@ func (m *CollectorManager) GetMetrics() []map[string]interface{} {
 }
 
 func (m *CollectorManager) downloadConfig(url string) (string, error) {
+	// Handle file:// URLs
+	if strings.HasPrefix(url, "file://") {
+		path := strings.TrimPrefix(url, "file://")
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return "", fmt.Errorf("failed to read config file: %w", err)
+		}
+		return string(data), nil
+	}
+	
+	// Handle HTTP/HTTPS URLs
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", fmt.Errorf("failed to download config: %w", err)

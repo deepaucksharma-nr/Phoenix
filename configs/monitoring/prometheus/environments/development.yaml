@@ -1,0 +1,26 @@
+# Development environment values for Prometheus
+Environment: development
+ClusterName: phoenix-dev
+ScrapeInterval: 15s
+EvaluationInterval: 15s
+
+# Targets
+PrometheusTarget: localhost:9090
+PhoenixAPITargets:
+  - phoenix-api:8081
+  - localhost:8081
+PushgatewayTargets:
+  - pushgateway:9091
+  - localhost:9091
+
+# Features
+AlertmanagerEnabled: false
+DirectAgentScraping: false
+
+# Rule files location
+RuleFilesPath: /etc/prometheus/rules
+
+# External labels
+ExternalLabels:
+  region: local
+  team: platform

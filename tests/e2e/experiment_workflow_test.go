@@ -30,21 +30,14 @@ func TestExperimentWorkflowE2E(t *testing.T) {
 
 	// Use environment variables for service URLs (set by integration test script)
 	apiURL := os.Getenv("API_URL")
-	generatorURL := os.Getenv("GENERATOR_URL")
-	
 	if apiURL == "" {
-		apiURL = "http://localhost:8081"
-	}
-	if generatorURL == "" {
-		generatorURL = "http://localhost:8083"
+		apiURL = "http://localhost:8080"
 	}
 	
 	t.Logf("🔗 Using API at %s", apiURL)
-	t.Logf("🔗 Using Generator at %s", generatorURL)
 	
 	// Check if services are ready
 	checkServiceHealth(t, apiURL+"/health")
-	checkServiceHealth(t, generatorURL+"/health")
 
 	t.Run("CompleteExperimentLifecycle", func(t *testing.T) {
 		// Test experiment creation

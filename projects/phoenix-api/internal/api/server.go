@@ -2,37 +2,77 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
+	"github.com/phoenix/platform/pkg/http/response"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/controller"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/services"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/tasks"
-	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
+	phoenixws "github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
 
 type Server struct {
-	store         store.Store
-	hub           *websocket.Hub
-	config        *config.Config
-	taskQueue     *tasks.Queue
-	expController *controller.ExperimentController
+	store              store.Store
+	hub                *phoenixws.Hub
+	config             *config.Config
+	taskQueue          *tasks.Queue
+	expController      *controller.ExperimentController
+	metricsCollector   *services.MetricsCollector
+	analysisService    *services.AnalysisService
+	templateRenderer   *services.PipelineTemplateRenderer
+	costService        *services.CostService
 }
 
-func NewServer(store store.Store, hub *websocket.Hub, config *config.Config) *Server {
+func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*Server, error) {
 	taskQueue := tasks.NewQueue(store)
 	expController := controller.NewExperimentController(store, taskQueue)
 	
-	return &Server{
-		store:         store,
-		hub:           hub,
-		config:        config,
-		taskQueue:     taskQueue,
-		expController: expController,
+	// Initialize metrics collector
+	metricsCollector, err := services.NewMetricsCollector(store, config.PrometheusURL)
+	if err != nil {
+		return nil, err
 	}
+	
+	// Initialize analysis service
+	analysisService, err := services.NewAnalysisService(store, config.PrometheusURL)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Initialize template renderer
+	templateRenderer := services.NewPipelineTemplateRenderer()
+	
+	// Load built-in templates
+	for name, tmpl := range templateRenderer.GetBuiltinTemplates() {
+		if err := templateRenderer.LoadTemplate(name, tmpl); err != nil {
+			log.Error().Err(err).Str("template", name).Msg("Failed to load built-in template")
+		}
+	}
+	
+	// Initialize cost service
+	costService := services.NewCostService(store)
+	
+	return &Server{
+		store:            store,
+		hub:              hub,
+		config:           config,
+		taskQueue:        taskQueue,
+		expController:    expController,
+		metricsCollector: metricsCollector,
+		analysisService:  analysisService,
+		templateRenderer: templateRenderer,
+		costService:      costService,
+	}, nil
+}
+
+// GetTaskQueue returns the task queue instance
+func (s *Server) GetTaskQueue() *tasks.Queue {
+	return s.taskQueue
 }
 
 func (s *Server) SetupRoutes(r chi.Router) {
@@ -50,6 +90,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Post("/{id}/kpis", s.handleCalculateKPIs)
 			r.Get("/{id}/kpis", s.handleGetKPIs)
 			r.Post("/{id}/analyze", s.handleAnalyzeExperiment)
+			r.Get("/{id}/cost-analysis", s.handleGetCostAnalysis)
 		})
 
 		// Pipeline endpoints (existing from platform-api)
@@ -57,6 +98,8 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/", s.handleListPipelines)
 			r.Get("/{id}", s.handleGetPipeline)
 			r.Get("/status", s.handleGetPipelineStatus)
+			r.Post("/validate", s.handleValidatePipeline)
+			r.Post("/render", s.handleRenderPipeline)
 		})
 		
 		// Pipeline deployment endpoints
@@ -149,27 +192,43 @@ func (s *Server) agentAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// Compatibility wrappers for existing code
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		log.Error().Err(err).Msg("Failed to encode response")
-	}
+	response.JSON(w, status, data)
 }
 
 func respondError(w http.ResponseWriter, status int, message string) {
-	respondJSON(w, status, map[string]string{"error": message})
+	response.Error(w, status, message)
 }
 
 // handleWebSocket handles WebSocket connections
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	client, err := s.hub.HandleConnection(w, r)
+	// Upgrade HTTP connection to WebSocket
+	upgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			// Allow connections from any origin for now
+			// TODO: Implement proper CORS checking in production
+			return true
+		},
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+	}
+	
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to handle WebSocket connection")
+		log.Error().Err(err).Msg("Failed to upgrade WebSocket connection")
 		return
 	}
 	
-	// Handle client messages
-	go client.ReadMessages()
-	go client.WriteMessages()
+	// Create new client and register with hub
+	client := phoenixws.NewClient(conn, s.hub)
+	
+	// Register client with hub
+	s.hub.Register <- client
+	
+	// Start client goroutines
+	go client.WritePump()
+	go client.ReadPump()
+	
+	log.Info().Str("remote_addr", r.RemoteAddr).Msg("WebSocket client connected")
 }

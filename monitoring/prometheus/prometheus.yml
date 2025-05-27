@@ -1,66 +1,50 @@
+# Phoenix Platform Prometheus Configuration
+# This is the main configuration for development environment
+# For production, use configs/generated/production/prometheus.yaml
+
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
   external_labels:
+    cluster: 'phoenix-dev'
     environment: 'development'
     architecture: 'lean'
 
 # Rule files
 rule_files:
-  - /etc/prometheus/rules/*.yml
+  - "rules/*.yml"
 
 # Scrape configurations
 scrape_configs:
-  # Scrape Prometheus itself
+  # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # Scrape Pushgateway for experiment metrics
+  # Phoenix API metrics
+  - job_name: 'phoenix-api'
+    static_configs:
+      - targets: ['phoenix-api:8081', 'localhost:8081']
+    metrics_path: /metrics
+
+  # Pushgateway for agent metrics
   - job_name: 'pushgateway'
     honor_labels: true
     static_configs:
-      - targets: ['pushgateway:9091']
+      - targets: ['pushgateway:9091', 'localhost:9091']
     metric_relabel_configs:
-      # Keep experiment labels
+      # Preserve important labels
       - source_labels: [experiment_id]
         target_label: experiment_id
       - source_labels: [variant]
-        target_label: variant
+        target_label: variant  
       - source_labels: [host]
         target_label: host
+      - source_labels: [pipeline_id]
+        target_label: pipeline_id
 
-  # Scrape Phoenix API metrics
-  - job_name: 'phoenix-api'
-    static_configs:
-      - targets: ['phoenix-api:8080']
-    metrics_path: '/metrics'
-    relabel_configs:
-      - source_labels: [__address__]
-        target_label: instance
-        regex: '([^:]+):.*'
-        replacement: '${1}'
-
-  # Optional: Scrape Grafana
+  # Grafana metrics (if available)
   - job_name: 'grafana'
     static_configs:
       - targets: ['grafana:3000']
-
-  # Optional: Scrape Redis
-  - job_name: 'redis'
-    static_configs:
-      - targets: ['redis:6379']
-
-# Alerting configuration
-alerting:
-  alertmanagers:
-    - static_configs:
-        - targets: []
-
-# Remote write for long-term storage (optional)
-# remote_write:
-#   - url: "http://thanos-receive:19291/api/v1/receive"
-#     write_relabel_configs:
-#       - source_labels: [__name__]
-#         regex: '(up|phoenix_.*|agent_.*|experiment_.*)'
-#         action: keep
+    metrics_path: /metrics
