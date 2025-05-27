@@ -294,8 +294,8 @@ import (
 )
 
 func main() {
-	fmt.Printf("Phoenix CLI Plugin: %s\n", %q)
-	fmt.Printf("Description: %s\n", %q)
+	fmt.Printf("Phoenix CLI Plugin: %%s\n", %q)
+	fmt.Printf("Description: %%s\n", %q)
 	fmt.Printf("Arguments: %%v\n", os.Args[1:])
 	
 	// Add your plugin logic here
