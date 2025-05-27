@@ -114,9 +114,9 @@ func PipelineTemplateCompletion(cmd *cobra.Command, args []string, toComplete st
 	return suggestions, cobra.ShellCompDirectiveNoFileComp
 }
 
-// NamespaceCompletion provides completion for Kubernetes namespaces
+// NamespaceCompletion provides completion for deployment environments
 func NamespaceCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Common namespace suggestions
+	// Common environment suggestions
 	namespaces := []string{
 		"default",
 		"production",
@@ -225,7 +225,7 @@ func DurationCompletion(cmd *cobra.Command, args []string, toComplete string) ([
 	return suggestions, cobra.ShellCompDirectiveNoFileComp
 }
 
-// SelectorCompletion provides completion for Kubernetes selectors
+// SelectorCompletion provides completion for agent selectors
 func SelectorCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	selectors := []string{
 		"app=webserver",

@@ -483,10 +483,12 @@ func (ptr *PipelineTemplateRenderer) validateExporter(name string, exporter inte
 // GetBuiltinTemplates returns a map of built-in pipeline templates
 func (ptr *PipelineTemplateRenderer) GetBuiltinTemplates() map[string]string {
 	return map[string]string{
-		"baseline": baselinePipelineTemplate,
-		"topk":     topkPipelineTemplate,
-		"adaptive": adaptiveFilterPipelineTemplate,
-		"hybrid":   hybridPipelineTemplate,
+		"baseline":             baselinePipelineTemplate,
+		"topk":                 topkPipelineTemplate,
+		"adaptive":             adaptiveFilterPipelineTemplate,
+		"hybrid":               hybridPipelineTemplate,
+		"nrdot-baseline":       nrdotBaselinePipelineTemplate,
+		"nrdot-cardinality":    nrdotCardinalityPipelineTemplate,
 	}
 }
 

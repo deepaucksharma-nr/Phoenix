@@ -201,10 +201,10 @@ func (a *StatusAggregator) getCRStatus(ctx context.Context, deploymentID string)
 func (a *StatusAggregator) getCollectorHealth(ctx context.Context, deploymentID string) (*CollectorHealth, error) {
 	// Query Prometheus for collector metrics
 	queries := map[string]string{
-		"cpu_usage":     fmt.Sprintf(`avg(rate(container_cpu_usage_seconds_total{pod=~"otelcol-%s-.*"}[5m])) * 100`, deploymentID),
-		"memory_usage":  fmt.Sprintf(`avg(container_memory_usage_bytes{pod=~"otelcol-%s-.*"}) / avg(container_spec_memory_limit_bytes{pod=~"otelcol-%s-.*"}) * 100`, deploymentID, deploymentID),
-		"restart_count": fmt.Sprintf(`sum(kube_pod_container_status_restarts_total{pod=~"otelcol-%s-.*"})`, deploymentID),
-		"uptime":        fmt.Sprintf(`min(time() - kube_pod_start_time{pod=~"otelcol-%s-.*"})`, deploymentID),
+		"cpu_usage":     fmt.Sprintf(`avg(rate(container_cpu_usage_seconds_total{container=~"otelcol-%s-.*"}[5m])) * 100`, deploymentID),
+		"memory_usage":  fmt.Sprintf(`avg(container_memory_usage_bytes{container=~"otelcol-%s-.*"}) / avg(container_spec_memory_limit_bytes{container=~"otelcol-%s-.*"}) * 100`, deploymentID, deploymentID),
+		"restart_count": fmt.Sprintf(`sum(container_restart_count{container=~"otelcol-%s-.*"})`, deploymentID),
+		"uptime":        fmt.Sprintf(`min(time() - container_start_time{container=~"otelcol-%s-.*"})`, deploymentID),
 	}
 
 	health := &CollectorHealth{}
