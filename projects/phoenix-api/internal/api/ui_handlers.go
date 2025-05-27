@@ -245,15 +245,13 @@ func (s *Server) handleGetActiveTasks(w http.ResponseWriter, r *http.Request) {
 
 // handleGetTaskQueue returns task queue status
 func (s *Server) handleGetTaskQueue(w http.ResponseWriter, r *http.Request) {
-	_ = r.Context() // ctx reserved for future use
+	ctx := r.Context()
 	
-	// TODO: Implement queue status method
-	queueStatus := map[string]interface{}{
-		"pending": 0,
-		"running": 0,
-		"completed": 0,
-		"failed": 0,
-		"total": 0,
+	queueStatus, err := s.store.GetTaskQueueStatus(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get task queue status")
+		respondError(w, http.StatusInternalServerError, "Failed to get queue status")
+		return
 	}
 	
 	respondJSON(w, http.StatusOK, queueStatus)
@@ -383,6 +381,57 @@ func (s *Server) handleInstantRollback(w http.ResponseWriter, r *http.Request) {
 		"message":        "Rollback initiated",
 		"experiment_id":  experimentID,
 		"hosts_affected": rollbackTasks,
+	})
+}
+
+// handleGetPipelineTemplates returns available pipeline templates
+func (s *Server) handleGetPipelineTemplates(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	
+	// Get filter parameters
+	category := r.URL.Query().Get("category")
+	tag := r.URL.Query().Get("tag")
+
+	// Get templates from database
+	templates, err := s.store.GetPipelineTemplates(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get pipeline templates")
+		respondError(w, http.StatusInternalServerError, "Failed to fetch pipeline templates")
+		return
+	}
+
+	// Apply filters
+	filtered := templates
+	if category != "" || tag != "" {
+		filtered = make([]*store.PipelineTemplate, 0)
+		for _, template := range templates {
+		if category != "" && template.Metadata["category"] != category {
+			continue
+		}
+		if tag != "" {
+			hasTag := false
+			for _, t := range template.Tags {
+				if t == tag {
+					hasTag = true
+					break
+				}
+			}
+			if !hasTag {
+				continue
+			}
+		}
+		filtered = append(filtered, template)
+	}
+
+	_ = ctx // ctx reserved for future use
+	
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"templates": filtered,
+		"total":     len(filtered),
+		"filters": map[string]string{
+			"category": category,
+			"tag":      tag,
+		},
 	})
 }
 

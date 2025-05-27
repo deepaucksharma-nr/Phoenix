@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"database/sql"
+	"database/sql" // Only for type reference in migration function
 	"fmt"
 	"net/http"
 	"os"
@@ -16,7 +16,6 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	commonstore "github.com/phoenix/platform/pkg/common/store"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/api"
@@ -44,23 +43,18 @@ func main() {
 	// Load configuration
 	cfg := config.Load()
 
-	// Connect to database
-	db, err := sql.Open("pgx", cfg.DatabaseURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to database")
-	}
-	defer db.Close()
-
-	// Run migrations
-	if err := runMigrations(db, cfg.DatabaseURL); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run migrations")
-	}
-
 	// Initialize store
 	postgresStore, err := commonstore.NewPostgresStore(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to create postgres store")
 	}
+	defer postgresStore.Close()
+
+	// Run migrations using the store's DB connection
+	if err := runMigrations(postgresStore, cfg.DatabaseURL); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run migrations")
+	}
+
 	pipelineStore := store.NewPostgresPipelineDeploymentStore(postgresStore)
 
 	// Initialize WebSocket hub
@@ -100,6 +94,23 @@ func main() {
 	// Start task queue background worker
 	go apiServer.GetTaskQueue().Run(context.Background())
 
+	// Start token blacklist cleanup job (runs every hour)
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+				if err := compositeStore.CleanupExpiredTokens(ctx); err != nil {
+					log.Error().Err(err).Msg("Failed to cleanup expired tokens")
+				}
+				cancel()
+			}
+		}
+	}()
+
 	// Setup routes
 	apiServer.SetupRoutes(r)
 
@@ -136,8 +147,8 @@ func main() {
 	}
 }
 
-func runMigrations(db *sql.DB, databaseURL string) error {
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+func runMigrations(dbProvider interface{ DB() *sql.DB }, databaseURL string) error {
+	driver, err := postgres.WithInstance(dbProvider.DB(), &postgres.Config{})
 	if err != nil {
 		return fmt.Errorf("failed to create migration driver: %w", err)
 	}
