@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 	phoenixws "github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
@@ -421,6 +422,7 @@ func (s *Server) handleGetPipelineTemplates(w http.ResponseWriter, r *http.Reque
 			}
 		}
 		filtered = append(filtered, template)
+		}
 	}
 
 	_ = ctx // ctx reserved for future use

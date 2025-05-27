@@ -64,7 +64,7 @@ func TestAuthStatusCommand(t *testing.T) {
 
 			// Capture output
 			var buf bytes.Buffer
-			cmd := authStatusCmd
+			cmd := statusCmd
 			cmd.SetOut(&buf)
 			cmd.SetErr(&buf)
 
@@ -100,7 +100,7 @@ func TestAuthLogoutCommand(t *testing.T) {
 
 	// Capture output
 	var buf bytes.Buffer
-	cmd := authLogoutCmd
+	cmd := logoutCmd
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
 
