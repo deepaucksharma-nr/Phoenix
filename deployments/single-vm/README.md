@@ -144,6 +144,19 @@ sudo docker-compose up -d
 curl -fsSL https://phoenix.your-domain.com/install-agent.sh | sudo bash
 ```
 
+### Configure NRDOT Agents
+```bash
+# For New Relic users, configure NRDOT on agents:
+sudo tee -a /etc/phoenix/agent.env <<EOF
+COLLECTOR_TYPE=nrdot
+NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+NEW_RELIC_LICENSE_KEY=your-license-key
+EOF
+
+# Restart agent
+sudo systemctl restart phoenix-agent
+```
+
 ## Monitoring
 
 - **Phoenix UI**: Real-time cost savings, agent status, experiments

@@ -48,7 +48,27 @@ Simplified experiment creation for UI.
   "host_selector": ["group:prod-api", "env=production"],
   "baseline_template": "standard",
   "candidate_template": "adaptive-filter-v1",
-  "duration_hours": 24
+  "duration_hours": 24,
+  "collector_type": "otel"
+}
+```
+
+**With NRDOT Collector:**
+```json
+{
+  "name": "NRDOT Cardinality Reduction",
+  "description": "Use New Relic's advanced cardinality reduction",
+  "host_selector": ["group:prod-api"],
+  "baseline_template": "standard",
+  "candidate_template": "nrdot-cardinality",
+  "duration_hours": 24,
+  "collector_type": "nrdot",
+  "nrdot_config": {
+    "license_key": "your-nr-license-key",
+    "otlp_endpoint": "otlp.nr-data.net:4317",
+    "max_cardinality": 10000,
+    "reduction_percentage": 70
+  }
 }
 ```
 
@@ -61,7 +81,8 @@ Simplified experiment creation for UI.
   "created_at": "2024-01-15T10:00:00Z",
   "baseline_template": "standard",
   "candidate_template": "adaptive-filter-v1",
-  "estimated_savings_percent": 70
+  "estimated_savings_percent": 70,
+  "collector_type": "otel"
 }
 ```
 
@@ -182,7 +203,8 @@ Returns agents with geographical location for map visualization.
     "description": "Dynamically filters low-value metrics",
     "category": "cost_optimization",
     "config_url": "/configs/adaptive-filter-v1.yaml",
-    "estimated_savings_percent": 70
+    "estimated_savings_percent": 70,
+    "collector_type": "otel"
   },
   {
     "id": "topk-v1",
@@ -190,7 +212,8 @@ Returns agents with geographical location for map visualization.
     "description": "Keep only top K metrics by value",
     "category": "cost_optimization",
     "config_url": "/configs/topk-v1.yaml",
-    "estimated_savings_percent": 65
+    "estimated_savings_percent": 65,
+    "collector_type": "otel"
   },
   {
     "id": "hybrid-v1",
@@ -198,7 +221,34 @@ Returns agents with geographical location for map visualization.
     "description": "Combines multiple filtering techniques",
     "category": "advanced",
     "config_url": "/configs/hybrid-v1.yaml",
-    "estimated_savings_percent": 75
+    "estimated_savings_percent": 75,
+    "collector_type": "otel"
+  },
+  {
+    "id": "nrdot-baseline",
+    "name": "NRDOT Baseline",
+    "description": "New Relic collector with standard configuration",
+    "category": "new_relic",
+    "config_url": "/configs/nrdot-baseline.yaml",
+    "estimated_savings_percent": 0,
+    "collector_type": "nrdot",
+    "requirements": {
+      "license_key": true,
+      "min_version": "1.0.0"
+    }
+  },
+  {
+    "id": "nrdot-cardinality",
+    "name": "NRDOT Cardinality Reduction",
+    "description": "New Relic collector with advanced cardinality reduction",
+    "category": "new_relic",
+    "config_url": "/configs/nrdot-cardinality.yaml",
+    "estimated_savings_percent": 80,
+    "collector_type": "nrdot",
+    "requirements": {
+      "license_key": true,
+      "min_version": "1.0.0"
+    }
   }
 ]
 ```
@@ -360,7 +410,33 @@ Long-polling endpoint with 30-second timeout. Returns immediately if tasks are a
     "metrics_per_sec": 45000
   },
   "active_pipelines": ["baseline", "candidate"],
-  "agent_version": "1.0.0"
+  "agent_version": "1.0.0",
+  "collector_info": {
+    "type": "otel",
+    "version": "0.91.0",
+    "status": "running"
+  }
+}
+```
+
+**With NRDOT Collector:**
+```json
+{
+  "status": "healthy",
+  "metrics": {
+    "cpu_percent": 12.5,
+    "memory_mb": 256,
+    "metrics_per_sec": 45000,
+    "cardinality_reduction": 72.5
+  },
+  "active_pipelines": ["nrdot-cardinality"],
+  "agent_version": "1.0.0",
+  "collector_info": {
+    "type": "nrdot",
+    "version": "1.0.0",
+    "status": "running",
+    "new_relic_account": "123456"
+  }
 }
 ```
 
@@ -605,8 +681,10 @@ client.Do(req)
 - **A/B Testing**: Baseline vs candidate pipeline comparison
 - **Authentication**: X-Agent-Host-ID header for agents
 - **WebSocket**: Real-time updates on same port as REST API
-- **Pipeline Templates**: Adaptive Filter, TopK, and Hybrid approaches
-- **Cost Reduction**: Demonstrated 70% reduction in metrics cardinality
+- **Pipeline Templates**: Adaptive Filter, TopK, Hybrid, and NRDOT approaches
+- **Collector Support**: Both OpenTelemetry and NRDOT (New Relic) collectors
+- **Cost Reduction**: Demonstrated 70-80% reduction in metrics cardinality
+- **NRDOT Features**: Advanced cardinality reduction with New Relic processors
 
 ---
 

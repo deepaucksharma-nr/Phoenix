@@ -139,6 +139,10 @@ rate_limiting:
 | `PHOENIX_OTEL_BINARY` | OTel collector binary | `otelcol` | No |
 | `PHOENIX_LOG_LEVEL` | Log level | `info` | No |
 | `PHOENIX_WORK_DIR` | Working directory | `/var/lib/phoenix` | No |
+| `COLLECTOR_TYPE` | Collector type (otel/nrdot) | `otel` | No |
+| `OTEL_COLLECTOR_ENDPOINT` | OTel collector endpoint | `http://localhost:4317` | No |
+| `NRDOT_OTLP_ENDPOINT` | NRDOT endpoint | `https://otlp.nr-data.net:4317` | No |
+| `NEW_RELIC_LICENSE_KEY` | New Relic license key | - | No (Required for NRDOT) |
 
 ### Configuration File (agent.yaml)
 
@@ -169,6 +173,14 @@ otel:
   restart_delay: 10s
   health_check_port: 13133
   graceful_shutdown: 30s
+
+collector:
+  type: otel  # or "nrdot"
+  otel:
+    endpoint: http://localhost:4317
+  nrdot:
+    endpoint: https://otlp.nr-data.net:4317
+    license_key: ${NEW_RELIC_LICENSE_KEY}
 
 pipelines:
   validate_before_deploy: true

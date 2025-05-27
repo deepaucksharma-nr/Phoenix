@@ -40,10 +40,16 @@ services:
       - CONFIG_DIR=/etc/phoenix-agent
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - OTEL_ENDPOINT=http://localhost:4318
-      # NRDOT Configuration (uncomment to use NRDOT instead of OTel)
+      # Collector Configuration - Choose ONE:
+      # Option 1: Standard OpenTelemetry Collector (default)
+      - COLLECTOR_TYPE=otel
+      # Option 2: New Relic Distribution of OpenTelemetry (NRDOT)
+      # - COLLECTOR_TYPE=nrdot
       # - USE_NRDOT=true
       # - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
-      # - NEW_RELIC_OTLP_ENDPOINT=otlp.nr-data.net:4317
+      # - NEW_RELIC_OTLP_ENDPOINT=${NEW_RELIC_OTLP_ENDPOINT:-otlp.nr-data.net:4317}
+      # - MAX_CARDINALITY=10000
+      # - REDUCTION_PERCENTAGE=70
     depends_on:
       - phoenix-api
     networks:

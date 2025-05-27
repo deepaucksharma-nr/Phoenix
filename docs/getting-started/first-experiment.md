@@ -56,6 +56,14 @@ Phoenix offers three optimization strategies:
 
 For this guide, we'll use the Adaptive Filter.
 
+### Collector Selection
+
+You can run experiments with either:
+- **OpenTelemetry Collector** (default) - Vendor-neutral, community standard
+- **NRDOT Collector** - New Relic's optimized distribution with enhanced cardinality reduction
+
+For New Relic users, NRDOT provides additional optimization benefits.
+
 ## Step 3: Create the Experiment
 
 ### Using the Dashboard
@@ -89,6 +97,20 @@ phoenix-cli experiment create \
   --min-reduction 0.6 \
   --max-signal-loss 0.01 \
   --max-latency-ms 10
+```
+
+For NRDOT users:
+```bash
+phoenix-cli experiment create \
+  --name "NRDOT Cardinality Reduction" \
+  --description "Test NRDOT adaptive filter" \
+  --baseline-pipeline default \
+  --candidate-pipeline nrdot-adaptive-filter \
+  --traffic-split 20 \
+  --duration 2h \
+  --min-reduction 0.6 \
+  --collector-type nrdot \
+  --config '{"nr_license_key": "${NEW_RELIC_LICENSE_KEY}"}'
 ```
 
 Output:

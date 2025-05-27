@@ -1,0 +1,47 @@
+{
+  "name": "NRDOT Cardinality Reduction Test",
+  "description": "Testing cardinality reduction using Phoenix platform with NRDOT collector and adaptive filtering",
+  "config": {
+    "collector_type": "nrdot",
+    "target_hosts": ["nrdot-agent-001", "nrdot-agent-002"],
+    "baseline_template": {
+      "url": "https://config-server.example.com/nrdot-templates/baseline/config.yaml",
+      "variables": {
+        "BATCH_TIMEOUT": "1s",
+        "BATCH_SIZE": "1000",
+        "EXPERIMENT_ID": "{{EXPERIMENT_ID}}",
+        "VARIANT": "baseline",
+        "HOST_ID": "{{HOST_ID}}",
+        "NRDOT_OTLP_ENDPOINT": "https://otlp.nr-data.net:4317",
+        "NEW_RELIC_LICENSE_KEY": "{{NEW_RELIC_LICENSE_KEY}}"
+      }
+    },
+    "candidate_template": {
+      "url": "https://config-server.example.com/nrdot-templates/candidate/adaptive-filter-config.yaml",
+      "variables": {
+        "BATCH_TIMEOUT": "1s",
+        "BATCH_SIZE": "500",
+        "CPU_THRESHOLD": "0.05",
+        "MEMORY_THRESHOLD": "0.10",
+        "MEMORY_BYTES_THRESHOLD": "52428800",
+        "NETWORK_THRESHOLD": "1024",
+        "DISK_THRESHOLD": "1024",
+        "EXPERIMENT_ID": "{{EXPERIMENT_ID}}",
+        "VARIANT": "candidate",
+        "HOST_ID": "{{HOST_ID}}",
+        "NRDOT_OTLP_ENDPOINT": "https://otlp.nr-data.net:4317",
+        "NEW_RELIC_LICENSE_KEY": "{{NEW_RELIC_LICENSE_KEY}}",
+        "CARDINALITY_LIMIT": "10000",
+        "REDUCTION_TARGET": "70"
+      }
+    },
+    "load_profile": "high-card",
+    "duration": "10m",
+    "warmup_duration": "1m",
+    "success_criteria": {
+      "min_cardinality_reduction": 0.6,
+      "max_signal_loss": 0.01,
+      "max_latency_increase_ms": 50
+    }
+  }
+}

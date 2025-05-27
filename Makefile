@@ -335,8 +335,32 @@ run-phoenix-agent: ## Run Phoenix Agent
 	@echo -e "$(CYAN)Starting Phoenix Agent...$(NC)"
 	@cd projects/phoenix-agent && go run cmd/phoenix-agent/main.go
 
+run-phoenix-agent-nrdot: ## Run Phoenix Agent with NRDOT collector
+	@echo -e "$(CYAN)Starting Phoenix Agent with NRDOT...$(NC)"
+	@cd projects/phoenix-agent && USE_NRDOT=true go run cmd/phoenix-agent/main.go
+
 run-phoenix: dev-up run-phoenix-api ## Run Phoenix platform (API + dependencies)
 	@echo -e "$(GREEN)✓ Phoenix platform running$(NC)"
+
+##@ NRDOT Integration
+
+nrdot-test: ## Test NRDOT integration
+	@echo -e "$(CYAN)Testing NRDOT integration...$(NC)"
+	@./scripts/test-nrdot-integration.sh
+	@echo -e "$(GREEN)✓ NRDOT integration test completed$(NC)"
+
+nrdot-demo: ## Run NRDOT demonstration
+	@echo -e "$(CYAN)Starting NRDOT demonstration...$(NC)"
+	@./scripts/demo-nrdot.sh
+	@echo -e "$(GREEN)✓ NRDOT demonstration completed$(NC)"
+
+nrdot-validate: ## Validate NRDOT configuration
+	@echo -e "$(CYAN)Validating NRDOT configuration...$(NC)"
+	@if [ -z "$$NEW_RELIC_LICENSE_KEY" ]; then \
+		echo -e "$(RED)✗ NEW_RELIC_LICENSE_KEY not set$(NC)"; \
+		exit 1; \
+	fi
+	@echo -e "$(GREEN)✓ NRDOT configuration valid$(NC)"
 
 # Project-specific targets
 $(foreach project,$(ALL_PROJECTS),$(eval $(call PROJECT_TARGET,$(project))))

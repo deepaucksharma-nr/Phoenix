@@ -254,6 +254,14 @@ CODEOWNERS enforces review requirements:
 - UpdateDeploymentRequest supports `StatusMessage` and `UpdatedBy` fields
 - New deployment statuses: `degraded` and `healthy`
 
+### NRDOT Integration
+- Support for New Relic Distribution of OpenTelemetry (NRDOT) as alternative collector
+- NRDOT-specific pipeline templates: `nrdot-baseline` and `nrdot-cardinality`
+- Environment variables: `USE_NRDOT`, `NEW_RELIC_LICENSE_KEY`, `NEW_RELIC_OTLP_ENDPOINT`
+- CLI flags: `--use-nrdot`, `--nr-license-key`, `--max-cardinality`, `--reduction-percentage`
+- Automatic collector detection based on pipeline variant or configuration
+- Advanced cardinality reduction features via New Relic processors
+
 ## Current Implementation Status (Latest)
 
 ### Working Components
@@ -280,6 +288,8 @@ CODEOWNERS enforces review requirements:
    - Adaptive Filter: ML-based metric filtering
    - TopK: Keep only top K important metrics
    - Hybrid: Combination strategies
+   - NRDOT Baseline: New Relic OTLP export with basic processing
+   - NRDOT Cardinality: Advanced cardinality reduction with New Relic processors
    - Template rendering with Go text/template
 
 ### Key API Endpoints
