@@ -5,16 +5,16 @@ FROM golang:1.24-alpine AS builder
 RUN apk add --no-cache git make
 
 # Set working directory
-WORKDIR /build
+WORKDIR /workspace
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy entire monorepo context
+COPY . .
+
+# Change to project directory
+WORKDIR /workspace/projects/phoenix-agent
 
 # Download dependencies
 RUN go mod download
-
-# Copy source code
-COPY . .
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o phoenix-agent cmd/phoenix-agent/main.go
@@ -46,7 +46,7 @@ RUN mkdir -p /etc/phoenix-agent /var/log/phoenix-agent
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/phoenix-agent /app/
+COPY --from=builder /workspace/projects/phoenix-agent/phoenix-agent /app/
 
 # Create non-root user (but agent needs some privileges)
 RUN addgroup -g 1000 -S phoenix && \

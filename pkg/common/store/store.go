@@ -72,7 +72,7 @@ func (s *PostgresStore) CreateExperiment(ctx context.Context, exp *models.Experi
 
 	_, err = s.db.ExecContext(ctx, query,
 		exp.ID, exp.Name, exp.Description, exp.BaselinePipeline, exp.CandidatePipeline,
-		exp.Status, string(targetNodesJSON), exp.CreatedAt, exp.UpdatedAt,
+		exp.Status, targetNodesJSON, exp.CreatedAt, exp.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create experiment: %w", err)

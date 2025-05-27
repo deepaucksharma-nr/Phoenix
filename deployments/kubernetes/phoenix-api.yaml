@@ -10,6 +10,7 @@ metadata:
   namespace: phoenix-system
 data:
   PORT: "8080"
+  WEBSOCKET_PORT: "8081"
   ENVIRONMENT: "production"
   PROMETHEUS_URL: "http://prometheus:9090"
   PUSHGATEWAY_URL: "http://prometheus-pushgateway:9091"
@@ -51,6 +52,8 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        - containerPort: 8081
+          name: websocket
         envFrom:
         - configMapRef:
             name: phoenix-api-config
@@ -98,6 +101,10 @@ spec:
     targetPort: http
     protocol: TCP
     name: http
+  - port: 8081
+    targetPort: websocket
+    protocol: TCP
+    name: websocket
   selector:
     app: phoenix-api
 ---

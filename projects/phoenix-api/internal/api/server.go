@@ -91,6 +91,9 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/{id}/kpis", s.handleGetKPIs)
 			r.Post("/{id}/analyze", s.handleAnalyzeExperiment)
 			r.Get("/{id}/cost-analysis", s.handleGetCostAnalysis)
+			// UI-focused experiment endpoints
+			r.Post("/wizard", s.handleCreateExperimentWizard)
+			r.Post("/{id}/rollback", s.handleInstantRollback)
 		})
 
 		// Pipeline endpoints (existing from platform-api)
@@ -100,6 +103,10 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/status", s.handleGetPipelineStatus)
 			r.Post("/validate", s.handleValidatePipeline)
 			r.Post("/render", s.handleRenderPipeline)
+			// UI-focused pipeline endpoints
+			r.Get("/templates", s.handleGetPipelineTemplates)
+			r.Post("/preview", s.handlePreviewPipelineImpact)
+			r.Post("/quick-deploy", s.handleQuickDeploy)
 		})
 		
 		// Pipeline deployment endpoints
@@ -133,17 +140,6 @@ func (s *Server) SetupRoutes(r chi.Router) {
 		r.Route("/fleet", func(r chi.Router) {
 			r.Get("/status", s.handleGetFleetStatus)
 			r.Get("/map", s.handleGetAgentMap)
-		})
-		
-		r.Route("/experiments", func(r chi.Router) {
-			r.Post("/wizard", s.handleCreateExperimentWizard)
-			r.Post("/{id}/rollback", s.handleInstantRollback)
-		})
-		
-		r.Route("/pipelines", func(r chi.Router) {
-			r.Get("/templates", s.handleGetPipelineTemplates)
-			r.Post("/preview", s.handlePreviewPipelineImpact)
-			r.Post("/quick-deploy", s.handleQuickDeploy)
 		})
 		
 		r.Route("/tasks", func(r chi.Router) {

@@ -121,11 +121,15 @@ func (s *Server) handleGetAgentMap(w http.ResponseWriter, r *http.Request) {
 // handleCreateExperimentWizard handles simplified experiment creation
 func (s *Server) handleCreateExperimentWizard(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name         string   `json:"name"`
-		Description  string   `json:"description"`
-		HostSelector []string `json:"host_selector"` // tags like env=prod
-		PipelineType string   `json:"pipeline_type"` // template name
-		Duration     int      `json:"duration_hours"`
+		Name               string            `json:"name"`
+		Description        string            `json:"description"`
+		TargetHosts        []string          `json:"target_hosts"`
+		BaselineTemplate   string            `json:"baseline_template"`
+		CandidateTemplate  string            `json:"candidate_template"`
+		TemplateVariables  map[string]string `json:"template_variables"`
+		Duration           int               `json:"duration_minutes"`
+		WarmupDuration     int               `json:"warmup_duration_minutes"`
+		OptimizationGoal   string            `json:"optimization_goal"`
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -133,15 +137,60 @@ func (s *Server) handleCreateExperimentWizard(w http.ResponseWriter, r *http.Req
 		return
 	}
 	
-	// TODO: Implement experiment wizard creation
-	// For now, return a placeholder response
-	experiment := map[string]interface{}{
-		"id": "exp-" + time.Now().Format("20060102150405"),
-		"name": req.Name,
-		"description": req.Description,
-		"status": "created",
-		"message": "Experiment wizard creation is being implemented",
+	// Create experiment using the wizard data
+	experiment := &internalModels.Experiment{
+		ID:          fmt.Sprintf("exp-%s", time.Now().Format("20060102150405")),
+		Name:        req.Name,
+		Description: req.Description,
+		Phase:       internalModels.PhasePending,
+		Config: internalModels.ExperimentConfig{
+			TargetHosts: req.TargetHosts,
+			BaselineTemplate: internalModels.PipelineTemplate{
+				Name:      req.BaselineTemplate,
+				ConfigURL: fmt.Sprintf("file:///configs/%s.yaml", req.BaselineTemplate),
+			},
+			CandidateTemplate: internalModels.PipelineTemplate{
+				Name:      req.CandidateTemplate,
+				ConfigURL: fmt.Sprintf("file:///configs/%s.yaml", req.CandidateTemplate),
+				Variables: req.TemplateVariables,
+			},
+			Duration:       time.Duration(req.Duration) * time.Minute,
+			WarmupDuration: time.Duration(req.WarmupDuration) * time.Minute,
+		},
+		Metadata: map[string]interface{}{
+			"wizard_version": "1.0",
+			"optimization_goal": req.OptimizationGoal,
+		},
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	}
+	
+	// Save experiment
+	if err := s.store.CreateExperiment(r.Context(), experiment); err != nil {
+		log.Error().Err(err).Msg("Failed to create experiment from wizard")
+		respondError(w, http.StatusInternalServerError, "Failed to create experiment")
+		return
+	}
+	
+	// Create initial event
+	event := &internalModels.ExperimentEvent{
+		ExperimentID: experiment.ID,
+		EventType:    "experiment_created",
+		Phase:        "created",
+		Message:      "Experiment created via wizard",
+		Metadata: map[string]interface{}{
+			"wizard_data": req,
+		},
+	}
+	
+	if err := s.store.CreateExperimentEvent(r.Context(), event); err != nil {
+		log.Error().Err(err).Msg("Failed to create experiment event")
+	}
+	
+	// Broadcast creation event
+	s.broadcastExperimentUpdate(experiment.ID, "created", map[string]interface{}{
+		"experiment": experiment,
+	})
 	
 	respondJSON(w, http.StatusCreated, experiment)
 }
@@ -377,4 +426,21 @@ func (s *Server) deployPipelineQuick(ctx context.Context, template string, hosts
 		"hosts_count": len(hosts),
 		"status": "deploying",
 	}, nil
+}
+
+// Helper function to broadcast experiment updates via WebSocket
+func (s *Server) broadcastExperimentUpdate(experimentID, action string, data map[string]interface{}) {
+	msgData, _ := json.Marshal(map[string]interface{}{
+		"experiment_id": experimentID,
+		"action":        action,
+		"data":          data,
+		"timestamp":     time.Now(),
+	})
+	
+	s.hub.Broadcast <- &phoenixws.Message{
+		Type:      phoenixws.MessageTypeExperimentUpdate,
+		Topic:     "experiments",
+		Data:      msgData,
+		Timestamp: time.Now(),
+	}
 }

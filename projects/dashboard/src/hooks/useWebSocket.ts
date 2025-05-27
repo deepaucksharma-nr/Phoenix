@@ -1,10 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { useEffect, useCallback, useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useExperimentStore } from '../store/useExperimentStore'
-import { WebSocketMessage } from '../types'
-
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080'
+import { webSocketService } from '../services/websocket/WebSocketService'
 
 interface UseWebSocketReturn {
   connected: boolean
@@ -15,100 +12,59 @@ interface UseWebSocketReturn {
 }
 
 export const useWebSocket = (): UseWebSocketReturn => {
-  const socketRef = useRef<Socket | null>(null)
   const { token } = useAuthStore()
   const { updateExperiment } = useExperimentStore()
+  const [connected, setConnected] = useState(false)
 
   const connect = useCallback(() => {
-    if (socketRef.current?.connected) return
-
-    socketRef.current = io(WS_URL, {
-      auth: {
-        token,
-      },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    })
-
-    socketRef.current.on('connect', () => {
-      console.log('WebSocket connected')
-    })
-
-    socketRef.current.on('disconnect', () => {
-      console.log('WebSocket disconnected')
-    })
-
-    socketRef.current.on('error', (error: any) => {
-      console.error('WebSocket error:', error)
-    })
-
-    // Handle system messages
-    socketRef.current.on('message', (message: WebSocketMessage) => {
-      handleMessage(message)
+    if (webSocketService.isConnected()) return
+    
+    webSocketService.connect(token).catch(err => {
+      console.error('Failed to connect WebSocket:', err)
     })
   }, [token])
 
   const disconnect = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect()
-      socketRef.current = null
-    }
+    webSocketService.disconnect()
   }, [])
 
   const send = useCallback((event: string, data: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data)
+    if (webSocketService.isConnected()) {
+      // For native WebSocket, we need to send structured messages
+      webSocketService.send({
+        type: event,
+        data: data,
+        timestamp: new Date().toISOString()
+      })
     } else {
       console.warn('WebSocket not connected')
     }
   }, [])
 
   const subscribe = useCallback((event: string, handler: (data: any) => void) => {
-    if (!socketRef.current) {
-      console.warn('WebSocket not initialized')
-      return () => {}
-    }
-
-    socketRef.current.on(event, handler)
+    webSocketService.on(event, handler)
 
     // Return unsubscribe function
     return () => {
-      socketRef.current?.off(event, handler)
+      webSocketService.off(event, handler)
     }
   }, [])
 
-  const handleMessage = (message: WebSocketMessage) => {
-    switch (message.type) {
-      case 'experiment.update':
-        // Update experiment in store
-        if (message.payload.experiment) {
-          updateExperiment(message.payload.experiment.id, message.payload.experiment)
-        }
-        break
+  // WebSocketService already handles message routing via event handlers
 
-      case 'metrics.update':
-        // Handle real-time metrics updates
-        console.log('Metrics update:', message.payload)
-        // TODO: Update metrics store when implemented
-        break
-
-      case 'alert':
-        // Handle system alerts
-        console.warn('Alert:', message.payload)
-        // TODO: Show notification to user
-        break
-
-      case 'notification':
-        // Handle general notifications
-        console.log('Notification:', message.payload)
-        // TODO: Add to notification store
-        break
-
-      default:
-        console.log('Unknown message type:', message.type)
+  // Track connection state
+  useEffect(() => {
+    const unsubscribeConnected = webSocketService.on('connected', () => setConnected(true))
+    const unsubscribeDisconnected = webSocketService.on('disconnected', () => setConnected(false))
+    
+    // Check initial state
+    setConnected(webSocketService.isConnected())
+    
+    return () => {
+      webSocketService.off('connected', unsubscribeConnected)
+      webSocketService.off('disconnected', unsubscribeDisconnected)
     }
-  }
+  }, [])
 
   // Auto-connect when token is available
   useEffect(() => {
@@ -119,12 +75,12 @@ export const useWebSocket = (): UseWebSocketReturn => {
     }
 
     return () => {
-      disconnect()
+      // Don't disconnect on unmount if still needed elsewhere
     }
   }, [token, connect, disconnect])
 
   return {
-    connected: socketRef.current?.connected || false,
+    connected,
     connect,
     disconnect,
     send,
