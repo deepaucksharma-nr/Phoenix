@@ -87,7 +87,7 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ### Operations
-- [Deployment Options](docs/operations/deployment/) - K8s, Docker, Single VM
+- [Deployment Options](docs/operations/deployment/) - Docker Compose, Single VM
 - [Configuration Reference](docs/operations/configuration.md) - All config options
 - [Production Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment
 - [Scaling & Performance](docs/operations/scaling.md) - Scaling strategies

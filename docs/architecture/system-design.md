@@ -257,20 +257,22 @@ metrics (
 
 ## Deployment Patterns
 
-### Kubernetes
-- **Helm charts**: Standardized deployment
-- **Auto-scaling**: HPA for API pods
-- **Service mesh**: Optional Istio integration
-
-### Docker Compose
+### Docker Compose (Primary)
+- **Production**: Single VM deployment
 - **Development**: Full stack locally
 - **Testing**: Integration test environment
 - **Demo**: Quick evaluation setup
 
-### Single VM
-- **Small scale**: All-in-one deployment
-- **Edge cases**: Restricted environments
-- **Backup**: Disaster recovery option
+### Single VM Architecture
+- **Standard deployment**: All services on one VM
+- **Systemd integration**: Service management
+- **Resource limits**: Docker resource constraints
+- **Auto-scaling**: Process-based scaling
+
+### Component Separation (Growth Path)
+- **Database**: Managed PostgreSQL service
+- **Monitoring**: Dedicated Prometheus VM
+- **API scaling**: Multiple API containers
 
 ## Monitoring and Observability
 

@@ -21,7 +21,7 @@ production/
 ## Production Deployment
 
 ### Prerequisites
-- Kubernetes cluster or Docker Compose
+- Docker and Docker Compose installed
 - PostgreSQL database (managed or self-hosted)
 - TLS certificates for secure communication
 - Agent nodes with network access to control plane

@@ -62,9 +62,9 @@ phoenix/
 │   ├── operations/                    # Operations documentation
 │   │   ├── README.md                  # Operations overview
 │   │   ├── deployment/                # Deployment guides
-│   │   │   ├── kubernetes.md          # Kubernetes deployment
-│   │   │   ├── single-vm.md           # Single VM deployment
-│   │   │   └── docker-compose.md      # Docker Compose setup
+│   │   │   ├── docker-compose.md      # Docker Compose deployment
+│   │   │   ├── single-vm.md           # Single VM installation
+│   │   │   └── scaling.md             # Scaling strategies
 │   │   ├── configuration.md           # Configuration reference
 │   │   ├── monitoring.md              # Production monitoring
 │   │   ├── scaling.md                 # Scaling strategies

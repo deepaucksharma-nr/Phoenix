@@ -88,9 +88,9 @@ User → Dashboard → API → PostgreSQL → Task Queue
 - Single-command startup
 
 ### Production
-- Kubernetes deployment
-- Horizontal scaling for API
-- DaemonSet for agents
+- Docker Compose deployment on single VM
+- Process-based scaling for API
+- Systemd-managed agents
 - Managed PostgreSQL recommended
 
 ## Security Model
@@ -126,7 +126,7 @@ User → Dashboard → API → PostgreSQL → Task Queue
 
 ### Infrastructure
 - **Container**: Docker
-- **Orchestration**: Kubernetes
+- **Orchestration**: Docker Compose + systemd
 - **CI/CD**: GitHub Actions
 - **Monitoring**: Prometheus + Grafana
 

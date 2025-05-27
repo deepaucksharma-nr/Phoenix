@@ -287,7 +287,7 @@ docker-compose down --rmi all
 
 1. **Explore the codebase**: Check `/projects` for service implementations
 2. **Customize pipelines**: Create your own processors in the visual builder
-3. **Deploy to Kubernetes**: Use manifests in `/deployments/kubernetes`
+3. **Deploy to production**: Follow the Single VM deployment guide
 4. **Contribute**: See CONTRIBUTING.md for guidelines
 
 ## Summary

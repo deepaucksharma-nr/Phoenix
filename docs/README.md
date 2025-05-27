@@ -33,9 +33,9 @@ Welcome to the Phoenix Platform documentation. Phoenix is an observability cost 
 ### 🔧 For Operators
 
 **Deployment**
-- [Kubernetes Deployment](operations/deployment/kubernetes.md) - Production K8s setup
-- [Docker Compose](operations/deployment/docker-compose.md) - Quick deployment
-- [Single VM Setup](operations/deployment/single-vm.md) - Standalone installation
+- [Docker Compose](operations/deployment/docker-compose.md) - Production deployment
+- [Single VM Setup](operations/deployment/single-vm.md) - Complete installation guide
+- [Scaling Guide](operations/scaling.md) - Growth strategies
 
 **Operations**
 - [Configuration Reference](operations/configuration.md) - All configuration options

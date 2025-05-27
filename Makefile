@@ -60,6 +60,13 @@ help-extended: ## Display extended help message
 	@echo -e "  $(CYAN)build-<project>$(NC)  Build specific project"
 	@echo -e "  $(CYAN)test-<project>$(NC)   Test specific project"
 	@echo -e "  $(CYAN)lint-<project>$(NC)   Lint specific project"
+	@echo -e "  $(CYAN)docker-<project>$(NC) Build Docker image for project"
+	@echo ""
+	@echo -e "$(GREEN)Single VM Deployment:$(NC)"
+	@echo -e "  $(CYAN)vm-deploy$(NC)        Deploy to single VM"
+	@echo -e "  $(CYAN)vm-status$(NC)        Check deployment status"
+	@echo -e "  $(CYAN)vm-logs$(NC)          View deployment logs"
+	@echo -e "  $(CYAN)vm-stop$(NC)          Stop deployment"
 	@echo ""
 	@echo -e "$(GREEN)Available projects:$(NC)"
 	@for project in $(ALL_PROJECTS); do echo "  - $$project"; done
@@ -203,22 +210,44 @@ docker-push-%: ## Push Docker image for specific project
 	@$(MAKE) -C $(PROJECTS_DIR)/$* docker-push
 	@echo -e "$(GREEN)✓ $* Docker image pushed$(NC)"
 
-##@ Kubernetes
+##@ Single-VM Deployment
 
-k8s-generate: ## Generate Kubernetes manifests
-	@echo -e "$(CYAN)Generating Kubernetes manifests...$(NC)"
-	@$(BUILD_DIR)/scripts/k8s/generate-manifests.sh
-	@echo -e "$(GREEN)✓ Kubernetes manifests generated$(NC)"
+vm-deploy: docker ## Deploy to single VM
+	@echo -e "$(CYAN)Deploying to single VM...$(NC)"
+	@cd deployments/single-vm && docker-compose up -d
+	@echo -e "$(GREEN)✓ Deployed to single VM$(NC)"
 
-k8s-validate: ## Validate Kubernetes manifests
-	@echo -e "$(CYAN)Validating Kubernetes manifests...$(NC)"
-	@$(BUILD_DIR)/scripts/k8s/validate-manifests.sh
-	@echo -e "$(GREEN)✓ Kubernetes manifests valid$(NC)"
+vm-status: ## Check single VM deployment status
+	@echo -e "$(CYAN)Checking deployment status...$(NC)"
+	@cd deployments/single-vm && docker-compose ps
+	@echo -e "$(GREEN)✓ Status check complete$(NC)"
 
-k8s-deploy-dev: ## Deploy to development cluster
-	@echo -e "$(CYAN)Deploying to development...$(NC)"
-	@$(BUILD_DIR)/scripts/k8s/deploy.sh development
-	@echo -e "$(GREEN)✓ Deployed to development$(NC)"
+vm-logs: ## View single VM deployment logs
+	@cd deployments/single-vm && docker-compose logs -f
+
+vm-stop: ## Stop single VM deployment
+	@echo -e "$(CYAN)Stopping deployment...$(NC)"
+	@cd deployments/single-vm && docker-compose down
+	@echo -e "$(GREEN)✓ Deployment stopped$(NC)"
+
+vm-reset: ## Reset single VM deployment
+	@echo -e "$(YELLOW)Resetting deployment...$(NC)"
+	@cd deployments/single-vm && docker-compose down -v
+	@echo -e "$(GREEN)✓ Deployment reset$(NC)"
+
+vm-backup: ## Backup single VM data
+	@echo -e "$(CYAN)Creating backup...$(NC)"
+	@cd deployments/single-vm && ./scripts/backup.sh
+	@echo -e "$(GREEN)✓ Backup created$(NC)"
+
+vm-restore: ## Restore single VM data
+	@echo -e "$(CYAN)Restoring from backup...$(NC)"
+	@cd deployments/single-vm && ./scripts/restore.sh
+	@echo -e "$(GREEN)✓ Restore completed$(NC)"
+
+vm-scale: ## Monitor and auto-scale single VM deployment
+	@echo -e "$(CYAN)Starting auto-scale monitor...$(NC)"
+	@cd deployments/single-vm && ./scripts/auto-scale-monitor.sh
 
 ##@ Release
 

@@ -17,7 +17,7 @@ This document outlines the monorepo-wide changes required to implement the Phoen
 ```markdown
 # Old Flow
 1. Write YAML configuration
-2. Deploy via kubectl
+2. Deploy via CLI
 3. Monitor via CLI
 
 # New Flow  

@@ -10,7 +10,7 @@ After comprehensive review, the UX Revolution implementation successfully delive
 - ✅ **Agent-centric design**: All UI components focus on agent status, not Kubernetes
 - ✅ **Simple API integration**: Phoenix API extended with UI endpoints, not new microservices
 - ✅ **Task queue visibility**: Direct view into agent tasks without CRDs
-- ✅ **Works everywhere**: UI supports K8s, VMs, and bare metal equally
+- ✅ **Works everywhere**: UI supports Docker Compose, VMs, and bare metal equally
 
 ### 2. **Core Philosophy Achieved**
 - ✅ **Radical Transparency**: Live cost flow, agent map, and cardinality explorer

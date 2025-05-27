@@ -19,7 +19,7 @@ Phoenix Platform is a monorepo for an observability cost optimization system tha
 
 ### Security
 - **NEVER** hardcode secrets, passwords, or API keys
-- **NEVER** modify production configurations outside `/deployments/kubernetes/overlays/production/`
+- **NEVER** modify production configurations outside `/deployments/single-vm/` or `/configs/production/`
 - Security-sensitive files require security team approval (see CODEOWNERS)
 
 ## Build and Development Commands
@@ -100,7 +100,7 @@ phoenix/
 │   └── makefiles/         # Reusable Makefile components
 ├── tools/                 # Development and validation tools
 │   └── analyzers/         # Static analysis scripts
-└── deployments/           # K8s, Helm, Terraform configs
+└── deployments/           # Docker Compose, Single VM configs
 ```
 
 ### Project Standard Structure
@@ -225,9 +225,9 @@ CODEOWNERS enforces review requirements:
 
 ## Deployment
 
-- Development: `make k8s-deploy-dev`
-- Uses Kubernetes with Helm charts
-- GitOps workflow with manifest generation
+- Development: `make dev-up` or `docker-compose up -d`
+- Uses Docker Compose for container orchestration
+- Single-VM deployment with systemd for production
 - Production requires multi-team approval
 
 ## Recent Architecture Updates

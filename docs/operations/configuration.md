@@ -371,31 +371,19 @@ processors:
 
 ## Deployment Configuration
 
-### Kubernetes ConfigMap
+### Docker Compose Configuration
 
 ```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: phoenix-config
-  namespace: phoenix-system
-data:
-  api-config.yaml: |
-    api:
-      port: 8080
-      metrics_port: 9090
-    database:
-      host: postgres.phoenix-system.svc.cluster.local
-      port: 5432
-      name: phoenix
-  
-  agent-config.yaml: |
-    agent:
-      labels:
-        cluster: ${CLUSTER_NAME}
-        node: ${NODE_NAME}
-    api:
-      url: http://phoenix-api.phoenix-system.svc.cluster.local:8080
+# Configuration via environment files
+# .env.production
+PHOENIX_DB_HOST=postgres
+PHOENIX_DB_PORT=5432
+PHOENIX_DB_NAME=phoenix
+PHOENIX_DB_USER=phoenix
+PHOENIX_DB_PASSWORD=secure_password
+PHOENIX_JWT_SECRET=your_jwt_secret
+PHOENIX_API_PORT=8080
+PHOENIX_LOG_LEVEL=info
 ```
 
 ### Docker Compose Environment
@@ -470,15 +458,12 @@ scrape_configs:
         action: drop
 
   - job_name: 'phoenix-agents'
-    kubernetes_sd_configs:
-      - role: pod
-        namespaces:
-          names:
-            - phoenix-system
+    file_sd_configs:
+      - files:
+          - '/etc/prometheus/targets/agents.yml'
     relabel_configs:
-      - source_labels: [__meta_kubernetes_pod_label_app]
-        regex: phoenix-agent
-        action: keep
+      - source_labels: [__address__]
+        target_label: instance
 ```
 
 ### Alerting Rules

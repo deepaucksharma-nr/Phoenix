@@ -95,9 +95,9 @@ curl http://localhost:8080/api/v1/fleet/status
 ## 📈 Next Steps
 
 1. **Production Deployment**
-   - Kubernetes manifests ready
-   - Helm charts configured
-   - Multi-region support
+   - Docker Compose production configuration
+   - Single VM deployment guide ready
+   - Multi-region support via component separation
 
 2. **Feature Expansion**
    - ML-based metric importance scoring

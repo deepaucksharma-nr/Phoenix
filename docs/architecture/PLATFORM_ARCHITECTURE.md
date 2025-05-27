@@ -149,13 +149,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
 ```
 
-### Production Deployment (Kubernetes)
+### Production Deployment (Single VM)
 ```yaml
-# Namespace: phoenix-system
-- Phoenix API: StatefulSet with persistent storage
-- Phoenix Agents: DaemonSet on target nodes
-- PostgreSQL: Managed service or StatefulSet
-- Prometheus Stack: Full observability
+# Docker Compose with systemd
+- Phoenix API: Docker container with restart policy
+- Phoenix Agents: Systemd services on target hosts
+- PostgreSQL: Managed service or Docker container
+- Prometheus Stack: Full observability via Docker
 ```
 
 ## Security Model
@@ -174,7 +174,7 @@ services:
 ### Data Security
 - Encrypted storage for sensitive data
 - Audit logging for all operations
-- Secrets management via Kubernetes secrets
+- Secrets management via environment variables and Docker secrets
 
 ## Performance Characteristics
 
