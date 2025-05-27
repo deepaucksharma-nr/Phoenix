@@ -15,6 +15,10 @@ AGENT_VERSION="${PHOENIX_AGENT_VERSION:-latest}"
 INSTALL_DIR="/opt/phoenix-agent"
 SERVICE_USER="phoenixagent"
 ARCH=$(uname -m)
+USE_NRDOT="${USE_NRDOT:-false}"
+NRDOT_VERSION="${NRDOT_VERSION:-latest}"
+NEW_RELIC_LICENSE_KEY="${NEW_RELIC_LICENSE_KEY:-}"
+NEW_RELIC_OTLP_ENDPOINT="${NEW_RELIC_OTLP_ENDPOINT:-otlp.nr-data.net:4317}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -129,9 +133,76 @@ install_agent() {
     
     chmod +x "${INSTALL_DIR}/phoenix-agent"
     
+    # Download OTel Collector (standard or NRDOT)
+    if [[ "$USE_NRDOT" == "true" ]]; then
+        install_nrdot_collector
+    else
+        install_otel_collector
+    fi
+    
     # Set ownership
     chown -R "$SERVICE_USER:$SERVICE_USER" /var/log/phoenix-agent
     chown -R "$SERVICE_USER:$SERVICE_USER" /var/lib/phoenix-agent
+}
+
+# Install standard OTel collector
+install_otel_collector() {
+    log "Installing OpenTelemetry Collector Contrib..."
+    
+    local otel_version="0.95.0"
+    local otel_url="https://github.com/open-telemetry/opentelemetry-collector-releases/releases/download/v${otel_version}/otelcol-contrib_${otel_version}_linux_${arch_suffix}.tar.gz"
+    
+    if ! command -v otelcol-contrib >/dev/null 2>&1; then
+        log "Downloading OTel Collector from: $otel_url"
+        wget -q "$otel_url" -O /tmp/otelcol-contrib.tar.gz
+        tar -xzf /tmp/otelcol-contrib.tar.gz -C /usr/local/bin/ otelcol-contrib
+        chmod +x /usr/local/bin/otelcol-contrib
+        rm /tmp/otelcol-contrib.tar.gz
+        log "OTel Collector installed successfully"
+    else
+        log "OTel Collector already installed"
+    fi
+}
+
+# Install NRDOT collector
+install_nrdot_collector() {
+    log "Installing New Relic NRDOT Collector..."
+    
+    if [[ -z "$NEW_RELIC_LICENSE_KEY" ]]; then
+        error "NEW_RELIC_LICENSE_KEY must be set when using NRDOT"
+        exit 1
+    fi
+    
+    local nrdot_url=""
+    if [[ "$NRDOT_VERSION" == "latest" ]]; then
+        nrdot_url="https://github.com/newrelic/nrdot-collector-releases/releases/latest/download/nrdot-collector-host_linux_${arch_suffix}.tar.gz"
+    else
+        nrdot_url="https://github.com/newrelic/nrdot-collector-releases/releases/download/v${NRDOT_VERSION}/nrdot-collector-host_linux_${arch_suffix}.tar.gz"
+    fi
+    
+    log "Downloading NRDOT from: $nrdot_url"
+    if ! wget -q "$nrdot_url" -O /tmp/nrdot.tar.gz; then
+        error "Failed to download NRDOT collector"
+        exit 1
+    fi
+    
+    # Extract NRDOT
+    tar -xzf /tmp/nrdot.tar.gz -C /tmp/
+    
+    # Find and move the binary
+    if [[ -f /tmp/nrdot-collector-host ]]; then
+        mv /tmp/nrdot-collector-host /usr/local/bin/nrdot
+    elif [[ -f /tmp/nrdot ]]; then
+        mv /tmp/nrdot /usr/local/bin/nrdot
+    else
+        error "Could not find NRDOT binary in archive"
+        exit 1
+    fi
+    
+    chmod +x /usr/local/bin/nrdot
+    rm -f /tmp/nrdot.tar.gz
+    
+    log "NRDOT Collector installed successfully"
 }
 
 # Create configuration file
@@ -169,6 +240,13 @@ resources:
   max_collectors: 2
   max_memory_mb: 512
   max_cpu_percent: 10
+
+# Collector configuration
+collector:
+  type: ${USE_NRDOT}
+  newrelic:
+    license_key: ${NEW_RELIC_LICENSE_KEY}
+    otlp_endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
 EOF
     
     chmod 600 /etc/phoenix-agent/config.yaml

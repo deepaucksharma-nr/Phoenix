@@ -49,26 +49,26 @@ type ConfigGenerator interface {
 	ApplyTemplate(ctx context.Context, templateID string, variables map[string]interface{}) (*PipelineConfig, error)
 }
 
-// PipelineOperator defines the interface for Kubernetes pipeline operations
-// This interface represents the contract with the Pipeline Operator
+// PipelineOperator defines the interface for pipeline deployment operations
+// This interface represents the contract for deploying pipelines to agents
 type PipelineOperator interface {
-	// CreatePipelineCR creates a PhoenixProcessPipeline custom resource
-	CreatePipelineCR(ctx context.Context, pipeline *PipelineCR) error
+	// DeployPipeline deploys a pipeline configuration to target agents
+	DeployPipeline(ctx context.Context, deployment *PipelineDeployment) error
 	
-	// UpdatePipelineCR updates an existing pipeline custom resource
-	UpdatePipelineCR(ctx context.Context, pipeline *PipelineCR) error
+	// UpdatePipeline updates an existing pipeline deployment
+	UpdatePipeline(ctx context.Context, deployment *PipelineDeployment) error
 	
-	// DeletePipelineCR removes a pipeline custom resource
-	DeletePipelineCR(ctx context.Context, name, namespace string) error
+	// DeletePipeline removes a pipeline deployment
+	DeletePipeline(ctx context.Context, deploymentID string) error
 	
-	// GetPipelineCR retrieves a pipeline custom resource
-	GetPipelineCR(ctx context.Context, name, namespace string) (*PipelineCR, error)
+	// GetPipelineDeployment retrieves a pipeline deployment
+	GetPipelineDeployment(ctx context.Context, deploymentID string) (*PipelineDeployment, error)
 	
-	// ListPipelineCRs lists pipeline custom resources
-	ListPipelineCRs(ctx context.Context, namespace string) ([]*PipelineCR, error)
+	// ListPipelineDeployments lists pipeline deployments
+	ListPipelineDeployments(ctx context.Context, filter map[string]string) ([]*PipelineDeployment, error)
 	
-	// GetPipelineStatus retrieves the status of a pipeline deployment
-	GetPipelineStatus(ctx context.Context, name, namespace string) (*PipelineStatus, error)
+	// GetDeploymentStatus retrieves the status of a pipeline deployment
+	GetDeploymentStatus(ctx context.Context, deploymentID string) (*PipelineStatus, error)
 }
 
 // Pipeline represents a complete pipeline configuration
@@ -142,14 +142,16 @@ type TemplateVariable struct {
 	ValidValues  []string    `json:"valid_values,omitempty"`
 }
 
-// PipelineCR represents the Kubernetes custom resource for a pipeline
-type PipelineCR struct {
+// PipelineDeployment represents a pipeline deployment configuration
+type PipelineDeployment struct {
+	ID                string                 `json:"id"`
 	Name              string                 `json:"name"`
-	Namespace         string                 `json:"namespace"`
-	NodeSelector      map[string]string      `json:"nodeSelector,omitempty"`
-	PipelineCatalogRef string                `json:"pipelineCatalogRef"`
-	ConfigOverrides   map[string]interface{} `json:"configOverrides,omitempty"`
-	ConfigVariables   map[string]string      `json:"configVariables,omitempty"`
+	TargetEnv         string                 `json:"target_env"`
+	TargetNodes       map[string]string      `json:"target_nodes,omitempty"`
+	PipelineRef       string                 `json:"pipeline_ref"`
+	ConfigOverrides   map[string]interface{} `json:"config_overrides,omitempty"`
+	ConfigVariables   map[string]string      `json:"config_variables,omitempty"`
+	Resources         *ResourceSpec          `json:"resources,omitempty"`
 }
 
 // PipelineStatus represents the deployment status of a pipeline
@@ -172,11 +174,11 @@ type PipelineCondition struct {
 
 // CollectorStatus contains status information about deployed collectors
 type CollectorStatus struct {
-	DesiredReplicas   int32                  `json:"desiredReplicas"`
-	ReadyReplicas     int32                  `json:"readyReplicas"`
-	UpdatedReplicas   int32                  `json:"updatedReplicas"`
-	AvailableReplicas int32                  `json:"availableReplicas"`
-	NodeStatus        map[string]string      `json:"nodeStatus,omitempty"`
+	DesiredInstances   int32                  `json:"desired_instances"`
+	RunningInstances   int32                  `json:"running_instances"`
+	HealthyInstances   int32                  `json:"healthy_instances"`
+	FailedInstances    int32                  `json:"failed_instances"`
+	AgentStatus        map[string]string      `json:"agent_status,omitempty"`
 }
 
 // DeploymentStatus represents the overall deployment status
@@ -192,10 +194,19 @@ type DeploymentStatus struct {
 // NodeStatus represents the deployment status on a specific node
 type NodeStatus struct {
 	NodeName    string    `json:"node_name"`
+	AgentID     string    `json:"agent_id"`
 	Phase       string    `json:"phase"`
 	Message     string    `json:"message,omitempty"`
 	CollectorID string    `json:"collector_id,omitempty"`
 	LastUpdated time.Time `json:"last_updated"`
+}
+
+// ResourceSpec defines resource requirements for collectors
+type ResourceSpec struct {
+	CPURequest    string `json:"cpu_request,omitempty"`
+	CPULimit      string `json:"cpu_limit,omitempty"`
+	MemoryRequest string `json:"memory_request,omitempty"`
+	MemoryLimit   string `json:"memory_limit,omitempty"`
 }
 
 // GeneratedConfig represents the output of config generation

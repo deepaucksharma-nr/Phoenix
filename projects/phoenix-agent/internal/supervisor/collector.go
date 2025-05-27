@@ -68,19 +68,49 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 
-	// Prepare command
-	cmd := exec.Command(
-		"otelcol-contrib",
-		"--config", configPath,
-		"--set", "service.telemetry.metrics.address=:0", // Disable default metrics endpoint
-	)
+	// Determine which collector binary to use
+	collectorBinary := "otelcol-contrib"
+	if m.config.UseNRDOT || variant == "nrdot" {
+		collectorBinary = "nrdot"
+		
+		// Validate New Relic configuration
+		if m.config.NRLicenseKey == "" {
+			return fmt.Errorf("NEW_RELIC_LICENSE_KEY is required when using NRDOT collector")
+		}
+	}
+	
+	// Prepare command with appropriate binary
+	cmdArgs := []string{"--config", configPath}
+	
+	// Add collector-specific arguments
+	if collectorBinary == "otelcol-contrib" {
+		cmdArgs = append(cmdArgs, "--set", "service.telemetry.metrics.address=:0")
+	} else if collectorBinary == "nrdot" {
+		// NRDOT-specific flags
+		cmdArgs = append(cmdArgs, 
+			"--feature-gates", "exporter.newrelic.cardinality_reduction",
+			"--max-memory", "512MiB",
+		)
+	}
+	
+	cmd := exec.Command(collectorBinary, cmdArgs...)
 
 	// Set environment variables
-	cmd.Env = append(os.Environ(),
+	env := append(os.Environ(),
 		fmt.Sprintf("EXPERIMENT_ID=%s", strings.Split(id, "-")[0]),
 		fmt.Sprintf("VARIANT=%s", variant),
 		fmt.Sprintf("HOST_ID=%s", m.config.HostID),
 	)
+	
+	// Add New Relic specific environment variables if using NRDOT
+	if collectorBinary == "nrdot" {
+		env = append(env,
+			fmt.Sprintf("NEW_RELIC_LICENSE_KEY=%s", m.config.NRLicenseKey),
+			fmt.Sprintf("NEW_RELIC_OTLP_ENDPOINT=%s", m.config.NROTLPEndpoint),
+		)
+	}
+	
+	cmd.Env = env
 
 	// Set up logging
 	logFile, err := os.Create(filepath.Join(m.config.ConfigDir, fmt.Sprintf("%s.log", id)))

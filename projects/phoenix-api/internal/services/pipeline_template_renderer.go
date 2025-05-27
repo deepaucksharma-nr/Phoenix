@@ -711,3 +711,140 @@ service:
       processors: [batch, memory_limiter, filter, topk, resource]
       exporters: [prometheus]
 `
+
+// NRDOT-specific templates
+const nrdotBaselinePipelineTemplate = `
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      network:
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 10000
+  
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  
+  attributes:
+    actions:
+      - key: experiment_id
+        value: "{{ .ExperimentID }}"
+        action: insert
+      - key: variant
+        value: "{{ .Variant }}"
+        action: insert
+      - key: collector_type
+        value: "nrdot"
+        action: insert
+
+exporters:
+  otlp/newrelic:
+    endpoint: {{ .Config.nr_otlp_endpoint | default "otlp.nr-data.net:4317" }}
+    headers:
+      api-key: {{ .Config.nr_license_key }}
+    compression: gzip
+  
+  pushgateway:
+    endpoint: {{ .Config.pushgateway_url }}
+    job: phoenix-experiment
+    labels:
+      experiment_id: "{{ .ExperimentID }}"
+      variant: "{{ .Variant }}"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [otlp/newrelic, pushgateway]
+`
+
+const nrdotCardinalityPipelineTemplate = `
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+      memory:
+      disk:
+      network:
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 10000
+  
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+  
+  attributes:
+    actions:
+      - key: experiment_id
+        value: "{{ .ExperimentID }}"
+        action: insert
+      - key: variant
+        value: "{{ .Variant }}"
+        action: insert
+      - key: collector_type
+        value: "nrdot"
+        action: insert
+  
+  # NRDOT-specific cardinality reduction processor
+  newrelic/cardinality:
+    enabled: true
+    max_series: {{ .Config.max_cardinality | default 10000 }}
+    reduction_target_percentage: {{ .Config.reduction_percentage | default 70 }}
+    preserve_critical_metrics: true
+    critical_metrics_patterns:
+      - "^system\\.cpu\\."
+      - "^system\\.memory\\."
+      - "^http\\.server\\.duration"
+      {{- range .Config.critical_metrics }}
+      - {{ . }}
+      {{- end }}
+
+exporters:
+  otlp/newrelic:
+    endpoint: {{ .Config.nr_otlp_endpoint | default "otlp.nr-data.net:4317" }}
+    headers:
+      api-key: {{ .Config.nr_license_key }}
+    compression: gzip
+  
+  pushgateway:
+    endpoint: {{ .Config.pushgateway_url }}
+    job: phoenix-experiment
+    labels:
+      experiment_id: "{{ .ExperimentID }}"
+      variant: "{{ .Variant }}"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics]
+      processors: [memory_limiter, newrelic/cardinality, batch, attributes]
+      exporters: [otlp/newrelic, pushgateway]
+`

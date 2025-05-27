@@ -1,0 +1,145 @@
+# NRDOT Collector Configuration - Cardinality Reduction
+# This configuration uses NRDOT's built-in cardinality reduction features
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+      paging:
+      processes:
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'phoenix-metrics'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['localhost:9090']
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 10000
+    send_batch_max_size: 10000
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  attributes:
+    actions:
+      - key: experiment_id
+        value: ${EXPERIMENT_ID}
+        action: insert
+      - key: variant
+        value: ${VARIANT}
+        action: insert
+      - key: host_id
+        value: ${HOST_ID}
+        action: insert
+      - key: collector_type
+        value: nrdot
+        action: insert
+
+  # NRDOT-specific cardinality reduction processor
+  newrelic/cardinality:
+    enabled: true
+    max_series: ${MAX_CARDINALITY}
+    reduction_target_percentage: ${REDUCTION_PERCENTAGE}
+    preserve_critical_metrics: true
+    critical_metrics_patterns:
+      - "^system\\.cpu\\."
+      - "^system\\.memory\\."
+      - "^http\\.server\\.duration"
+      - "^db\\.query\\.duration"
+      - "^error\\.rate"
+    aggregation_temporality: delta
+    cardinality_limit_strategy: "adaptive"
+    
+  # Additional NRDOT processor for metric filtering
+  newrelic/filter:
+    metrics:
+      include:
+        match_type: regexp
+        metric_names:
+          - "^system\\."
+          - "^runtime\\."
+          - "^http\\."
+          - "^db\\."
+          - "^cache\\."
+      exclude:
+        match_type: strict
+        metric_names:
+          - "system.network.dropped"
+          - "system.filesystem.inodes.usage"
+
+exporters:
+  otlp/newrelic:
+    endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
+    headers:
+      api-key: ${NEW_RELIC_LICENSE_KEY}
+    compression: gzip
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  pushgateway:
+    endpoint: ${PUSHGATEWAY_URL}
+    job: phoenix-experiment
+    labels:
+      experiment_id: ${EXPERIMENT_ID}
+      variant: ${VARIANT}
+
+  # Debug exporter for cardinality analysis
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 100
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics, prometheus]
+      processors: [memory_limiter, newrelic/filter, newrelic/cardinality, batch, attributes]
+      exporters: [otlp/newrelic, pushgateway]
+    
+    # Debug pipeline for monitoring cardinality reduction
+    metrics/debug:
+      receivers: [otlp]
+      processors: [newrelic/cardinality]
+      exporters: [debug]
+
+  extensions: [health_check, pprof, zpages]
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679

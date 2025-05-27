@@ -22,7 +22,7 @@ var pipelineVMConfigCmd = &cobra.Command{
 	Long: `Generate a static OpenTelemetry Collector configuration for running on a virtual machine.
 
 The command reads a pipeline template from the local catalog and writes a single YAML
-configuration that can be used directly with the otelcol binary outside Kubernetes.`,
+configuration that can be used directly with the otelcol binary on Docker or VM hosts.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPipelineVMConfig,
 }

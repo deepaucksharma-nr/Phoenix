@@ -26,6 +26,9 @@ func main() {
 		configDir      = flag.String("config-dir", getEnv("CONFIG_DIR", "/etc/phoenix-agent"), "Directory for agent configs")
 		logLevel       = flag.String("log-level", getEnv("LOG_LEVEL", "info"), "Log level (debug, info, warn, error)")
 		pushgatewayURL = flag.String("pushgateway-url", getEnv("PUSHGATEWAY_URL", "http://prometheus-pushgateway:9091"), "Prometheus Pushgateway URL")
+		useNRDOT       = flag.Bool("use-nrdot", getBoolEnv("USE_NRDOT", false), "Use New Relic NRDOT collector instead of OTel")
+		nrLicenseKey   = flag.String("nr-license-key", getEnv("NEW_RELIC_LICENSE_KEY", ""), "New Relic license key")
+		nrOTLPEndpoint = flag.String("nr-otlp-endpoint", getEnv("NEW_RELIC_OTLP_ENDPOINT", "otlp.nr-data.net:4317"), "New Relic OTLP endpoint")
 	)
 	flag.Parse()
 
@@ -54,6 +57,10 @@ func main() {
 		PollInterval:   *pollInterval,
 		ConfigDir:      *configDir,
 		PushgatewayURL: *pushgatewayURL,
+		UseNRDOT:       *useNRDOT,
+		NRLicenseKey:   *nrLicenseKey,
+		NROTLPEndpoint: *nrOTLPEndpoint,
+		CollectorType:  getCollectorType(*useNRDOT),
 	}
 
 	// Initialize components
@@ -224,4 +231,23 @@ func getDurationEnv(key string, defaultValue time.Duration) time.Duration {
 		}
 	}
 	return defaultValue
+}
+
+func getBoolEnv(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		switch value {
+		case "true", "1", "yes", "on":
+			return true
+		case "false", "0", "no", "off":
+			return false
+		}
+	}
+	return defaultValue
+}
+
+func getCollectorType(useNRDOT bool) string {
+	if useNRDOT {
+		return "nrdot"
+	}
+	return "otel"
 }

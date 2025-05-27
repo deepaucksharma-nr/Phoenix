@@ -1,0 +1,101 @@
+# NRDOT Collector Configuration - Baseline
+# This configuration is for the baseline collector using NRDOT
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  hostmetrics:
+    collection_interval: 10s
+    scrapers:
+      cpu:
+        metrics:
+          system.cpu.utilization:
+            enabled: true
+      disk:
+      load:
+      filesystem:
+      memory:
+      network:
+      paging:
+      processes:
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'phoenix-metrics'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['localhost:9090']
+
+processors:
+  batch:
+    timeout: 10s
+    send_batch_size: 10000
+    send_batch_max_size: 10000
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  attributes:
+    actions:
+      - key: experiment_id
+        value: ${EXPERIMENT_ID}
+        action: insert
+      - key: variant
+        value: ${VARIANT}
+        action: insert
+      - key: host_id
+        value: ${HOST_ID}
+        action: insert
+      - key: collector_type
+        value: nrdot
+        action: insert
+
+exporters:
+  otlp/newrelic:
+    endpoint: ${NEW_RELIC_OTLP_ENDPOINT}
+    headers:
+      api-key: ${NEW_RELIC_LICENSE_KEY}
+    compression: gzip
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 300s
+
+  pushgateway:
+    endpoint: ${PUSHGATEWAY_URL}
+    job: phoenix-experiment
+    labels:
+      experiment_id: ${EXPERIMENT_ID}
+      variant: ${VARIANT}
+
+service:
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+
+  pipelines:
+    metrics:
+      receivers: [otlp, hostmetrics, prometheus]
+      processors: [memory_limiter, batch, attributes]
+      exporters: [otlp/newrelic, pushgateway]
+
+  extensions: [health_check, pprof, zpages]
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679

@@ -60,18 +60,18 @@ func GetLoadSimProfiles(cmd *cobra.Command, args []string, toComplete string) ([
 	return matches, cobra.ShellCompDirectiveNoFileComp
 }
 
-// GetNamespaces returns a list of Kubernetes namespaces for shell completion
-func GetNamespaces(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// In a real implementation, this would use kubectl or the Kubernetes API
-	namespaces := []string{
-		"default", "phoenix-dev", "phoenix-staging", "phoenix-prod",
-		"kube-system", "monitoring",
+// GetTargetEnvironments returns a list of target environments for shell completion
+func GetTargetEnvironments(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	// In a real implementation, this would fetch from the API
+	environments := []string{
+		"default", "development", "staging", "production",
+		"testing", "demo",
 	}
 	
 	var matches []string
-	for _, ns := range namespaces {
-		if strings.HasPrefix(ns, toComplete) {
-			matches = append(matches, ns)
+	for _, env := range environments {
+		if strings.HasPrefix(env, toComplete) {
+			matches = append(matches, env)
 		}
 	}
 	

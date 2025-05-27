@@ -42,6 +42,13 @@ RUN wget -q https://github.com/open-telemetry/opentelemetry-collector-releases/r
     chmod +x /usr/local/bin/otelcol-contrib && \
     rm otelcol-contrib_0.95.0_linux_amd64.tar.gz
 
+# Download NRDOT Collector (New Relic distribution)
+RUN wget -q https://github.com/newrelic/nrdot-collector-releases/releases/latest/download/nrdot-collector-host_linux_amd64.tar.gz && \
+    tar -xzf nrdot-collector-host_linux_amd64.tar.gz && \
+    mv nrdot-collector-host /usr/local/bin/nrdot && \
+    chmod +x /usr/local/bin/nrdot && \
+    rm nrdot-collector-host_linux_amd64.tar.gz
+
 # Create directories
 RUN mkdir -p /etc/phoenix-agent /var/log/phoenix-agent
 

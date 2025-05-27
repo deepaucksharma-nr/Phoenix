@@ -50,11 +50,6 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 	// Create API client
 	apiClient := client.NewAPIClient(cfg.GetAPIEndpoint(), token)
 
-	k8sClient, err := client.GetKubernetesClient()
-	if err != nil {
-		return fmt.Errorf("failed to create Kubernetes client: %w", err)
-	}
-
 	// Get current experiment status
 	experiment, err := apiClient.GetExperiment(experimentID)
 	if err != nil {
@@ -73,10 +68,29 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start experiment: %w", err)
 	}
 
+	// Wait for pipelines to be deployed via agents
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	_ = k8sClient.WaitForPipelineReady(ctx, experimentID, "baseline", "default", 2*time.Minute)
-	_ = k8sClient.WaitForPipelineReady(ctx, experimentID, "candidate", "default", 2*time.Minute)
+	
+	// Poll for pipeline deployment status
+	fmt.Println("Waiting for pipeline deployments...")
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("timeout waiting for pipeline deployments")
+		case <-ticker.C:
+			// Check deployment status via API
+			exp, err := apiClient.GetExperiment(experimentID)
+			if err == nil && exp.Phase == "running" {
+				fmt.Println("Pipelines deployed successfully")
+				goto deployed
+			}
+		}
+	}
+deployed:
 
 	output.PrintSuccess("Experiment started successfully!")
 

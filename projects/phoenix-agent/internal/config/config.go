@@ -8,6 +8,12 @@ type Config struct {
 	PollInterval   time.Duration
 	ConfigDir      string
 	PushgatewayURL string
+	
+	// NRDOT Collector configuration
+	UseNRDOT           bool
+	NRLicenseKey       string
+	NROTLPEndpoint     string
+	CollectorType      string // "otel" or "nrdot"
 }
 
 // GetAPIEndpoint returns the full URL for an API endpoint

@@ -208,7 +208,7 @@ type PipelineDeployment struct {
 type CreatePipelineDeploymentRequest struct {
 	DeploymentName string                 `json:"deployment_name"`
 	PipelineName   string                 `json:"pipeline_name"`
-	Namespace      string                 `json:"namespace"`
+	TargetEnv      string                 `json:"target_env"`
 	TargetNodes    map[string]string      `json:"target_nodes"`
 	Parameters     map[string]interface{} `json:"parameters,omitempty"`
 	Resources      *ResourceRequirements  `json:"resources,omitempty"`

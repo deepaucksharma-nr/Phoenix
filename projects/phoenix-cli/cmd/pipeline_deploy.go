@@ -13,7 +13,7 @@ import (
 var (
 	deploymentName   string
 	deployPipeline   string
-	deployNamespace  string
+	deployTarget     string
 	deploySelector   map[string]string
 	deployParams     map[string]string
 	deployCPURequest string
@@ -34,11 +34,11 @@ This is useful for:
   - Emergency rollbacks to baseline
 
 Examples:
-  # Deploy a pipeline
+  # Deploy a pipeline to specific agents
   phoenix pipeline deploy \
     --name production-optimization \
     --pipeline process-topk-v1 \
-    --namespace phoenix-prod \
+    --target "production" \
     --selector "environment=production,tier=frontend" \
     --param top_k=20
 
@@ -46,7 +46,7 @@ Examples:
   phoenix pipeline deploy \
     --name staging-test \
     --pipeline process-priority-filter-v1 \
-    --namespace phoenix-staging \
+    --target "staging" \
     --selector "app=api" \
     --param critical_processes=nginx,envoy \
     --cpu-limit 500m \
@@ -60,7 +60,7 @@ func init() {
 	// Required flags
 	pipelineDeployCmd.Flags().StringVarP(&deploymentName, "name", "n", "", "Deployment name (required)")
 	pipelineDeployCmd.Flags().StringVar(&deployPipeline, "pipeline", "", "Pipeline template to deploy (required)")
-	pipelineDeployCmd.Flags().StringVar(&deployNamespace, "namespace", "default", "Kubernetes namespace")
+	pipelineDeployCmd.Flags().StringVar(&deployTarget, "target", "default", "Target environment or agent group")
 	pipelineDeployCmd.Flags().StringToStringVar(&deploySelector, "selector", nil, "Target node selector labels (required)")
 
 	pipelineDeployCmd.MarkFlagRequired("name")
@@ -101,7 +101,7 @@ func runPipelineDeploy(cmd *cobra.Command, args []string) error {
 	req := client.CreatePipelineDeploymentRequest{
 		DeploymentName: deploymentName,
 		PipelineName:   deployPipeline,
-		Namespace:      deployNamespace,
+		TargetEnv:      deployTarget,
 		TargetNodes:    deploySelector,
 		Parameters:     parameters,
 		Resources: &client.ResourceRequirements{
@@ -120,7 +120,7 @@ func runPipelineDeploy(cmd *cobra.Command, args []string) error {
 	fmt.Println("Deployment Configuration:")
 	fmt.Printf("  Name:      %s\n", deploymentName)
 	fmt.Printf("  Pipeline:  %s\n", deployPipeline)
-	fmt.Printf("  Namespace: %s\n", deployNamespace)
+	fmt.Printf("  Target:    %s\n", deployTarget)
 	fmt.Printf("  Selectors: %s\n", formatSelector(deploySelector))
 
 	if len(parameters) > 0 {
@@ -154,7 +154,7 @@ func runPipelineDeploy(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  phoenix pipeline status %s\n", status.DeploymentID)
 
 	fmt.Printf("\nTo list all deployments:\n")
-	fmt.Printf("  phoenix pipeline list-deployments --namespace %s\n", deployNamespace)
+	fmt.Printf("  phoenix pipeline list-deployments --target %s\n", deployTarget)
 
 	return nil
 }

@@ -10,20 +10,19 @@ import (
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"go.uber.org/zap"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // StatusAggregator aggregates pipeline status from multiple sources
 type StatusAggregator struct {
-	k8sClient    kubernetes.Interface
 	promClient   v1.API
 	logger       *zap.Logger
-	namespace    string
+	targetEnv    string
 	cacheTTL     time.Duration
 	cache        map[string]*AggregatedStatus
 	cacheMutex   sync.RWMutex
 	lastCacheTime time.Time
+	// Function to get agent status from the API or store
+	getAgentStatus func(ctx context.Context, agentID string) (map[string]interface{}, error)
 }
 
 // AggregatedStatus represents the aggregated status of a pipeline deployment
@@ -79,7 +78,7 @@ type ProcessRetention struct {
 }
 
 // NewStatusAggregator creates a new status aggregator
-func NewStatusAggregator(k8sClient kubernetes.Interface, promEndpoint, namespace string, logger *zap.Logger) (*StatusAggregator, error) {
+func NewStatusAggregator(promEndpoint, targetEnv string, logger *zap.Logger, agentStatusFunc func(context.Context, string) (map[string]interface{}, error)) (*StatusAggregator, error) {
 	// Create Prometheus client
 	promClient, err := api.NewClient(api.Config{
 		Address: promEndpoint,
@@ -89,12 +88,12 @@ func NewStatusAggregator(k8sClient kubernetes.Interface, promEndpoint, namespace
 	}
 
 	return &StatusAggregator{
-		k8sClient:  k8sClient,
 		promClient: v1.NewAPI(promClient),
 		logger:     logger,
-		namespace:  namespace,
+		targetEnv:  targetEnv,
 		cacheTTL:   30 * time.Second,
 		cache:      make(map[string]*AggregatedStatus),
+		getAgentStatus: agentStatusFunc,
 	}, nil
 }
 
@@ -108,7 +107,7 @@ func (a *StatusAggregator) GetStatus(ctx context.Context, deploymentID string) (
 	// Aggregate status from various sources
 	status := &AggregatedStatus{
 		DeploymentID: deploymentID,
-		Namespace:    a.namespace,
+		Namespace:    a.targetEnv,
 		LastUpdated:  time.Now(),
 		Issues:       []string{},
 	}
@@ -187,10 +186,10 @@ func (a *StatusAggregator) GetStatus(ctx context.Context, deploymentID string) (
 	return status, nil
 }
 
-// getCRStatus retrieves status from the Kubernetes CR
+// getCRStatus retrieves status from the deployment store
 func (a *StatusAggregator) getCRStatus(ctx context.Context, deploymentID string) (*CRStatus, error) {
-	// This would normally query the PhoenixProcessPipeline CR
-	// For now, return a mock implementation
+	// Query deployment status from the API/store instead of Kubernetes CR
+	// This would normally be implemented by the caller
 	return &CRStatus{
 		Phase:     "Running",
 		Ready:     true,
@@ -232,17 +231,12 @@ func (a *StatusAggregator) getCollectorHealth(ctx context.Context, deploymentID 
 		}
 	}
 
-	// Get pod count
-	pods, err := a.k8sClient.CoreV1().Pods(a.namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=otelcol,deployment=%s", deploymentID),
-	})
-	if err == nil {
-		health.TotalInstances = len(pods.Items)
-		for _, pod := range pods.Items {
-			if pod.Status.Phase == "Running" {
-				health.HealthyInstances++
-			}
-		}
+	// Get agent instance count from deployment status
+	if a.getAgentStatus != nil {
+		// This would query agent status from the API
+		// For now, set default values
+		health.TotalInstances = 1
+		health.HealthyInstances = 1
 	}
 
 	return health, nil
