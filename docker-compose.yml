@@ -4,8 +4,8 @@ services:
   # Phoenix API - Consolidated control plane with WebSocket
   phoenix-api:
     build:
-      context: ./projects/phoenix-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.phoenix-api
     ports:
       - "8080:8080"  # API and WebSocket on same port
     environment:
@@ -30,8 +30,8 @@ services:
   # Phoenix Agent - Data plane agent
   phoenix-agent:
     build:
-      context: ./projects/phoenix-agent
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.phoenix-agent
     environment:
       - PHOENIX_API_URL=http://phoenix-api:8080
       - PHOENIX_HOST_ID=local-agent-001

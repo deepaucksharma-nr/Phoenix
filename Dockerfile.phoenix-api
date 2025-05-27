@@ -5,16 +5,16 @@ FROM golang:1.24-alpine AS builder
 RUN apk add --no-cache git make
 
 # Set working directory
-WORKDIR /build
+WORKDIR /workspace
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Copy entire monorepo context
+COPY . .
+
+# Change to project directory
+WORKDIR /workspace/projects/phoenix-api
 
 # Download dependencies
 RUN go mod download
-
-# Copy source code
-COPY . .
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o phoenix-api cmd/api/main.go
@@ -33,8 +33,8 @@ RUN addgroup -g 1000 -S phoenix && \
 WORKDIR /app
 
 # Copy binary from builder
-COPY --from=builder /build/phoenix-api /app/
-COPY --from=builder /build/migrations /app/migrations
+COPY --from=builder /workspace/projects/phoenix-api/phoenix-api /app/
+COPY --from=builder /workspace/projects/phoenix-api/migrations /app/migrations
 
 # Install migrate tool
 RUN wget -q https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz && \

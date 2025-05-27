@@ -11,6 +11,11 @@ metadata:
     nginx.ingress.kubernetes.io/rate-limit: "100"
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-set-headers: |
+      Upgrade $http_upgrade;
+      Connection "upgrade";
 spec:
   tls:
   - hosts:
@@ -20,11 +25,18 @@ spec:
   - host: api.phoenix.example.com
     http:
       paths:
+      - path: /api/v1/ws
+        pathType: Exact
+        backend:
+          service:
+            name: phoenix-api
+            port:
+              number: 8081
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: api-gateway
+            name: phoenix-api
             port:
               number: 8080
 ---

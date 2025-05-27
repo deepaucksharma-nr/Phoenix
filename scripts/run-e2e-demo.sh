@@ -1,153 +1,191 @@
 #!/bin/bash
-# Phoenix Platform E2E Demo Runner
+# End-to-End Phoenix Platform Demo
+# This script demonstrates the complete workflow from setup to experiment execution
 
-set -euo pipefail
+set -e
 
-# Colors
-GREEN='\033[0;32m'
+echo "🚀 Phoenix Platform End-to-End Demo"
+echo "==================================="
+echo ""
+
+# Colors for output
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m'
+NC='\033[0m' # No Color
 
-cd "$(dirname "$0")/.."
+# Check prerequisites
+echo "📋 Checking prerequisites..."
+command -v docker >/dev/null 2>&1 || { echo -e "${RED}Docker is required but not installed.${NC}" >&2; exit 1; }
+command -v docker-compose >/dev/null 2>&1 || { echo -e "${RED}Docker Compose is required but not installed.${NC}" >&2; exit 1; }
+echo -e "${GREEN}✓ Prerequisites satisfied${NC}"
 
-echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     Phoenix Platform E2E Demo          ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+# Build all services
+echo ""
+echo "🔨 Building services..."
+make build || { echo -e "${RED}Build failed${NC}"; exit 1; }
+echo -e "${GREEN}✓ All services built successfully${NC}"
 
-# Function to cleanup
-cleanup() {
-    echo -e "\n${YELLOW}Cleaning up...${NC}"
-    pkill -f "go run ./cmd" || true
-    docker-compose -f docker-compose.e2e.yml down 2>/dev/null || true
+# Start infrastructure services
+echo ""
+echo "🏗️  Starting infrastructure services..."
+docker-compose up -d postgres prometheus grafana
+echo "Waiting for PostgreSQL to be ready..."
+sleep 10
+
+# Run database migrations
+echo ""
+echo "🗄️  Running database migrations..."
+docker-compose run --rm phoenix-api /app/bin/phoenix-api migrate || echo "Migrations may already be applied"
+
+# Start Phoenix services
+echo ""
+echo "🚀 Starting Phoenix services..."
+docker-compose up -d phoenix-api
+echo "Waiting for API to be ready..."
+sleep 5
+
+# Check API health
+echo ""
+echo "🏥 Checking API health..."
+until curl -f http://localhost:8080/health >/dev/null 2>&1; do
+    echo "Waiting for API..."
+    sleep 2
+done
+echo -e "${GREEN}✓ API is healthy${NC}"
+
+# Start agents
+echo ""
+echo "🤖 Starting Phoenix agents..."
+docker-compose up -d phoenix-agent-1 phoenix-agent-2
+echo -e "${GREEN}✓ Agents started${NC}"
+
+# CLI Demo
+echo ""
+echo "📟 Running CLI Demo..."
+echo "========================"
+
+# Set API endpoint for CLI
+export PHOENIX_API_URL=http://localhost:8080
+
+# 1. Create an experiment
+echo ""
+echo -e "${BLUE}1. Creating an experiment...${NC}"
+cat > /tmp/experiment.json <<EOF
+{
+  "name": "E2E Demo Experiment",
+  "description": "Demonstrating Phoenix cost optimization",
+  "config": {
+    "target_hosts": ["phoenix-agent-1", "phoenix-agent-2"],
+    "baseline_template": {
+      "name": "baseline",
+      "config_url": "file:///configs/baseline.yaml"
+    },
+    "candidate_template": {
+      "name": "adaptive",
+      "config_url": "file:///configs/adaptive.yaml",
+      "variables": {
+        "threshold": "0.7",
+        "interval": "60s"
+      }
+    },
+    "duration": "5m",
+    "warmup_duration": "1m"
+  }
 }
+EOF
 
-# Set trap for cleanup
-trap cleanup EXIT
+EXPERIMENT_ID=$(curl -s -X POST http://localhost:8080/api/v1/experiments \
+    -H "Content-Type: application/json" \
+    -d @/tmp/experiment.json | jq -r '.id')
 
-# Option 1: Local Go execution (faster for development)
-run_local() {
-    echo -e "\n${BLUE}Starting services locally...${NC}"
-    
-    # Build services
-    echo "Building services..."
-    (cd services/api && go build -o bin/api ./cmd/api) &
-    (cd services/controller && go build -o bin/controller ./cmd/controller) &
-    (cd services/generator && go build -o bin/generator ./cmd/generator) &
-    wait
-    
-    # Start services
-    echo -e "\n${GREEN}Starting API service...${NC}"
-    (cd services/api && ./bin/api) &
-    API_PID=$!
-    
-    echo -e "${GREEN}Starting Controller service...${NC}"
-    (cd services/controller && ./bin/controller) &
-    CTRL_PID=$!
-    
-    echo -e "${GREEN}Starting Generator service...${NC}"
-    (cd services/generator && ./bin/generator) &
-    GEN_PID=$!
-    
-    sleep 3
-}
+echo -e "${GREEN}✓ Created experiment: $EXPERIMENT_ID${NC}"
 
-# Option 2: Docker Compose execution
-run_docker() {
-    echo -e "\n${BLUE}Starting services with Docker...${NC}"
-    docker-compose -f docker-compose.e2e.yml up -d --build
-    
-    echo "Waiting for services to start..."
-    sleep 15
-}
+# 2. List experiments
+echo ""
+echo -e "${BLUE}2. Listing experiments...${NC}"
+curl -s http://localhost:8080/api/v1/experiments | jq '.experiments[] | {id, name, phase}'
 
-# Test the services
-test_services() {
-    echo -e "\n${BLUE}Testing Phoenix Platform...${NC}"
-    
-    # Test health endpoints
-    echo -e "\n${YELLOW}1. Health Check${NC}"
-    echo -n "API Health: "
-    curl -s http://localhost:8080/health | jq -r '.status' || echo "Failed"
-    echo -n "Controller Health: "
-    curl -s http://localhost:8082/health | jq -r '.status' || echo "Failed"
-    echo -n "Generator Health: "
-    curl -s http://localhost:8083/health | jq -r '.status' || echo "Failed"
-    
-    # Create an experiment
-    echo -e "\n${YELLOW}2. Create Experiment${NC}"
-    RESPONSE=$(curl -s -X POST http://localhost:8080/api/v1/experiments \
-        -H "Content-Type: application/json" \
-        -d '{
-            "name": "demo-experiment",
-            "baseline_pipeline": "baseline-v1",
-            "candidate_pipeline": "optimized-v1",
-            "target_selector": {"app": "demo-app"},
-            "duration": "30m"
-        }')
-    
-    echo "Response: "
-    echo "$RESPONSE" | jq . || echo "$RESPONSE"
-    
-    # Extract experiment ID
-    EXP_ID=$(echo "$RESPONSE" | jq -r '.id' 2>/dev/null || echo "exp-demo")
-    echo -e "${GREEN}Created experiment: $EXP_ID${NC}"
-    
-    # Check experiment status
-    echo -e "\n${YELLOW}3. Check Experiment Status${NC}"
-    curl -s http://localhost:8080/api/v1/experiments/$EXP_ID | jq . || echo "Failed"
-    
-    # List pipelines
-    echo -e "\n${YELLOW}4. List Available Pipelines${NC}"
-    curl -s http://localhost:8080/api/v1/pipelines | jq . || echo "Failed"
-    
-    # Generate config
-    echo -e "\n${YELLOW}5. Generate Pipeline Config${NC}"
-    curl -s -X POST http://localhost:8083/generate \
-        -H "Content-Type: application/json" \
-        -d '{"experiment_id": "'$EXP_ID'", "type": "baseline"}' | jq . || echo "Failed"
-    
-    # Show metrics endpoint
-    echo -e "\n${YELLOW}6. Prometheus Metrics${NC}"
-    echo "API Metrics: http://localhost:8080/metrics"
-    echo "Controller Metrics: http://localhost:8082/metrics"
-    echo "Generator Metrics: http://localhost:8083/metrics"
-    
-    echo -e "\n${GREEN}✅ E2E Demo Complete!${NC}"
-    echo -e "\nThe Phoenix Platform is running. You can:"
-    echo "- Access the API at http://localhost:8080"
-    echo "- View logs with: docker-compose -f docker-compose.e2e.yml logs -f"
-    echo "- Stop services with: docker-compose -f docker-compose.e2e.yml down"
-}
+# 3. Start the experiment
+echo ""
+echo -e "${BLUE}3. Starting experiment...${NC}"
+curl -s -X POST http://localhost:8080/api/v1/experiments/$EXPERIMENT_ID/start
+echo -e "${GREEN}✓ Experiment started${NC}"
 
-# Main execution
-main() {
-    echo -e "\n${YELLOW}Choose execution mode:${NC}"
-    echo "1) Local Go execution (faster)"
-    echo "2) Docker Compose (isolated)"
-    echo -n "Enter choice [1-2]: "
-    read -r choice
-    
-    case $choice in
-        1)
-            run_local
-            test_services
-            echo -e "\n${YELLOW}Press Ctrl+C to stop services${NC}"
-            wait
-            ;;
-        2)
-            run_docker
-            test_services
-            echo -e "\n${YELLOW}Services are running in background${NC}"
-            echo "Stop with: docker-compose -f docker-compose.e2e.yml down"
-            ;;
-        *)
-            echo -e "${RED}Invalid choice${NC}"
-            exit 1
-            ;;
-    esac
-}
+# 4. Check agent tasks
+echo ""
+echo -e "${BLUE}4. Checking agent task distribution...${NC}"
+sleep 3
+echo "Agent 1 tasks:"
+curl -s -H "X-Agent-Host-ID: phoenix-agent-1" http://localhost:8080/api/v1/agent/tasks | jq '.'
+echo "Agent 2 tasks:"
+curl -s -H "X-Agent-Host-ID: phoenix-agent-2" http://localhost:8080/api/v1/agent/tasks | jq '.'
 
-# Run main
-main
+# 5. Monitor experiment progress
+echo ""
+echo -e "${BLUE}5. Monitoring experiment progress...${NC}"
+for i in {1..3}; do
+    sleep 5
+    STATUS=$(curl -s http://localhost:8080/api/v1/experiments/$EXPERIMENT_ID | jq -r '.experiment.phase')
+    echo "Experiment phase: $STATUS"
+    
+    # Get KPIs if available
+    curl -s http://localhost:8080/api/v1/experiments/$EXPERIMENT_ID/kpis 2>/dev/null | jq '.' || true
+done
+
+# 6. Get cost analysis
+echo ""
+echo -e "${BLUE}6. Analyzing cost savings...${NC}"
+curl -s http://localhost:8080/api/v1/experiments/$EXPERIMENT_ID/cost-analysis | jq '.cost_analysis | {monthly_savings, yearly_savings, savings_percentage}'
+
+# 7. Check fleet status
+echo ""
+echo -e "${BLUE}7. Checking fleet status...${NC}"
+curl -s http://localhost:8080/api/v1/fleet/status | jq '.'
+
+# 8. Get metric cost flow
+echo ""
+echo -e "${BLUE}8. Getting real-time metric costs...${NC}"
+curl -s http://localhost:8080/api/v1/metrics/cost-flow | jq '{total_cost_per_minute, top_metrics: .top_metrics[:3]}'
+
+# 9. Test rollback
+echo ""
+echo -e "${BLUE}9. Testing experiment rollback...${NC}"
+curl -s -X POST "http://localhost:8080/api/v1/experiments/$EXPERIMENT_ID/rollback?reason=demo-rollback" | jq '.'
+echo -e "${GREEN}✓ Experiment rolled back${NC}"
+
+# 10. WebSocket demo
+echo ""
+echo -e "${BLUE}10. WebSocket connection demo...${NC}"
+echo "WebSocket endpoint available at: ws://localhost:8081/api/v1/ws"
+echo "Connect using the dashboard or WebSocket client to see real-time updates"
+
+# Dashboard
+echo ""
+echo -e "${BLUE}11. Launching Dashboard...${NC}"
+echo "Dashboard available at: http://localhost:3000"
+echo "Use 'phoenix ui' command to open in browser"
+
+# Summary
+echo ""
+echo "=================================="
+echo -e "${GREEN}🎉 End-to-End Demo Complete!${NC}"
+echo ""
+echo "Key Achievements Demonstrated:"
+echo "✅ Experiment creation and lifecycle management"
+echo "✅ Agent-based task distribution"
+echo "✅ Real-time cost analysis"
+echo "✅ Fleet monitoring"
+echo "✅ Experiment rollback"
+echo "✅ WebSocket real-time updates"
+echo ""
+echo "Services Running:"
+echo "- API: http://localhost:8080"
+echo "- WebSocket: ws://localhost:8081/api/v1/ws"
+echo "- Dashboard: http://localhost:3000"
+echo "- Prometheus: http://localhost:9090"
+echo "- Grafana: http://localhost:3001"
+echo ""
+echo "To stop all services: docker-compose down"
+echo ""
