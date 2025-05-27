@@ -36,7 +36,8 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
 - **Agent-Based Architecture** - Distributed agents with task polling and heartbeat monitoring
 - **A/B Testing Framework** - Safe rollout with baseline vs candidate pipeline comparison
 - **Pipeline Templates** - Pre-built optimization strategies (Adaptive Filter, TopK, Hybrid)
-- **NRDOT Support** - Native integration with New Relic's optimized OpenTelemetry distribution
+- **Dual Collector Support** - Choose between OpenTelemetry or NRDOT (New Relic Distribution)
+- **NRDOT Integration** - Advanced cardinality reduction with New Relic's optimized collectors
 - **Enterprise Ready** - PostgreSQL storage, TLS support, comprehensive monitoring
 
 ## 🏗️ Architecture Overview
@@ -107,6 +108,37 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
 - [Reduce Cardinality by 70%](docs/tutorials/reduce-cardinality.md)
 - [Building Custom Pipelines](docs/tutorials/custom-pipelines.md)
 - [Integration Guide](docs/tutorials/integration-guide.md)
+
+## 🔌 Collector Support
+
+Phoenix supports multiple telemetry collectors:
+
+### OpenTelemetry Collector (Default)
+- Industry-standard collector with wide ecosystem support
+- Configurable processors for basic cardinality reduction
+- Compatible with any OTLP-compliant backend
+
+### NRDOT (New Relic Distribution of OpenTelemetry)
+- Advanced cardinality reduction with New Relic's algorithms
+- Up to 80% reduction in metric volume
+- Automatic preservation of critical metrics
+- Native integration with New Relic platform
+
+**Quick Start with NRDOT:**
+```bash
+# Using environment variables
+export USE_NRDOT=true
+export NEW_RELIC_LICENSE_KEY=your-license-key
+
+# Or using CLI
+phoenix-cli experiment create \
+  --name "NRDOT Test" \
+  --use-nrdot \
+  --nr-license-key $NEW_RELIC_LICENSE_KEY \
+  --candidate-pipeline nrdot-cardinality
+```
+
+See [NRDOT Integration Guide](docs/operations/nrdot-integration.md) for detailed setup.
 
 ## 🛠️ Development
 
