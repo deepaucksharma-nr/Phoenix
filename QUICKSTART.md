@@ -86,10 +86,43 @@ POSTGRES_PASSWORD=change-me-in-production
 # Agent Authentication
 AGENT_HOST_ID=$(hostname)
 
+# Collector Selection (choose one)
+# For OpenTelemetry Collector (default)
+COLLECTOR_TYPE=otel
+OTEL_COLLECTOR_ENDPOINT=http://localhost:4317
+
+# For New Relic NRDOT Collector
+# COLLECTOR_TYPE=nrdot
+# NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+# NEW_RELIC_LICENSE_KEY=your-license-key-here
+
 # Optional
 ENABLE_AUTH=true
 LOG_LEVEL=info
 TASK_POLL_INTERVAL=30s
+```
+
+### Using NRDOT Collector
+
+To use New Relic's optimized OpenTelemetry distribution:
+
+```bash
+# Set environment variables
+export COLLECTOR_TYPE=nrdot
+export NEW_RELIC_LICENSE_KEY=your-license-key
+export NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+
+# Update agent configuration
+sudo systemctl edit phoenix-agent
+
+# Add these environment variables:
+[Service]
+Environment="COLLECTOR_TYPE=nrdot"
+Environment="NEW_RELIC_LICENSE_KEY=your-license-key"
+Environment="NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317"
+
+# Restart agent
+sudo systemctl restart phoenix-agent
 ```
 
 ### Agent Installation

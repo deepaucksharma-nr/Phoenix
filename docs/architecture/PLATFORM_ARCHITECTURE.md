@@ -42,8 +42,8 @@ Phoenix Platform implements an agent-based architecture with task polling:
 │           │                                                 │
 │      ┌────▼─────┐                                         │
 │      │ Phoenix   │                                         │
-│      │ Agents    │────────► OpenTelemetry ────► Backends │
-│      │ (X-Agent-Host-ID)       Collector                   │
+│      │ Agents    │────────► Collector ────────► Backends │
+│      │ (X-Agent-Host-ID)    (OTel/NRDOT)                   │
 │      └──────────┘                                         │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -70,16 +70,18 @@ The central control plane running on port 8080 (REST + WebSocket):
 Lightweight agents that poll for tasks using X-Agent-Host-ID authentication:
 
 - **Task Polling**: Long-polling with 30-second timeout
-- **OTel Management**: Deploys baseline/candidate pipeline configurations
+- **Collector Management**: Deploys baseline/candidate pipeline configurations
 - **Authentication**: Uses X-Agent-Host-ID header for identification
 - **Pipeline Templates**: Supports Adaptive Filter, TopK, and Hybrid
 - **Status Reporting**: Reports metrics and experiment results
+- **Collector Support**: OpenTelemetry Collector and New Relic NRDOT
 
 **Key Features**:
 - Minimal resource footprint (<50MB RAM)
 - Outbound-only connections (security)
 - Concurrent A/B test execution
 - Automatic task retry on failure
+- Flexible collector backend (OTel or NRDOT)
 
 ### 3. Dashboard
 Modern React 18 + Vite web interface:
@@ -89,6 +91,34 @@ Modern React 18 + Vite web interface:
 - **Live Cost Analytics**: Real-time cost reduction visualization
 - **Pipeline Templates**: Pre-configured optimization strategies
 - **Agent Fleet View**: Monitor all connected agents
+
+## Collector Integration
+
+Phoenix supports multiple collector backends for flexibility:
+
+### OpenTelemetry Collector (Default)
+- Standard OTLP protocol support
+- Configurable exporters (Prometheus, Jaeger, etc.)
+- Custom processors for metric optimization
+- Community-supported and vendor-neutral
+
+### New Relic NRDOT
+- Optimized OpenTelemetry distribution by New Relic
+- Direct integration with New Relic One platform
+- Enhanced performance for New Relic users
+- Simplified configuration with license key authentication
+
+Configuration is handled via environment variables:
+```bash
+# For OpenTelemetry
+COLLECTOR_TYPE=otel
+OTEL_COLLECTOR_ENDPOINT=http://localhost:4317
+
+# For NRDOT
+COLLECTOR_TYPE=nrdot
+NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+NEW_RELIC_LICENSE_KEY=your-license-key
+```
 
 ## Data Flow
 

@@ -375,7 +375,8 @@ Render a pipeline template with parameters.
   "parameters": {
     "importance_threshold": 0.75,
     "namespace_regex": "app_.*"
-  }
+  },
+  "collector_type": "nrdot"  // Optional: "otel" (default) or "nrdot"
 }
 ```
 
@@ -386,6 +387,15 @@ Render a pipeline template with parameters.
     "config": "receivers:\n  otlp:\n    protocols:\n      grpc:\n        endpoint: 0.0.0.0:4317\n\nprocessors:\n  adaptive_filter:\n    importance_threshold: 0.75\n    namespace_regex: app_.*\n\nexporters:\n  prometheus:\n    endpoint: 0.0.0.0:8889\n\nservice:\n  pipelines:\n    metrics:\n      receivers: [otlp]\n      processors: [adaptive_filter]\n      exporters: [prometheus]"
   }
 }
+```
+
+For NRDOT collector, the config includes New Relic-specific exporters:
+```yaml
+exporters:
+  nrdot:
+    endpoint: ${NRDOT_OTLP_ENDPOINT}
+    headers:
+      api-key: ${NEW_RELIC_LICENSE_KEY}
 ```
 
 ### Pipeline Deployments
@@ -482,6 +492,8 @@ X-Agent-Host-ID: agent-hostname-123
   "status": "healthy",
   "version": "1.2.3",
   "uptime_seconds": 86400,
+  "collector_type": "nrdot",  // "otel" or "nrdot"
+  "collector_version": "1.0.0",
   "metrics": {
     "cpu_percent": 45.2,
     "memory_percent": 62.1,

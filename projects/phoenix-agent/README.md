@@ -71,6 +71,10 @@ Environment variables:
 | `CONFIG_DIR` | OTel config directory | `/etc/phoenix/configs` |
 | `LOG_LEVEL` | Logging level | `info` |
 | `MAX_RETRIES` | Task retry attempts | `3` |
+| `COLLECTOR_TYPE` | Collector type (`otel` or `nrdot`) | `otel` |
+| `OTEL_COLLECTOR_ENDPOINT` | OpenTelemetry endpoint | `http://localhost:4317` |
+| `NRDOT_OTLP_ENDPOINT` | NRDOT endpoint | `https://otlp.nr-data.net:4317` |
+| `NEW_RELIC_LICENSE_KEY` | New Relic license key (for NRDOT) | - |
 
 ## Architecture
 
@@ -94,7 +98,11 @@ Environment variables:
 4. **Pipeline Templates**: Executes Adaptive Filter, TopK, or Hybrid configs
 5. **Result Reporting**: Updates task status and experiment metrics
 
-## OTel Collector Management
+## Collector Management
+
+The agent supports both OpenTelemetry and NRDOT collectors:
+
+### OpenTelemetry Collector (Default)
 
 The agent manages OTel collectors as child processes:
 
@@ -123,6 +131,35 @@ Agent will:
 3. Start OTel collector for specified variant (baseline/candidate)
 4. Monitor metrics and cardinality reduction
 5. Report results via `/api/v2/tasks/{id}/status`
+
+### New Relic NRDOT
+
+When configured for NRDOT, the agent:
+
+```bash
+# Set NRDOT environment
+export COLLECTOR_TYPE=nrdot
+export NEW_RELIC_LICENSE_KEY=your-license-key
+export NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+
+# Start agent
+./phoenix-agent
+```
+
+NRDOT-specific features:
+- Direct integration with New Relic One
+- Optimized for New Relic infrastructure
+- License key authentication
+- Enhanced metric compression
+
+Pipeline configs are automatically adjusted for NRDOT exporters:
+```yaml
+exporters:
+  nrdot:
+    endpoint: ${NRDOT_OTLP_ENDPOINT}
+    headers:
+      api-key: ${NEW_RELIC_LICENSE_KEY}
+```
 
 ## Monitoring
 

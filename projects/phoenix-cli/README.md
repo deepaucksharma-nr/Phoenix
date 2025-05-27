@@ -74,6 +74,10 @@ export PHOENIX_TOKEN=your-auth-token
 api_url: http://localhost:8080
 token: your-auth-token
 default_output: table
+
+# Collector preferences (optional)
+collector_type: nrdot  # or "otel"
+nrdot_endpoint: https://otlp.nr-data.net:4317
 ```
 
 3. **Command Flags**:
@@ -233,6 +237,19 @@ phoenix experiment quick-start \
 phoenix experiment list -o json | \
   jq -r '.[] | select(.status=="running") | .id' | \
   xargs -I {} phoenix experiment stop {}
+```
+
+### NRDOT Integration
+```bash
+# Deploy pipeline with NRDOT collector
+phoenix pipeline deploy \
+  --name "nrdot-optimized" \
+  --template adaptive-filter-v2 \
+  --collector-type nrdot \
+  --param importance_threshold=0.8
+
+# Check NRDOT-enabled agents
+phoenix agent list --filter collector_type=nrdot
 ```
 
 ## Contributing

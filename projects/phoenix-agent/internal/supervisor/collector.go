@@ -74,7 +74,15 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 		collectorBinary = "nrdot"
 
 		// Validate New Relic configuration
-		if m.config.NRLicenseKey == "" {
+		// Check vars first, then fall back to config
+		nrLicenseKey := ""
+		if val, ok := vars["NEW_RELIC_LICENSE_KEY"]; ok && val != "" {
+			nrLicenseKey = val
+		} else {
+			nrLicenseKey = m.config.NRLicenseKey
+		}
+		
+		if nrLicenseKey == "" {
 			return fmt.Errorf("NEW_RELIC_LICENSE_KEY is required when using NRDOT collector")
 		}
 	}
@@ -104,10 +112,28 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 
 	// Add New Relic specific environment variables if using NRDOT
 	if collectorBinary == "nrdot" {
+		// Use vars if provided, otherwise fall back to config
+		nrLicenseKey := m.config.NRLicenseKey
+		if val, ok := vars["NEW_RELIC_LICENSE_KEY"]; ok && val != "" {
+			nrLicenseKey = val
+		}
+		
+		nrOTLPEndpoint := m.config.NROTLPEndpoint
+		if val, ok := vars["NEW_RELIC_OTLP_ENDPOINT"]; ok && val != "" {
+			nrOTLPEndpoint = val
+		}
+		
 		env = append(env,
-			fmt.Sprintf("NEW_RELIC_LICENSE_KEY=%s", m.config.NRLicenseKey),
-			fmt.Sprintf("NEW_RELIC_OTLP_ENDPOINT=%s", m.config.NROTLPEndpoint),
+			fmt.Sprintf("NEW_RELIC_LICENSE_KEY=%s", nrLicenseKey),
+			fmt.Sprintf("NEW_RELIC_OTLP_ENDPOINT=%s", nrOTLPEndpoint),
 		)
+	}
+	
+	// Add any additional environment variables from vars
+	for k, v := range vars {
+		if strings.HasPrefix(k, "NEW_RELIC_") || k == "MAX_CARDINALITY" || k == "REDUCTION_PERCENTAGE" {
+			env = append(env, fmt.Sprintf("%s=%s", k, v))
+		}
 	}
 
 	cmd.Env = env

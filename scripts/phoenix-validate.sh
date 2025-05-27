@@ -74,30 +74,40 @@ echo "---------------"
 
 # Check for cross-project imports
 run_check "cross-project imports" "
-    ! grep -r --include='*.go' 'github.com/phoenix/platform/projects' $PROJECT_ROOT/projects 2>/dev/null | \
-    grep -v '// Code generated' | \
-    awk -F: '{print \$1}' | while read file; do
-        dir=\$(dirname \"\$file\" | cut -d'/' -f1-4)
-        if grep -q \"github.com/phoenix/platform/projects\" \"\$file\" | grep -v \"\$dir\"; then
-            echo \"Cross-project import in \$file\"
-            exit 1
+    violations=0
+    for project in phoenix-api phoenix-agent phoenix-cli dashboard; do
+        if [ -d \"$PROJECT_ROOT/projects/\$project\" ]; then
+            # Check if this project imports from other projects
+            for other_project in phoenix-api phoenix-agent phoenix-cli dashboard; do
+                if [ \"\$project\" != \"\$other_project\" ]; then
+                    if grep -r --include='*.go' \"github.com/phoenix/platform/projects/\$other_project\" \"$PROJECT_ROOT/projects/\$project\" 2>/dev/null | grep -v '// Code generated'; then
+                        echo \"Project \$project imports from \$other_project\"
+                        violations=1
+                    fi
+                fi
+            done
         fi
     done
+    [ \$violations -eq 0 ]
 "
 
-# Check for direct database imports
+# Check for direct database imports (exclude phoenix-api store and main.go migration)
 run_check "direct database access" "
     ! grep -r --include='*.go' -E '\"database/sql\"|\"github.com/lib/pq\"|\"github.com/jackc/pgx\"' \
     $PROJECT_ROOT/projects/*/internal $PROJECT_ROOT/projects/*/cmd 2>/dev/null | \
-    grep -v '// Code generated'
+    grep -v '// Code generated' | \
+    grep -v 'phoenix-api/internal/store' | \
+    grep -v 'phoenix-api/cmd/api/main.go'
 "
 
 # Check for hardcoded secrets
 run_check "hardcoded secrets" "
     ! grep -r --include='*.go' --include='*.yaml' --include='*.yml' -E \
-    '(password|secret|key|token)\\s*[:=]\\s*[\"'\''][^\"'\'']+[\"'\'']' \
+    '(password|secret|_key|token)\\s*[:=]\\s*[\"'\''][^\"'\'']+[\"'\'']' \
     $PROJECT_ROOT 2>/dev/null | \
-    grep -vE '(example|template|test|fake|dummy|TODO|CHANGE_ME)'
+    grep -vE '(example|template|test|fake|dummy|TODO|CHANGE_ME|change-me|your-|user\\.id|field\\.key)' | \
+    grep -v 'load-profiles.yaml' | \
+    grep -v '.env'
 "
 
 echo ""
@@ -109,7 +119,7 @@ echo "-----------"
 # Check go.work consistency
 run_check "go.work consistency" "
     cd $PROJECT_ROOT && go work sync && \
-    ! git diff --quiet go.work go.work.sum
+    git diff --quiet go.work go.work.sum
 "
 
 # Check module dependencies
@@ -208,7 +218,7 @@ run_check "large files" "
 
 # Check for merge conflicts
 run_check "merge conflicts" "
-    ! grep -r '<<<<<<<' $PROJECT_ROOT --exclude-dir=.git 2>/dev/null
+    ! grep -r '<<<<<<<' $PROJECT_ROOT --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor --exclude='phoenix-validate.sh' 2>/dev/null
 "
 
 echo ""

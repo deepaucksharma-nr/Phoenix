@@ -87,6 +87,16 @@ POSTGRES_DB=phoenix
 JWT_SECRET=<random-secret>
 API_PORT=8080
 
+# Collector Configuration (choose one)
+# Option 1: OpenTelemetry Collector
+COLLECTOR_TYPE=otel
+OTEL_COLLECTOR_ENDPOINT=http://otel-collector:4317
+
+# Option 2: New Relic NRDOT
+# COLLECTOR_TYPE=nrdot
+# NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+# NEW_RELIC_LICENSE_KEY=<your-license-key>
+
 # Monitoring
 PROMETHEUS_RETENTION=30d
 GRAFANA_ADMIN_PASSWORD=<admin-password>

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -14,10 +15,14 @@ import (
 // POST /api/v1/experiments - Create a new experiment
 func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name        string                  `json:"name"`
-		Description string                  `json:"description"`
-		Config      models.ExperimentConfig `json:"config"`
-		Namespace   string                  `json:"namespace"`
+		Name              string                  `json:"name"`
+		Description       string                  `json:"description"`
+		Config            models.ExperimentConfig `json:"config"`
+		Namespace         string                  `json:"namespace"`
+		BaselinePipeline  string                  `json:"baseline_pipeline"`
+		CandidatePipeline string                  `json:"candidate_pipeline"`
+		TargetNodes       map[string]string       `json:"target_nodes"`
+		Parameters        map[string]interface{}  `json:"parameters"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -29,6 +34,26 @@ func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) 
 	if req.Name == "" {
 		respondError(w, http.StatusBadRequest, "Name is required")
 		return
+	}
+
+	// Handle CLI-style request format
+	if req.BaselinePipeline != "" && req.CandidatePipeline != "" {
+		// Convert CLI format to API format
+		req.Config.BaselineTemplate = models.PipelineTemplate{
+			Name: req.BaselinePipeline,
+			URL:  fmt.Sprintf("/api/v1/pipelines/templates/%s", req.BaselinePipeline),
+		}
+		req.Config.CandidateTemplate = models.PipelineTemplate{
+			Name: req.CandidatePipeline,
+			URL:  fmt.Sprintf("/api/v1/pipelines/templates/%s", req.CandidatePipeline),
+		}
+		
+		// Convert target nodes to target hosts
+		if len(req.TargetNodes) > 0 {
+			for _, host := range req.TargetNodes {
+				req.Config.TargetHosts = append(req.Config.TargetHosts, host)
+			}
+		}
 	}
 
 	if len(req.Config.TargetHosts) == 0 {
@@ -48,6 +73,28 @@ func (s *Server) handleCreateExperiment(w http.ResponseWriter, r *http.Request) 
 		Metadata: map[string]interface{}{
 			"namespace": req.Namespace,
 		},
+	}
+
+	// Add parameters to metadata (including NRDOT parameters)
+	if req.Parameters != nil {
+		for key, value := range req.Parameters {
+			exp.Metadata[key] = value
+		}
+		
+		// Also add parameters to pipeline template variables for template rendering
+		if exp.Config.BaselineTemplate.Variables == nil {
+			exp.Config.BaselineTemplate.Variables = make(map[string]string)
+		}
+		if exp.Config.CandidateTemplate.Variables == nil {
+			exp.Config.CandidateTemplate.Variables = make(map[string]string)
+		}
+		
+		// Convert parameters to string values for template variables
+		for key, value := range req.Parameters {
+			strValue := fmt.Sprintf("%v", value)
+			exp.Config.BaselineTemplate.Variables[key] = strValue
+			exp.Config.CandidateTemplate.Variables[key] = strValue
+		}
 	}
 
 	if req.Namespace == "" {

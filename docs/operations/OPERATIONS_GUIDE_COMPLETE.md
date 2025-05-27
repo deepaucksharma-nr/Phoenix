@@ -38,6 +38,16 @@ api_url: https://phoenix.example.com:8080
 host_id: $(hostname)-$(date +%s)
 poll_interval: 30s
 log_level: info
+
+# Collector configuration (choose one)
+# Option 1: OpenTelemetry Collector (default)
+collector_type: otel
+otel_endpoint: http://localhost:4317
+
+# Option 2: New Relic NRDOT
+# collector_type: nrdot
+# nrdot_endpoint: https://otlp.nr-data.net:4317
+# new_relic_license_key: YOUR_LICENSE_KEY
 EOF
 
 # Start agent service
@@ -182,6 +192,13 @@ curl http://phoenix-api:8080/api/v1/experiments/exp-123/analysis
 - **Before Phoenix**: $50,000/month
 - **After Phoenix**: $15,000/month (70% reduction)
 - **Annual Savings**: $420,000
+
+### NRDOT Integration Benefits
+When using Phoenix with New Relic's NRDOT collector:
+- **Native Integration**: Direct pipeline to New Relic One
+- **Enhanced Performance**: Optimized for New Relic infrastructure
+- **Unified Billing**: Combined savings visible in New Relic usage dashboard
+- **Seamless Migration**: Drop-in replacement for existing New Relic agents
 
 ## Systemd Service
 

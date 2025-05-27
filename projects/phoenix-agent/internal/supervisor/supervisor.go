@@ -75,6 +75,34 @@ func (s *Supervisor) executeCollectorTask(ctx context.Context, task *poller.Task
 		}
 
 		vars, _ := config["vars"].(map[string]string)
+		if vars == nil {
+			vars = make(map[string]string)
+		}
+
+		// Check if this is an NRDOT deployment
+		if collectorType, ok := config["collector_type"].(string); ok && collectorType == "nrdot" {
+			// Override variant to nrdot
+			variant = "nrdot"
+			
+			// Pass NRDOT-specific parameters as environment variables
+			if nrLicenseKey, ok := config["nr_license_key"].(string); ok {
+				vars["NEW_RELIC_LICENSE_KEY"] = nrLicenseKey
+			}
+			if nrOTLPEndpoint, ok := config["nr_otlp_endpoint"].(string); ok {
+				vars["NEW_RELIC_OTLP_ENDPOINT"] = nrOTLPEndpoint
+			}
+			if maxCardinality, ok := config["max_cardinality"]; ok {
+				vars["MAX_CARDINALITY"] = fmt.Sprintf("%v", maxCardinality)
+			}
+			if reductionPercentage, ok := config["reduction_percentage"]; ok {
+				vars["REDUCTION_PERCENTAGE"] = fmt.Sprintf("%v", reductionPercentage)
+			}
+		}
+		
+		// Pass pushgateway URL if provided
+		if pushgatewayURL, ok := config["pushgateway_url"].(string); ok {
+			vars["METRICS_PUSHGATEWAY_URL"] = pushgatewayURL
+		}
 
 		if err := s.collectorManager.Start(id, variant, configURL, vars); err != nil {
 			return nil, fmt.Errorf("failed to start collector: %w", err)
@@ -104,6 +132,34 @@ func (s *Supervisor) executeCollectorTask(ctx context.Context, task *poller.Task
 		}
 
 		vars, _ := config["vars"].(map[string]string)
+		if vars == nil {
+			vars = make(map[string]string)
+		}
+
+		// Check if this is an NRDOT deployment
+		if collectorType, ok := config["collector_type"].(string); ok && collectorType == "nrdot" {
+			// Override variant to nrdot
+			variant = "nrdot"
+			
+			// Pass NRDOT-specific parameters as environment variables
+			if nrLicenseKey, ok := config["nr_license_key"].(string); ok {
+				vars["NEW_RELIC_LICENSE_KEY"] = nrLicenseKey
+			}
+			if nrOTLPEndpoint, ok := config["nr_otlp_endpoint"].(string); ok {
+				vars["NEW_RELIC_OTLP_ENDPOINT"] = nrOTLPEndpoint
+			}
+			if maxCardinality, ok := config["max_cardinality"]; ok {
+				vars["MAX_CARDINALITY"] = fmt.Sprintf("%v", maxCardinality)
+			}
+			if reductionPercentage, ok := config["reduction_percentage"]; ok {
+				vars["REDUCTION_PERCENTAGE"] = fmt.Sprintf("%v", reductionPercentage)
+			}
+		}
+		
+		// Pass pushgateway URL if provided
+		if pushgatewayURL, ok := config["pushgateway_url"].(string); ok {
+			vars["METRICS_PUSHGATEWAY_URL"] = pushgatewayURL
+		}
 
 		if err := s.collectorManager.Start(id, variant, configURL, vars); err != nil {
 			return nil, fmt.Errorf("failed to update collector: %w", err)

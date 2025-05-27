@@ -75,6 +75,16 @@ WEBSOCKET_URL=ws://localhost:8080/ws
 AGENT_HOST_ID=$(hostname)
 TASK_POLL_INTERVAL=30s
 
+# Collector Configuration (choose one)
+# Option 1: Local OpenTelemetry Collector
+COLLECTOR_TYPE=otel
+OTEL_COLLECTOR_ENDPOINT=http://localhost:4317
+
+# Option 2: New Relic NRDOT Collector
+# COLLECTOR_TYPE=nrdot
+# NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+# NEW_RELIC_LICENSE_KEY=your-dev-license-key
+
 # Development
 LOG_LEVEL=debug
 ENABLE_HOT_RELOAD=true
@@ -323,6 +333,26 @@ hey -n 10000 -c 100 http://localhost:8080/api/v2/experiments
 # Test task polling (agent simulation)
 hey -n 1000 -c 50 -H "X-Agent-Host-ID: test-agent" \
   http://localhost:8080/api/v2/tasks/poll
+```
+
+### Testing with NRDOT
+
+When developing with NRDOT integration:
+
+```bash
+# Set up NRDOT environment
+export COLLECTOR_TYPE=nrdot
+export NEW_RELIC_LICENSE_KEY=your-test-key
+export NRDOT_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+
+# Run agent with NRDOT
+cd projects/phoenix-agent
+make run
+
+# Verify NRDOT metrics in New Relic One
+# 1. Go to https://one.newrelic.com
+# 2. Check Infrastructure > Hosts
+# 3. Look for custom metrics with 'phoenix' prefix
 ```
 
 ## 📚 Resources

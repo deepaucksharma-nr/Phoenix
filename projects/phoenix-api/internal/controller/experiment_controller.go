@@ -49,6 +49,20 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 			},
 		}
 
+		// Add NRDOT parameters if present in experiment metadata
+		if exp.Metadata != nil {
+			if collectorType, ok := exp.Metadata["collector_type"].(string); ok && collectorType == "nrdot" {
+				baselineTask.Config["collector_type"] = collectorType
+				
+				// Pass through NRDOT-specific parameters
+				for _, key := range []string{"nr_license_key", "nr_otlp_endpoint", "max_cardinality", "reduction_percentage", "pushgateway_url"} {
+					if val, ok := exp.Metadata[key]; ok {
+						baselineTask.Config[key] = val
+					}
+				}
+			}
+		}
+
 		if err := c.taskQueue.Enqueue(ctx, baselineTask); err != nil {
 			return fmt.Errorf("failed to enqueue baseline task for host %s: %w", host, err)
 		}
@@ -66,6 +80,20 @@ func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.
 				"configUrl": exp.Config.CandidateTemplate.URL,
 				"vars":      exp.Config.CandidateTemplate.Variables,
 			},
+		}
+		
+		// Add NRDOT parameters for candidate as well
+		if exp.Metadata != nil {
+			if collectorType, ok := exp.Metadata["collector_type"].(string); ok && collectorType == "nrdot" {
+				candidateTask.Config["collector_type"] = collectorType
+				
+				// Pass through NRDOT-specific parameters
+				for _, key := range []string{"nr_license_key", "nr_otlp_endpoint", "max_cardinality", "reduction_percentage", "pushgateway_url"} {
+					if val, ok := exp.Metadata[key]; ok {
+						candidateTask.Config[key] = val
+					}
+				}
+			}
 		}
 
 		if err := c.taskQueue.Enqueue(ctx, candidateTask); err != nil {
