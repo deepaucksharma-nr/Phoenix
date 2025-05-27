@@ -63,10 +63,13 @@ func (s *PostgresStore) CreateExperiment(ctx context.Context, exp *models.Experi
 		return fmt.Errorf("failed to marshal target_nodes: %w", err)
 	}
 
+	// Log what we're trying to insert for debugging
+	fmt.Printf("DEBUG: Creating experiment with status=%v, target_nodes=%s\n", exp.Status, string(targetNodesJSON))
+
 	query := `
 		INSERT INTO experiments (
 			id, name, description, baseline_pipeline, candidate_pipeline, 
-			status, target_nodes, created_at, updated_at
+			phase, target_nodes, created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
@@ -85,7 +88,7 @@ func (s *PostgresStore) CreateExperiment(ctx context.Context, exp *models.Experi
 func (s *PostgresStore) GetExperiment(ctx context.Context, id string) (*models.Experiment, error) {
 	query := `
 		SELECT id, name, description, baseline_pipeline, candidate_pipeline,
-		       status, target_nodes, created_at, updated_at, started_at, completed_at
+		       phase, target_nodes, created_at, updated_at, started_at, completed_at
 		FROM experiments WHERE id = $1
 	`
 
@@ -126,7 +129,7 @@ func (s *PostgresStore) GetExperiment(ctx context.Context, id string) (*models.E
 func (s *PostgresStore) ListExperiments(ctx context.Context, limit, offset int) ([]*models.Experiment, error) {
 	query := `
 		SELECT id, name, description, baseline_pipeline, candidate_pipeline,
-		       status, target_nodes, created_at, updated_at, started_at, completed_at
+		       phase, target_nodes, created_at, updated_at, started_at, completed_at
 		FROM experiments 
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -186,7 +189,7 @@ func (s *PostgresStore) UpdateExperiment(ctx context.Context, exp *models.Experi
 	query := `
 		UPDATE experiments
 		SET name = $2, description = $3, baseline_pipeline = $4, candidate_pipeline = $5,
-		    status = $6, target_nodes = $7, updated_at = $8, started_at = $9, completed_at = $10
+		    phase = $6, target_nodes = $7, updated_at = $8, started_at = $9, completed_at = $10
 		WHERE id = $1
 	`
 
@@ -197,7 +200,7 @@ func (s *PostgresStore) UpdateExperiment(ctx context.Context, exp *models.Experi
 
 	_, err = s.db.ExecContext(ctx, query,
 		exp.ID, exp.Name, exp.Description, exp.BaselinePipeline, exp.CandidatePipeline,
-		exp.Status, string(targetNodesJSON), exp.UpdatedAt, exp.StartedAt, exp.CompletedAt,
+		exp.Status, targetNodesJSON, exp.UpdatedAt, exp.StartedAt, exp.CompletedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update experiment: %w", err)
