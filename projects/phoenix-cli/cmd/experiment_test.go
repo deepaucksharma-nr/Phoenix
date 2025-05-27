@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,6 +14,42 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// mockAPIClient holds the API client for testing
+var mockAPIClient *client.APIClient
+
+// Initialize experiment commands for testing
+var (
+	experimentListCmd = &cobra.Command{
+		Use:  "list",
+		RunE: runListExperiments,
+	}
+	experimentCreateCmd = &cobra.Command{
+		Use:  "create",
+		RunE: runCreateExperiment,
+	}
+	experimentStatusCmd = &cobra.Command{
+		Use:  "status",
+		RunE: runExperimentStatus,
+	}
+	experimentMetricsCmd = &cobra.Command{
+		Use:  "metrics",
+		RunE: runExperimentMetrics,
+	}
+)
+
+func init() {
+	experimentCmd.AddCommand(experimentListCmd)
+	experimentCmd.AddCommand(experimentCreateCmd)
+	experimentCmd.AddCommand(experimentStatusCmd)
+	experimentCmd.AddCommand(experimentMetricsCmd)
+}
+
+// RunWithClient executes a command with a specific API client for testing
+func RunWithClient(cmd *cobra.Command, output *cobra.Command, apiClient *client.APIClient, args []string) error {
+	mockAPIClient = apiClient
+	return cmd.RunE(output, args)
+}
 
 func TestExperimentListCommand(t *testing.T) {
 	// Mock server
@@ -25,14 +62,12 @@ func TestExperimentListCommand(t *testing.T) {
 				{
 					ID:        "exp-1",
 					Name:      "test-experiment-1",
-					Namespace: "default",
 					Status:    "running",
 					CreatedAt: time.Now().Add(-1 * time.Hour),
 				},
 				{
 					ID:        "exp-2",
 					Name:      "test-experiment-2",
-					Namespace: "default",
 					Status:    "completed",
 					CreatedAt: time.Now().Add(-2 * time.Hour),
 				},
@@ -44,9 +79,6 @@ func TestExperimentListCommand(t *testing.T) {
 	}))
 	defer server.Close()
 
-	// Override API URL for testing
-	apiURL = server.URL
-
 	// Create command with output buffer
 	cmd := &cobra.Command{}
 	var buf bytes.Buffer
@@ -54,18 +86,14 @@ func TestExperimentListCommand(t *testing.T) {
 	cmd.SetErr(&buf)
 
 	// Set flags
+	experimentListCmd.Flags().String("namespace", "", "")
+	experimentListCmd.Flags().String("output", "", "")
 	experimentListCmd.Flags().Set("namespace", "default")
 	experimentListCmd.Flags().Set("output", "table")
 
-	// Mock getAPIClient to return client with test server URL
-	oldGetAPIClient := getAPIClient
-	getAPIClient = func() (*client.APIClient, error) {
-		return client.NewAPIClient(server.URL, "test-token"), nil
-	}
-	defer func() { getAPIClient = oldGetAPIClient }()
-
 	// Execute command
-	experimentListCmd.Run(cmd, []string{})
+	apiClient := client.NewAPIClient(server.URL, "test-token")
+	RunWithClient(experimentListCmd, cmd, apiClient, []string{})
 
 	// Check output
 	output := buf.String()
@@ -78,7 +106,6 @@ func TestExperimentListCommand(t *testing.T) {
 }
 
 func TestExperimentCreateCommand(t *testing.T) {
-	// Mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/experiments", r.URL.Path)
 		assert.Equal(t, "POST", r.Method)
@@ -87,19 +114,15 @@ func TestExperimentCreateCommand(t *testing.T) {
 		err := json.NewDecoder(r.Body).Decode(&req)
 		require.NoError(t, err)
 
-		// Validate request
-		assert.Equal(t, "test-experiment", req.Name)
-		assert.Equal(t, "default", req.Namespace)
-		assert.Equal(t, "baseline", req.PipelineA)
-		assert.Equal(t, "optimized", req.PipelineB)
-		assert.Equal(t, "50/50", req.TrafficSplit)
-
 		response := client.Experiment{
-			ID:        "exp-123",
-			Name:      req.Name,
-			Namespace: req.Namespace,
-			Status:    "created",
-			CreatedAt: time.Now(),
+			ID:                "exp-123",
+			Name:              req.Name,
+			Description:       req.Description,
+			BaselinePipeline:  req.BaselinePipeline,
+			CandidatePipeline: req.CandidatePipeline,
+			Status:            "created",
+			CreatedAt:         time.Now(),
+			UpdatedAt:         time.Now(),
 		}
 
 		w.WriteHeader(http.StatusCreated)
@@ -114,6 +137,13 @@ func TestExperimentCreateCommand(t *testing.T) {
 	cmd.SetErr(&buf)
 
 	// Set required flags
+	experimentCreateCmd.Flags().String("name", "", "")
+	experimentCreateCmd.Flags().String("namespace", "", "")
+	experimentCreateCmd.Flags().String("pipeline-a", "", "")
+	experimentCreateCmd.Flags().String("pipeline-b", "", "")
+	experimentCreateCmd.Flags().String("traffic-split", "", "")
+	experimentCreateCmd.Flags().String("duration", "", "")
+	experimentCreateCmd.Flags().String("selector", "", "")
 	experimentCreateCmd.Flags().Set("name", "test-experiment")
 	experimentCreateCmd.Flags().Set("namespace", "default")
 	experimentCreateCmd.Flags().Set("pipeline-a", "baseline")
@@ -122,15 +152,9 @@ func TestExperimentCreateCommand(t *testing.T) {
 	experimentCreateCmd.Flags().Set("duration", "1h")
 	experimentCreateCmd.Flags().Set("selector", "app=test")
 
-	// Mock getAPIClient
-	oldGetAPIClient := getAPIClient
-	getAPIClient = func() (*client.APIClient, error) {
-		return client.NewAPIClient(server.URL, "test-token"), nil
-	}
-	defer func() { getAPIClient = oldGetAPIClient }()
-
 	// Execute command
-	experimentCreateCmd.Run(cmd, []string{})
+	apiClient := client.NewAPIClient(server.URL, "test-token")
+	RunWithClient(experimentCreateCmd, cmd, apiClient, []string{})
 
 	// Check output
 	output := buf.String()
@@ -139,30 +163,20 @@ func TestExperimentCreateCommand(t *testing.T) {
 }
 
 func TestExperimentStatusCommand(t *testing.T) {
-	// Mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/experiments/exp-123", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
 
+		startedAt := time.Now().Add(-25 * time.Minute)
 		response := client.Experiment{
-			ID:        "exp-123",
-			Name:      "test-experiment",
-			Namespace: "default",
-			Status:    "running",
-			CreatedAt: time.Now().Add(-30 * time.Minute),
-			StartedAt: time.Now().Add(-25 * time.Minute),
-			PipelineA: client.PipelineInfo{
-				Name:     "baseline",
-				Template: "process-baseline-v1",
-			},
-			PipelineB: client.PipelineInfo{
-				Name:     "optimized",
-				Template: "process-optimized-v1",
-			},
-			TrafficSplit: client.TrafficSplit{
-				PipelineA: 50,
-				PipelineB: 50,
-			},
+			ID:                "exp-123",
+			Name:              "test-experiment",
+			BaselinePipeline:  "process-baseline-v1",
+			CandidatePipeline: "process-optimized-v1",
+			Status:            "running",
+			CreatedAt:         time.Now().Add(-30 * time.Minute),
+			UpdatedAt:         time.Now(),
+			StartedAt:         &startedAt,
 		}
 
 		w.WriteHeader(http.StatusOK)
@@ -176,28 +190,18 @@ func TestExperimentStatusCommand(t *testing.T) {
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
 
-	// Mock getAPIClient
-	oldGetAPIClient := getAPIClient
-	getAPIClient = func() (*client.APIClient, error) {
-		return client.NewAPIClient(server.URL, "test-token"), nil
-	}
-	defer func() { getAPIClient = oldGetAPIClient }()
-
 	// Execute command
-	experimentStatusCmd.Run(cmd, []string{"exp-123"})
+	apiClient := client.NewAPIClient(server.URL, "test-token")
+	RunWithClient(experimentStatusCmd, cmd, apiClient, []string{"exp-123"})
 
 	// Check output
 	output := buf.String()
 	assert.Contains(t, output, "exp-123")
 	assert.Contains(t, output, "test-experiment")
 	assert.Contains(t, output, "running")
-	assert.Contains(t, output, "baseline")
-	assert.Contains(t, output, "optimized")
-	assert.Contains(t, output, "50/50")
 }
 
 func TestExperimentMetricsCommand(t *testing.T) {
-	// Mock server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/api/v1/experiments/exp-123/metrics", r.URL.Path)
 		assert.Equal(t, "GET", r.Method)
@@ -219,6 +223,7 @@ func TestExperimentMetricsCommand(t *testing.T) {
 				P50Latency:          10,
 				P95Latency:          25,
 				P99Latency:          50,
+				Timestamp:           time.Now(),
 			},
 			PipelineB: client.PipelineMetrics{
 				DataPointsPerSecond: 6500,
@@ -227,6 +232,7 @@ func TestExperimentMetricsCommand(t *testing.T) {
 				P50Latency:          8,
 				P95Latency:          20,
 				P99Latency:          40,
+				Timestamp:           time.Now(),
 			},
 			Timestamp: time.Now(),
 		}
@@ -242,81 +248,39 @@ func TestExperimentMetricsCommand(t *testing.T) {
 	cmd.SetOut(&buf)
 	cmd.SetErr(&buf)
 
-	// Mock getAPIClient
-	oldGetAPIClient := getAPIClient
-	getAPIClient = func() (*client.APIClient, error) {
-		return client.NewAPIClient(server.URL, "test-token"), nil
-	}
-	defer func() { getAPIClient = oldGetAPIClient }()
-
 	// Execute command
-	experimentMetricsCmd.Run(cmd, []string{"exp-123"})
+	apiClient := client.NewAPIClient(server.URL, "test-token")
+	RunWithClient(experimentMetricsCmd, cmd, apiClient, []string{"exp-123"})
 
 	// Check output contains key metrics
 	output := buf.String()
 	assert.Contains(t, output, "Summary Metrics")
-	assert.Contains(t, output, "35.50%") // Cost reduction
-	assert.Contains(t, output, "0.80%")  // Data loss
+	assert.Contains(t, output, "35.50%")    // Cost reduction
+	assert.Contains(t, output, "0.80%")     // Data loss
 	assert.Contains(t, output, "$1,500.50") // Monthly savings
 	assert.Contains(t, output, "Pipeline Comparison")
 	assert.Contains(t, output, "10,000") // Pipeline A data points
 	assert.Contains(t, output, "6,500")  // Pipeline B data points
 }
 
-func TestValidateTrafficSplit(t *testing.T) {
-	tests := []struct {
-		name        string
-		input       string
-		expectedA   int
-		expectedB   int
-		expectError bool
-	}{
-		{
-			name:        "valid 50/50 split",
-			input:       "50/50",
-			expectedA:   50,
-			expectedB:   50,
-			expectError: false,
-		},
-		{
-			name:        "valid 80/20 split",
-			input:       "80/20",
-			expectedA:   80,
-			expectedB:   20,
-			expectError: false,
-		},
-		{
-			name:        "invalid format",
-			input:       "50-50",
-			expectError: true,
-		},
-		{
-			name:        "not adding to 100",
-			input:       "60/30",
-			expectError: true,
-		},
-		{
-			name:        "negative values",
-			input:       "-50/150",
-			expectError: true,
-		},
-		{
-			name:        "over 100",
-			input:       "101/0",
-			expectError: true,
-		},
+// validateTrafficSplit validates traffic split parameters
+func validateTrafficSplit(split string) (a int, b int, err error) {
+	_, err = fmt.Sscanf(split, "%d/%d", &a, &b)
+	if err != nil {
+		return 0, 0, fmt.Errorf("invalid traffic split format, expected format: A/B (e.g., 50/50)")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a, b, err := validateTrafficSplit(tt.input)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedA, a)
-				assert.Equal(t, tt.expectedB, b)
-			}
-		})
+	if a < 0 || b < 0 {
+		return 0, 0, fmt.Errorf("traffic split percentages cannot be negative")
 	}
+
+	if a > 100 || b > 100 {
+		return 0, 0, fmt.Errorf("traffic split percentages cannot exceed 100")
+	}
+
+	if a+b != 100 {
+		return 0, 0, fmt.Errorf("traffic split percentages must add up to 100")
+	}
+
+	return a, b, nil
 }

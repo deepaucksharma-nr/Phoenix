@@ -1,0 +1,108 @@
+# Phoenix Load Simulation Profiles Configuration
+# This file defines standardized load simulation profiles for testing
+
+profiles:
+  high-cardinality:
+    description: "Simulates high cardinality metrics explosion"
+    aliases: ["high-card"]
+    parameters:
+      metrics_per_second: 1000
+      unique_labels: true
+      metric_types:
+        - name: "http.request.duration"
+          type: "histogram"
+          labels:
+            - key: "user.id"
+              cardinality: "unbounded"  # New UUID each time
+            - key: "endpoint"
+              cardinality: "high"       # Unique paths
+            - key: "status_code"
+              cardinality: "low"        # Limited set (200, 400, 500)
+      duration_default: "5m"
+      duration_max: "30m"
+    resource_impact:
+      cpu: "low"
+      memory: "high"
+      network: "medium"
+      
+  realistic:
+    description: "Simulates normal production workload"
+    aliases: ["normal"]
+    parameters:
+      system_stress:
+        cpu_workers: 2
+        io_workers: 2
+        vm_workers: 1
+        vm_bytes: "128M"
+      fallback_mode: "cpu_calculation"
+      duration_default: "10m"
+      duration_max: "1h"
+    resource_impact:
+      cpu: "medium"
+      memory: "low"
+      network: "low"
+      
+  spike:
+    description: "Simulates traffic spikes and recovery"
+    aliases: []
+    parameters:
+      phases:
+        - name: "normal"
+          duration: "30s"
+          rate_multiplier: 1
+        - name: "spike"
+          duration: "10s"
+          rate_multiplier: 100
+        - name: "recovery"
+          duration: "20s"
+          rate_multiplier: 1
+      base_rate: 1  # metrics per second
+      metric_name: "system.load"
+      duration_default: "1m"
+      duration_max: "10m"
+    resource_impact:
+      cpu: "variable"
+      memory: "low"
+      network: "variable"
+      
+  steady:
+    description: "Maintains constant load for stability testing"
+    aliases: ["process-churn"]
+    parameters:
+      rate: 10  # requests per second
+      metric_name: "http.requests"
+      metric_type: "counter"
+      labels:
+        - key: "method"
+          value: "GET"
+      duration_default: "30m"
+      duration_max: "24h"
+    resource_impact:
+      cpu: "low"
+      memory: "minimal"
+      network: "low"
+
+# Global settings for all profiles
+global:
+  otlp_endpoint: "${OTEL_ENDPOINT:-http://localhost:4318}"
+  pushgateway_url: "${METRICS_PUSHGATEWAY_URL}"
+  rate_limit_max: 10000  # Max metrics per second across all profiles
+  cleanup_timeout: "30s"  # Extra time after duration for cleanup
+  
+# Resource limits to prevent system overload
+resource_limits:
+  max_cpu_percent: 80
+  max_memory_mb: 1024
+  max_open_files: 1000
+  
+# Metrics to collect during load simulation
+telemetry:
+  enabled: true
+  interval: "10s"
+  metrics:
+    - "load_sim.metrics.generated"
+    - "load_sim.metrics.sent"
+    - "load_sim.metrics.failed"
+    - "load_sim.duration.seconds"
+    - "load_sim.resource.cpu_percent"
+    - "load_sim.resource.memory_mb"

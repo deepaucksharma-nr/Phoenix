@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains end-to-end (E2E) tests for the Phoenix Platform. These tests validate the complete system behavior by running actual services and making real API calls.
+End-to-end tests for the Phoenix Platform's 70% cost reduction observability system. Tests validate agent-based architecture, A/B experiments, and real-time cost monitoring.
 
 ## Test Files
 
@@ -27,31 +27,33 @@ The E2E tests depend on:
 
 ### Required Services
 The tests expect these services to be running:
-- **Platform API** (default: http://localhost:8081)
-- **Generator Service** (default: http://localhost:8083)
+- **Phoenix API** (default: http://localhost:8080)
 - **PostgreSQL** database
+- **Prometheus** (optional: http://localhost:9090)
+- **Pushgateway** (optional: http://localhost:9091)
 
 ### Environment Variables
 Configure these in your environment or `.env` file:
 ```bash
 # Service URLs (optional - defaults provided)
-API_URL=http://localhost:8081
-GENERATOR_URL=http://localhost:8083
+API_URL=http://localhost:8080
+DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/phoenix_test?sslmode=disable
 
-# Database
-DATABASE_URL=postgres://phoenix:phoenix@localhost/phoenix_test?sslmode=disable
+# Authentication
+JWT_SECRET=test-secret-key
 
-# New Relic Integration
-NEW_RELIC_API_KEY=your-api-key
-NEW_RELIC_OTLP_ENDPOINT=https://otlp.nr-data.net:4317
+# Optional monitoring
+PROMETHEUS_URL=http://localhost:9090
+PUSHGATEWAY_URL=http://localhost:9091
 ```
 
 ## Running the Tests
 
 ### Prerequisites
-1. Ensure Go 1.24+ is installed
+1. Ensure Go 1.22+ is installed
 2. Start required services (or use docker-compose)
 3. Set environment variables
+4. Run database migrations
 
 ### Run All E2E Tests
 ```bash
@@ -124,9 +126,14 @@ cat ../../go.work | grep "tests/e2e"
 
 ### Services Not Ready
 ```bash
-# Check service health endpoints
-curl http://localhost:8081/health
-curl http://localhost:8083/health
+# Check Phoenix API health
+curl http://localhost:8080/health
+
+# Test agent authentication
+curl -H "X-Agent-Host-ID: test-agent" http://localhost:8080/api/v1/agent/tasks
+
+# Check WebSocket endpoint
+websocketd --port=8080 --dir=/tmp echo
 ```
 
 ### Database Connection Issues

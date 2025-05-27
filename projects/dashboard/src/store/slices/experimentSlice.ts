@@ -5,7 +5,8 @@ interface Experiment {
   id: string
   name: string
   description?: string
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  phase: 'pending' | 'deploying' | 'running' | 'analyzing' | 'stopping' | 'stopped' | 'completed' | 'failed' | 'promoted'
+  status?: string // Deprecated: use phase
   createdAt: string
   updatedAt: string
   startedAt?: string
@@ -69,7 +70,7 @@ export const fetchExperiments = createAsyncThunk(
           id: '1',
           name: 'Process Metrics Cardinality Reduction',
           description: 'Testing new aggregation techniques to reduce process metrics cardinality by 85%',
-          status: 'running',
+          phase: 'running',
           spec: {
             duration: '7 days',
             targetHosts: ['prod-web-01', 'prod-web-02', 'prod-api-01', 'prod-api-02'],
@@ -90,7 +91,7 @@ export const fetchExperiments = createAsyncThunk(
           id: '2',
           name: 'Memory Usage Pattern Optimization',
           description: 'Evaluating memory usage sampling rate adjustments to balance visibility and storage costs',
-          status: 'completed',
+          phase: 'completed',
           spec: {
             duration: '3 days',
             targetHosts: ['staging-app-01', 'staging-app-02'],
@@ -111,7 +112,7 @@ export const fetchExperiments = createAsyncThunk(
           id: '3',
           name: 'Container Metrics Deduplication',
           description: 'Testing container-level metric deduplication strategies for Kubernetes deployments',
-          status: 'pending',
+          phase: 'pending',
           spec: {
             duration: '5 days',
             targetHosts: ['k8s-node-01', 'k8s-node-02', 'k8s-node-03'],
@@ -235,6 +236,37 @@ const experimentSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
+    updateExperiment: (state, action: PayloadAction<Experiment>) => {
+      const index = state.experiments.findIndex(exp => exp.id === action.payload.id)
+      if (index !== -1) {
+        state.experiments[index] = action.payload
+      }
+      if (state.currentExperiment?.id === action.payload.id) {
+        state.currentExperiment = action.payload
+      }
+    },
+    setExperimentMetrics: (state, action: PayloadAction<{ experimentId: string; metrics: any }>) => {
+      const { experimentId, metrics } = action.payload
+      const index = state.experiments.findIndex(exp => exp.id === experimentId)
+      if (index !== -1) {
+        state.experiments[index] = {
+          ...state.experiments[index],
+          results: {
+            ...state.experiments[index].results,
+            ...metrics
+          }
+        }
+      }
+      if (state.currentExperiment?.id === experimentId) {
+        state.currentExperiment = {
+          ...state.currentExperiment,
+          results: {
+            ...state.currentExperiment.results,
+            ...metrics
+          }
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -295,5 +327,5 @@ const experimentSlice = createSlice({
   },
 })
 
-export const { setCurrentExperiment, clearError } = experimentSlice.actions
+export const { setCurrentExperiment, clearError, updateExperiment, setExperimentMetrics } = experimentSlice.actions
 export default experimentSlice.reducer

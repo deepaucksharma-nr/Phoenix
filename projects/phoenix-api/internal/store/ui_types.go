@@ -43,18 +43,21 @@ type CardinalityContributor struct {
 
 // PipelineTemplate represents a pre-built pipeline configuration
 type PipelineTemplate struct {
-	ID                    string                 `json:"id"`
-	Name                  string                 `json:"name"`
-	Description           string                 `json:"description"`
-	Category              string                 `json:"category"`
-	Config                map[string]interface{} `json:"config"`
-	ConfigURL             string                 `json:"config_url"`
-	Variables             map[string]string      `json:"variables"`
-	Metadata              map[string]interface{} `json:"metadata"`
-	EstimatedSavings      float64                `json:"estimated_savings_percent"`
-	EstimatedCPUImpact    float64                `json:"estimated_cpu_impact"`
-	EstimatedMemoryImpact int                    `json:"estimated_memory_impact_mb"`
-	UIPreview             UIPreview              `json:"ui_preview"`
+	ID                 string            `json:"id"`
+	Name               string            `json:"name"`
+	DisplayName        string            `json:"display_name"`
+	Description        string            `json:"description"`
+	Version            string            `json:"version"`
+	Category           string            `json:"category"`
+	Config             map[string]interface{} `json:"config,omitempty"`
+	ConfigURL          string            `json:"config_url"`
+	Tags               []string          `json:"tags"`
+	EstimatedReduction float64           `json:"estimated_reduction"`
+	Features           []string          `json:"features"`
+	Variables          map[string]string `json:"variables,omitempty"`
+	Metadata           map[string]interface{} `json:"metadata,omitempty"`
+	CreatedAt          time.Time         `json:"created_at"`
+	UpdatedAt          time.Time         `json:"updated_at"`
 }
 
 // UIPreview represents visual preview data for a pipeline

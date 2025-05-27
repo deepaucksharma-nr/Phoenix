@@ -1,10 +1,10 @@
 # Phoenix Platform Architecture
 
-Phoenix is an observability cost optimization platform that reduces metrics cardinality by up to 90% while maintaining critical visibility.
+Phoenix is an observability cost optimization platform that reduces metrics cardinality by up to 70% while maintaining critical visibility through agent-based task distribution and A/B testing of optimization pipelines.
 
 ## Overview
 
-Phoenix uses a **lean-core architecture** with three main components:
+Phoenix uses an **agent-based architecture** with three main components:
 
 1. **Phoenix API** - Centralized control plane
 2. **Phoenix Agent** - Lightweight data plane agents  
@@ -13,12 +13,14 @@ Phoenix uses a **lean-core architecture** with three main components:
 ```
 ┌─────────────────┐         ┌─────────────────┐
 │   Phoenix API   │◄────────┤   Dashboard     │
-│  (Control Plane)│         │   (React UI)    │
-└────────┬────────┘         └─────────────────┘
+│  (Port 8080)    │         │   (React UI)    │
+│  + WebSocket    │         └─────────────────┘
+└────────┬────────┘
          │ Task Queue (PostgreSQL)
+         │ Long-polling (30s timeout)
     ┌────▼────┐
-    │ Phoenix │────► Pushgateway ────► Prometheus
-    │ Agents  │
+    │ Phoenix │────► OpenTelemetry ────► Backends
+    │ Agents  │      Collector
     └─────────┘
 ```
 
@@ -36,20 +38,20 @@ Phoenix uses a **lean-core architecture** with three main components:
 ### Phoenix Agent  
 - **Role**: Distributed data plane
 - **Responsibilities**:
-  - Poll API for work assignments (long-polling)
-  - Manage OpenTelemetry collectors
-  - Push metrics to Prometheus Pushgateway
-  - Self-register with zero configuration
+  - Poll API for tasks using X-Agent-Host-ID authentication
+  - Manage OpenTelemetry collectors with pipeline templates
+  - Execute A/B tests with baseline/candidate configurations
+  - Report metrics and status back to API
 - **Technology**: Go, minimal dependencies (<50MB RAM)
 
 ### Dashboard
 - **Role**: User interface
 - **Responsibilities**:
-  - Experiment creation and monitoring
-  - Real-time metrics visualization
-  - Pipeline catalog management
-  - Cost analytics display
-- **Technology**: React, TypeScript, WebSocket
+  - Experiment creation with A/B testing setup
+  - Real-time monitoring via WebSocket
+  - Pipeline templates (Adaptive Filter, TopK, Hybrid)
+  - Live cost reduction analytics
+- **Technology**: React 18, TypeScript, Vite, WebSocket
 
 ## Key Design Principles
 
@@ -63,20 +65,20 @@ Phoenix uses a **lean-core architecture** with three main components:
 
 ### Experiment Lifecycle
 ```
-User → Dashboard → API → Database → Task Queue
-                                         ↓
-                              Agent ← Poll Tasks
+User → Dashboard → API → PostgreSQL → Task Queue
+                                          ↓
+                              Agent ← Poll Tasks (30s)
                                 ↓
-                          OTel Collector
+                          OTel Collector (Baseline/Candidate)
                                 ↓
-                    Pushgateway → Prometheus → API (Analysis)
+                    Metrics Backend → API (Analysis) → WebSocket → Dashboard
 ```
 
 ### Communication Patterns
-- **Dashboard ↔ API**: REST + WebSocket
-- **Agent → API**: HTTP long-polling (outbound only)
-- **Agent → Pushgateway**: Prometheus metrics push
-- **API → Prometheus**: PromQL queries for analysis
+- **Dashboard ↔ API**: REST (port 8080) + WebSocket (same port)
+- **Agent → API**: HTTP long-polling with X-Agent-Host-ID header
+- **Agent → Backends**: OpenTelemetry protocol (OTLP)
+- **Task Queue**: PostgreSQL-based with atomic assignment
 
 ## Deployment Architecture
 
@@ -93,10 +95,10 @@ User → Dashboard → API → Database → Task Queue
 
 ## Security Model
 
-- **Authentication**: JWT tokens
-- **Authorization**: Role-based access control
-- **Agent Security**: No incoming connections, API key auth
-- **Data Protection**: TLS encryption, secrets management
+- **Authentication**: JWT tokens for users, X-Agent-Host-ID for agents
+- **Authorization**: Role-based access control (RBAC)
+- **Agent Security**: Outbound-only connections, task polling design
+- **Data Protection**: TLS encryption, PostgreSQL row-level security
 
 ## Performance Characteristics
 
@@ -111,16 +113,16 @@ User → Dashboard → API → Database → Task Queue
 ## Technology Stack
 
 ### Backend
-- **Language**: Go 1.24+
-- **Database**: PostgreSQL 15+
-- **Cache**: Redis (optional)
-- **Metrics**: Prometheus + Pushgateway
+- **Language**: Go 1.21+
+- **Database**: PostgreSQL 15+ (primary datastore)
+- **Task Queue**: PostgreSQL-based with long-polling
+- **Metrics**: OpenTelemetry Collector + various backends
 
 ### Frontend
-- **Framework**: React 18+
+- **Framework**: React 18+ with Vite
 - **Language**: TypeScript
-- **State**: Redux Toolkit
-- **Real-time**: WebSocket
+- **State**: Redux Toolkit + Zustand
+- **Real-time**: WebSocket for live updates
 
 ### Infrastructure
 - **Container**: Docker
@@ -130,10 +132,10 @@ User → Dashboard → API → Database → Task Queue
 
 ## Extension Points
 
-1. **Custom Processors**: Add OTel processors in collector
-2. **Analysis Plugins**: Extend KPI calculations
-3. **UI Plugins**: Add dashboard widgets
-4. **API Extensions**: RESTful API is versioned
+1. **Pipeline Templates**: Adaptive Filter, TopK, Hybrid processors
+2. **Analysis Metrics**: Cardinality reduction, cost savings calculations
+3. **UI Components**: Live monitoring, cost flow visualization
+4. **API Extensions**: RESTful API v2 with WebSocket support
 
 ## Related Documentation
 

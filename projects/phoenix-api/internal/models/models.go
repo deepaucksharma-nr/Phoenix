@@ -195,3 +195,16 @@ const (
 	PhaseStopped   = "stopped"
 	PhaseDeleted   = "deleted"
 )
+
+// User represents a system user
+type User struct {
+	ID           string    `json:"id" db:"id"`
+	Username     string    `json:"username" db:"username"`
+	Email        string    `json:"email" db:"email"`
+	PasswordHash string    `json:"-" db:"password_hash"`
+	Role         string    `json:"role" db:"role"`
+	IsActive     bool      `json:"is_active" db:"is_active"`
+	LastLogin    *time.Time `json:"last_login,omitempty" db:"last_login"`
+	CreatedAt    time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+}

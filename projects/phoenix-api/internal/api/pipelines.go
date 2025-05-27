@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -54,7 +53,10 @@ func (s *Server) handleListPipelines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondJSON(w, http.StatusOK, templates)
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"pipelines": templates,
+		"total":     len(templates),
+	})
 }
 
 // GET /api/v1/pipelines/{id} - Get pipeline template details
@@ -67,353 +69,272 @@ func (s *Server) handleGetPipeline(w http.ResponseWriter, r *http.Request) {
 		catalogPath = "/app/configs/pipelines/catalog"
 	}
 
-	templates, err := s.loadPipelineTemplates(catalogPath)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to load pipeline templates")
-		respondError(w, http.StatusInternalServerError, "Failed to load pipeline templates")
-		return
-	}
+	// Look for the template file in known categories
+	var template *PipelineTemplate
+	categories := []string{"process", "infra", "app"}
 
-	// Find the requested template
-	for _, template := range templates {
-		if template.ID == pipelineID {
-			// Load full configuration if requested
-			if r.URL.Query().Get("include_config") == "true" {
-				config, err := s.loadPipelineConfig(template.ConfigPath)
-				if err != nil {
-					log.Error().Err(err).Str("pipeline_id", pipelineID).Msg("Failed to load pipeline config")
-					respondError(w, http.StatusInternalServerError, "Failed to load pipeline configuration")
-					return
+	for _, category := range categories {
+		templatePath := filepath.Join(catalogPath, category, pipelineID+".yaml")
+		if info, err := os.Stat(templatePath); err == nil && !info.IsDir() {
+			// Load the template
+			data, err := os.ReadFile(templatePath)
+			if err != nil {
+				log.Error().Err(err).Str("path", templatePath).Msg("Failed to read template file")
+				continue
+			}
+
+			// Parse the template to extract metadata
+			var config map[string]interface{}
+			if err := yaml.Unmarshal(data, &config); err != nil {
+				log.Error().Err(err).Str("path", templatePath).Msg("Failed to parse template YAML")
+				continue
+			}
+
+			template = &PipelineTemplate{
+				ID:          pipelineID,
+				Name:        pipelineID,
+				Category:    category,
+				ConfigPath:  templatePath,
+				Version:     "1.0.0",
+				Description: fmt.Sprintf("%s pipeline template", strings.Title(category)),
+				Metadata:    config,
+			}
+
+			// Extract description from metadata if available
+			if metadata, ok := config["metadata"].(map[string]interface{}); ok {
+				if desc, ok := metadata["description"].(string); ok {
+					template.Description = desc
 				}
-				template.Metadata["config"] = config
+				if name, ok := metadata["name"].(string); ok {
+					template.Name = name
+				}
 			}
-			respondJSON(w, http.StatusOK, template)
-			return
+
+			break
 		}
 	}
 
-	respondError(w, http.StatusNotFound, "Pipeline template not found")
-}
-
-// GET /api/v1/pipelines/status - Get aggregated pipeline deployment status
-func (s *Server) handleGetPipelineStatus(w http.ResponseWriter, r *http.Request) {
-	// Get status from pipeline deployment service
-	ctx := r.Context()
-	
-	// Query parameters for filtering
-	namespace := r.URL.Query().Get("namespace")
-	status := r.URL.Query().Get("status")
-	
-	// Get deployed pipelines from store
-	req := &models.ListDeploymentsRequest{
-		Namespace: namespace,
-		Status:    status,
-		PageSize:  100, // Default page size
-	}
-	
-	deployments, total, err := s.store.ListDeployments(ctx, req)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to list pipeline deployments")
-		respondError(w, http.StatusInternalServerError, "Failed to get pipeline status")
+	if template == nil {
+		respondError(w, http.StatusNotFound, "Pipeline template not found")
 		return
 	}
 
-	// Aggregate status
-	statusSummary := map[string]interface{}{
-		"total_deployments": total,
-		"deployments_by_status": map[string]int{
-			"active":   0,
-			"pending":  0,
-			"failed":   0,
-			"updating": 0,
-		},
-		"deployments_by_pipeline": make(map[string]int),
-		"last_updated": time.Now(),
-	}
-
-	// Count deployments by status and pipeline
-	for _, deployment := range deployments {
-		if deployment.Status != "" {
-			if count, ok := statusSummary["deployments_by_status"].(map[string]int)[deployment.Status]; ok {
-				statusSummary["deployments_by_status"].(map[string]int)[deployment.Status] = count + 1
-			}
-		}
-		
-		if deployment.PipelineName != "" {
-			pipelineCount := statusSummary["deployments_by_pipeline"].(map[string]int)
-			pipelineCount[deployment.PipelineName]++
-		}
-	}
-
-	respondJSON(w, http.StatusOK, statusSummary)
+	respondJSON(w, http.StatusOK, template)
 }
 
-// loadPipelineTemplates loads pipeline templates from the catalog directory
-func (s *Server) loadPipelineTemplates(catalogPath string) ([]*PipelineTemplate, error) {
-	var templates []*PipelineTemplate
-
-	// Walk through catalog directory
-	err := filepath.Walk(catalogPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Process only YAML files
-		if !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
-			return nil
-		}
-
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-
-		// Extract template info from file
-		template, err := s.parsePipelineTemplate(path, catalogPath)
-		if err != nil {
-			log.Warn().Err(err).Str("file", path).Msg("Failed to parse pipeline template")
-			return nil // Continue with other files
-		}
-
-		templates = append(templates, template)
-		return nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return templates, nil
-}
-
-// parsePipelineTemplate parses a pipeline template file
-func (s *Server) parsePipelineTemplate(filePath, basePath string) (*PipelineTemplate, error) {
-	// Read file
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse YAML to extract metadata
-	var config map[string]interface{}
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-
-	// Extract relative path
-	relPath, _ := filepath.Rel(basePath, filePath)
+// GET /api/v1/pipelines/{id}/config - Get pipeline configuration by name
+func (s *Server) handleGetPipelineConfigByName(w http.ResponseWriter, r *http.Request) {
+	pipelineID := chi.URLParam(r, "id")
 	
-	// Extract category from directory structure
-	parts := strings.Split(filepath.Dir(relPath), string(os.PathSeparator))
-	category := "general"
-	if len(parts) > 0 && parts[0] != "." {
-		category = parts[0]
+	// Try to load the pipeline template directly from catalog
+	catalogPath := os.Getenv("PHOENIX_PIPELINE_CATALOG_PATH")
+	if catalogPath == "" {
+		catalogPath = "/app/configs/pipelines/catalog"
 	}
-
-	// Extract template name from filename
-	basename := filepath.Base(filePath)
-	name := strings.TrimSuffix(basename, filepath.Ext(basename))
 	
-	// Create template ID
-	id := strings.ReplaceAll(name, "-", "_")
-
-	// Extract description from comments
-	description := extractDescription(string(data))
-
-	// Extract version if present
-	version := "v1"
-	if strings.Contains(name, "-v") {
-		parts := strings.Split(name, "-v")
-		if len(parts) > 1 {
-			version = "v" + parts[len(parts)-1]
-		}
-	}
-
-	// Extract parameters from processor configurations
-	parameters := extractParameters(config)
-
-	template := &PipelineTemplate{
-		ID:          id,
-		Name:        name,
-		Description: description,
-		Category:    category,
-		Version:     version,
-		ConfigPath:  filePath,
-		Parameters:  parameters,
-		Metadata: map[string]interface{}{
-			"category": category,
-		},
-	}
-
-	return template, nil
-}
-
-// extractDescription extracts description from YAML comments
-func extractDescription(content string) string {
-	lines := strings.Split(content, "\n")
-	var description []string
-	inHeader := true
+	// Look for the pipeline template file
+	var templatePath string
+	categories := []string{"process", "infra", "app"}
 	
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		
-		// Skip first comment line (usually just the title)
-		if inHeader && strings.HasPrefix(trimmed, "#") && len(description) == 0 {
-			continue
-		}
-		
-		// Collect comment lines as description
-		if strings.HasPrefix(trimmed, "#") && inHeader {
-			cleaned := strings.TrimPrefix(trimmed, "#")
-			cleaned = strings.TrimSpace(cleaned)
-			if cleaned != "" {
-				description = append(description, cleaned)
-			}
-		} else if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
-			// Stop at first non-comment line
+	for _, category := range categories {
+		path := filepath.Join(catalogPath, category, pipelineID+".yaml")
+		if _, err := os.Stat(path); err == nil {
+			templatePath = path
 			break
 		}
 	}
 	
-	return strings.Join(description, " ")
+	if templatePath == "" {
+		respondError(w, http.StatusNotFound, "Pipeline template not found")
+		return
+	}
+	
+	// Read the template file
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		log.Error().Err(err).Str("path", templatePath).Msg("Failed to read pipeline template")
+		respondError(w, http.StatusInternalServerError, "Failed to read pipeline template")
+		return
+	}
+	
+	// Return the YAML content directly
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write(content)
 }
 
-// extractParameters extracts configurable parameters from the pipeline config
-func extractParameters(config map[string]interface{}) []TemplateParameter {
-	var parameters []TemplateParameter
+// GET /api/v1/pipelines/status - Get aggregated pipeline status
+func (s *Server) handleGetPipelineStatus(w http.ResponseWriter, r *http.Request) {
+	// Get deployment statistics
+	deployments, _, err := s.store.ListDeployments(r.Context(), &models.ListDeploymentsRequest{
+		PageSize: 100,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get deployments")
+		respondError(w, http.StatusInternalServerError, "Failed to get pipeline status")
+		return
+	}
 
-	// Look for processors section
-	if processors, ok := config["processors"].(map[string]interface{}); ok {
-		// Check for phoenix processor configurations
-		for processorName, processorConfig := range processors {
-			if strings.HasPrefix(processorName, "phoenix/") {
-				if cfg, ok := processorConfig.(map[string]interface{}); ok {
-					// Extract parameters from processor config
-					if baseThresholds, ok := cfg["base_thresholds"].(map[string]interface{}); ok {
-						for key, value := range baseThresholds {
-							param := TemplateParameter{
-								Name:         "base_threshold_" + key,
-								Description:  "Base threshold for " + key,
-								Type:         "number",
-								DefaultValue: value,
-								Required:     false,
-							}
-							parameters = append(parameters, param)
-						}
-					}
-					
-					// Extract other configurable fields
-					if maxCardinality, ok := cfg["max_cardinality"]; ok {
-						param := TemplateParameter{
-							Name:         "max_cardinality",
-							Description:  "Maximum number of unique values to track",
-							Type:         "integer",
-							DefaultValue: maxCardinality,
-							Required:     false,
-						}
-						parameters = append(parameters, param)
-					}
-				}
-			}
+	// Count by status
+	statusCounts := map[string]int{
+		"ready":     0,
+		"deploying": 0,
+		"failed":    0,
+		"stopped":   0,
+	}
+
+	for _, d := range deployments {
+		if count, exists := statusCounts[d.Status]; exists {
+			statusCounts[d.Status] = count + 1
+		} else {
+			statusCounts["unknown"] = statusCounts["unknown"] + 1
 		}
 	}
 
-	// Add common parameters
-	parameters = append(parameters, []TemplateParameter{
-		{
-			Name:         "collection_interval",
-			Description:  "How often to collect metrics",
-			Type:         "duration",
-			DefaultValue: "10s",
-			Required:     false,
-		},
-		{
-			Name:         "batch_size",
-			Description:  "Number of metrics to batch before sending",
-			Type:         "integer",
-			DefaultValue: 1000,
-			Required:     false,
-		},
-		{
-			Name:         "memory_limit_mib",
-			Description:  "Memory limit for the collector in MiB",
-			Type:         "integer",
-			DefaultValue: 512,
-			Required:     false,
-		},
-	}...)
-
-	return parameters
-}
-
-// loadPipelineConfig loads the full pipeline configuration
-func (s *Server) loadPipelineConfig(configPath string) (map[string]interface{}, error) {
-	data, err := ioutil.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var config map[string]interface{}
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, err
-	}
-
-	return config, nil
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"total":   len(deployments),
+		"status":  statusCounts,
+		"updated": time.Now(),
+	})
 }
 
 // POST /api/v1/pipelines/validate - Validate a pipeline configuration
 func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Config map[string]interface{} `json:"config"`
+		YAML   string                 `json:"yaml"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	
-	// Convert map to PipelineConfig struct for validation
+
+	// If YAML is provided, parse it
+	if req.YAML != "" {
+		var config map[string]interface{}
+		if err := yaml.Unmarshal([]byte(req.YAML), &config); err != nil {
+			respondJSON(w, http.StatusOK, map[string]interface{}{
+				"valid": false,
+				"error": fmt.Sprintf("Invalid YAML: %v", err),
+			})
+			return
+		}
+		req.Config = config
+	}
+
+	// Validate the pipeline configuration structure
+	if req.Config == nil {
+		respondJSON(w, http.StatusOK, map[string]interface{}{
+			"valid": false,
+			"error": "No configuration provided",
+		})
+		return
+	}
+
+	// Convert to PipelineConfig for validation
 	config := &services.PipelineConfig{
 		Receivers:  make(map[string]interface{}),
 		Processors: []services.ProcessorConfig{},
 		Exporters:  make(map[string]interface{}),
-		Service:    services.ServiceConfig{Pipelines: make(map[string]services.PipelineService)},
+		Service: services.ServiceConfig{
+			Pipelines: make(map[string]services.PipelineService),
+		},
 	}
-	
-	// Parse receivers
+
+	// Copy receivers directly
 	if receivers, ok := req.Config["receivers"].(map[string]interface{}); ok {
 		config.Receivers = receivers
 	}
-	
+
 	// Parse processors
 	if processors, ok := req.Config["processors"].(map[string]interface{}); ok {
-		for name, procConfig := range processors {
-			if cfg, ok := procConfig.(map[string]interface{}); ok {
-				procType := "unknown"
-				if pType, exists := cfg["type"].(string); exists {
-					procType = pType
+		for name, processor := range processors {
+			if p, ok := processor.(map[string]interface{}); ok {
+				pc := services.ProcessorConfig{
+					Type: name,
 				}
-				config.Processors = append(config.Processors, services.ProcessorConfig{
-					Name:   name,
-					Type:   procType,
-					Config: cfg,
-				})
+
+				// Handle different processor types
+				switch {
+				case strings.HasPrefix(name, "memory_limiter"):
+					if limit, ok := p["limit_mib"].(float64); ok {
+						pc.Limit = int(limit)
+					}
+					if checkInterval, ok := p["check_interval"].(string); ok {
+						pc.CheckInterval = checkInterval
+					}
+
+				case strings.HasPrefix(name, "batch"):
+					if timeout, ok := p["timeout"].(string); ok {
+						pc.Timeout = timeout
+					}
+					if sendBatchSize, ok := p["send_batch_size"].(float64); ok {
+						pc.SendBatchSize = int(sendBatchSize)
+					}
+
+				case name == "phoenix_adaptive_filter":
+					// Custom processor
+					if af, ok := p["adaptive_filter"].(map[string]interface{}); ok {
+						adaptiveFilter := make(map[string]interface{})
+						
+						if enabled, ok := af["enabled"].(bool); ok {
+							adaptiveFilter["enabled"] = enabled
+						}
+						if thresholds, ok := af["thresholds"].(map[string]interface{}); ok {
+							adaptiveFilter["thresholds"] = thresholds
+						}
+						if rules, ok := af["rules"].([]interface{}); ok {
+							adaptiveFilter["rules"] = rules
+						}
+						
+						pc.Config = map[string]interface{}{
+							"adaptive_filter": adaptiveFilter,
+						}
+					}
+
+				case name == "phoenix_topk":
+					// TopK processor
+					if topk, ok := p["topk"].(map[string]interface{}); ok {
+						topkConfig := make(map[string]interface{})
+						
+						if k, ok := topk["k"].(float64); ok {
+							topkConfig["k"] = int(k)
+						}
+						if windowSize, ok := topk["window_size"].(string); ok {
+							topkConfig["window_size"] = windowSize
+						}
+						if dimensions, ok := topk["dimensions"].([]interface{}); ok {
+							topkConfig["dimensions"] = dimensions
+						}
+						
+						pc.Config = map[string]interface{}{
+							"topk": topkConfig,
+						}
+					}
+
+				default:
+					// Store raw config for unknown processors
+					pc.Config = p
+				}
+
+				config.Processors = append(config.Processors, pc)
 			}
 		}
 	}
-	
+
 	// Parse exporters
 	if exporters, ok := req.Config["exporters"].(map[string]interface{}); ok {
 		config.Exporters = exporters
 	}
-	
+
 	// Parse service
 	if service, ok := req.Config["service"].(map[string]interface{}); ok {
 		if pipelines, ok := service["pipelines"].(map[string]interface{}); ok {
 			for name, pipeline := range pipelines {
 				if p, ok := pipeline.(map[string]interface{}); ok {
 					ps := services.PipelineService{}
-					
+
 					// Parse receivers
 					if receivers, ok := p["receivers"].([]interface{}); ok {
 						for _, r := range receivers {
@@ -422,7 +343,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 							}
 						}
 					}
-					
+
 					// Parse processors
 					if processors, ok := p["processors"].([]interface{}); ok {
 						for _, proc := range processors {
@@ -431,7 +352,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 							}
 						}
 					}
-					
+
 					// Parse exporters
 					if exporters, ok := p["exporters"].([]interface{}); ok {
 						for _, exp := range exporters {
@@ -440,13 +361,13 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 							}
 						}
 					}
-					
+
 					config.Service.Pipelines[name] = ps
 				}
 			}
 		}
 	}
-	
+
 	// Validate the configuration
 	if err := s.templateRenderer.ValidatePipelineConfig(config); err != nil {
 		respondJSON(w, http.StatusOK, map[string]interface{}{
@@ -455,7 +376,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"valid": true,
 		"message": "Pipeline configuration is valid",
@@ -471,18 +392,18 @@ func (s *Server) handleRenderPipeline(w http.ResponseWriter, r *http.Request) {
 		HostID       string                 `json:"host_id"`
 		Parameters   map[string]interface{} `json:"parameters"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	
+
 	// Validate required fields
 	if req.Template == "" {
 		respondError(w, http.StatusBadRequest, "Template name is required")
 		return
 	}
-	
+
 	// Create template data
 	templateData := services.TemplateData{
 		ExperimentID: req.ExperimentID,
@@ -490,29 +411,93 @@ func (s *Server) handleRenderPipeline(w http.ResponseWriter, r *http.Request) {
 		HostID:       req.HostID,
 		Config:       req.Parameters,
 	}
-	
+
 	// Default values
 	if templateData.Variant == "" {
 		templateData.Variant = "candidate"
 	}
-	
+
 	// Render the template
 	rendered, err := s.templateRenderer.RenderTemplate(r.Context(), req.Template, templateData)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, fmt.Sprintf("Failed to render template: %v", err))
 		return
 	}
-	
+
 	// Parse the rendered YAML to validate it
 	var config map[string]interface{}
 	if err := yaml.Unmarshal([]byte(rendered), &config); err != nil {
 		respondError(w, http.StatusInternalServerError, fmt.Sprintf("Rendered template is not valid YAML: %v", err))
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"rendered": rendered,
 		"config":   config,
 		"template": req.Template,
 	})
+}
+
+// Helper function to load pipeline templates from catalog
+func (s *Server) loadPipelineTemplates(catalogPath string) ([]PipelineTemplate, error) {
+	var templates []PipelineTemplate
+
+	// Define known categories
+	categories := []string{"process", "infra", "app"}
+
+	for _, category := range categories {
+		categoryPath := filepath.Join(catalogPath, category)
+		
+		// Check if category directory exists
+		if info, err := os.Stat(categoryPath); err != nil || !info.IsDir() {
+			continue
+		}
+
+		// Read all YAML files in the category
+		files, err := os.ReadDir(categoryPath)
+		if err != nil {
+			log.Warn().Err(err).Str("category", category).Msg("Failed to read category directory")
+			continue
+		}
+
+		for _, file := range files {
+			if file.IsDir() || !strings.HasSuffix(file.Name(), ".yaml") {
+				continue
+			}
+
+			// Create template entry
+			templateID := strings.TrimSuffix(file.Name(), ".yaml")
+			template := PipelineTemplate{
+				ID:          templateID,
+				Name:        templateID,
+				Category:    category,
+				Version:     "1.0.0",
+				ConfigPath:  filepath.Join(categoryPath, file.Name()),
+				Description: fmt.Sprintf("%s pipeline template", strings.Title(category)),
+				Metadata:    make(map[string]interface{}),
+			}
+
+			// Try to read and parse the template for metadata
+			data, err := os.ReadFile(template.ConfigPath)
+			if err == nil {
+				var config map[string]interface{}
+				if err := yaml.Unmarshal(data, &config); err == nil {
+					// Extract metadata if available
+					if metadata, ok := config["metadata"].(map[string]interface{}); ok {
+						if desc, ok := metadata["description"].(string); ok {
+							template.Description = desc
+						}
+						if name, ok := metadata["name"].(string); ok {
+							template.Name = name
+						}
+						template.Metadata = metadata
+					}
+				}
+			}
+
+			templates = append(templates, template)
+		}
+	}
+
+	return templates, nil
 }

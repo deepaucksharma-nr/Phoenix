@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"text/template"
+	"time"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
@@ -28,9 +30,25 @@ type TemplateData struct {
 
 // ProcessorConfig represents a processor configuration
 type ProcessorConfig struct {
-	Name   string                 `yaml:"name"`
-	Type   string                 `yaml:"type"`
-	Config map[string]interface{} `yaml:"config"`
+	Name          string                 `yaml:"name"`
+	Type          string                 `yaml:"type"`
+	Config        map[string]interface{} `yaml:"config"`
+	Limit         int                    `yaml:"limit,omitempty"`
+	CheckInterval string                 `yaml:"check_interval,omitempty"`
+	Timeout       string                 `yaml:"timeout,omitempty"`
+	SendBatchSize int                    `yaml:"send_batch_size,omitempty"`
+}
+
+// ReceiverConfig represents a receiver configuration
+type ReceiverConfig struct {
+	Type      string                       `yaml:"type"`
+	Protocols map[string]ProtocolConfig   `yaml:"protocols,omitempty"`
+	Config    map[string]interface{}      `yaml:"config,omitempty"`
+}
+
+// ProtocolConfig represents a protocol configuration
+type ProtocolConfig struct {
+	Endpoint string `yaml:"endpoint"`
 }
 
 // PipelineConfig represents a complete pipeline configuration
@@ -263,6 +281,27 @@ func (ptr *PipelineTemplateRenderer) ValidatePipelineConfig(config *PipelineConf
 		return fmt.Errorf("pipeline must have at least one service pipeline")
 	}
 
+	// Validate receivers
+	for name, receiver := range config.Receivers {
+		if err := ptr.validateReceiver(name, receiver); err != nil {
+			return fmt.Errorf("invalid receiver %s: %w", name, err)
+		}
+	}
+
+	// Validate processors
+	for _, processor := range config.Processors {
+		if err := ptr.validateProcessor(processor); err != nil {
+			return fmt.Errorf("invalid processor %s: %w", processor.Name, err)
+		}
+	}
+
+	// Validate exporters
+	for name, exporter := range config.Exporters {
+		if err := ptr.validateExporter(name, exporter); err != nil {
+			return fmt.Errorf("invalid exporter %s: %w", name, err)
+		}
+	}
+
 	// Validate service pipelines
 	for name, pipeline := range config.Service.Pipelines {
 		if len(pipeline.Receivers) == 0 {
@@ -280,16 +319,16 @@ func (ptr *PipelineTemplateRenderer) ValidatePipelineConfig(config *PipelineConf
 			}
 		}
 
-		for _, processor := range pipeline.Processors {
+		for _, processorName := range pipeline.Processors {
 			found := false
 			for _, p := range config.Processors {
-				if p.Name == processor {
+				if p.Name == processorName {
 					found = true
 					break
 				}
 			}
 			if !found {
-				return fmt.Errorf("pipeline %s references undefined processor: %s", name, processor)
+				return fmt.Errorf("pipeline %s references undefined processor: %s", name, processorName)
 			}
 		}
 
@@ -300,6 +339,144 @@ func (ptr *PipelineTemplateRenderer) ValidatePipelineConfig(config *PipelineConf
 		}
 	}
 
+	return nil
+}
+
+// validateReceiver validates a receiver configuration
+func (ptr *PipelineTemplateRenderer) validateReceiver(name string, receiver interface{}) error {
+	// Validate OTLP receiver
+	if strings.HasPrefix(name, "otlp") {
+		if cfg, ok := receiver.(map[string]interface{}); ok {
+			if protocols, ok := cfg["protocols"].(map[string]interface{}); ok {
+				// Check for at least one protocol
+				if len(protocols) == 0 {
+					return fmt.Errorf("OTLP receiver must have at least one protocol configured")
+				}
+				
+				// Validate gRPC config
+				if grpc, ok := protocols["grpc"].(map[string]interface{}); ok {
+					if endpoint, ok := grpc["endpoint"].(string); ok && endpoint == "" {
+						return fmt.Errorf("gRPC endpoint cannot be empty")
+					}
+				}
+				
+				// Validate HTTP config
+				if http, ok := protocols["http"].(map[string]interface{}); ok {
+					if endpoint, ok := http["endpoint"].(string); ok && endpoint == "" {
+						return fmt.Errorf("HTTP endpoint cannot be empty")
+					}
+				}
+			} else {
+				return fmt.Errorf("OTLP receiver must have protocols configured")
+			}
+		}
+	}
+	
+	// Validate hostmetrics receiver
+	if name == "hostmetrics" {
+		if cfg, ok := receiver.(map[string]interface{}); ok {
+			if interval, ok := cfg["collection_interval"].(string); ok {
+				if _, err := time.ParseDuration(interval); err != nil {
+					return fmt.Errorf("invalid collection_interval: %v", err)
+				}
+			}
+		}
+	}
+	
+	return nil
+}
+
+// validateProcessor validates a processor configuration
+func (ptr *PipelineTemplateRenderer) validateProcessor(processor ProcessorConfig) error {
+	switch processor.Type {
+	case "batch":
+		if processor.Timeout != "" {
+			if _, err := time.ParseDuration(processor.Timeout); err != nil {
+				return fmt.Errorf("invalid timeout: %v", err)
+			}
+		}
+		if processor.SendBatchSize < 0 {
+			return fmt.Errorf("send_batch_size cannot be negative")
+		}
+		
+	case "memory_limiter":
+		if processor.Limit < 0 {
+			return fmt.Errorf("limit_mib cannot be negative")
+		}
+		if processor.CheckInterval != "" {
+			if _, err := time.ParseDuration(processor.CheckInterval); err != nil {
+				return fmt.Errorf("invalid check_interval: %v", err)
+			}
+		}
+		
+	case "phoenix_adaptive_filter":
+		if processor.Config != nil {
+			if af, ok := processor.Config["adaptive_filter"].(map[string]interface{}); ok {
+				// Validate thresholds
+				if thresholds, ok := af["thresholds"].(map[string]interface{}); ok {
+					if cardinalityLimit, ok := thresholds["cardinality_limit"].(float64); ok && cardinalityLimit <= 0 {
+						return fmt.Errorf("cardinality_limit must be positive")
+					}
+				}
+			}
+		}
+		
+	case "phoenix_topk":
+		if processor.Config != nil {
+			if topk, ok := processor.Config["topk"].(map[string]interface{}); ok {
+				// Validate k value
+				if k, ok := topk["k"].(float64); ok && k <= 0 {
+					return fmt.Errorf("k value must be positive")
+				}
+				// Validate window size
+				if windowSize, ok := topk["window_size"].(string); ok {
+					if _, err := time.ParseDuration(windowSize); err != nil {
+						return fmt.Errorf("invalid window_size: %v", err)
+					}
+				}
+			}
+		}
+	}
+	
+	return nil
+}
+
+// validateExporter validates an exporter configuration
+func (ptr *PipelineTemplateRenderer) validateExporter(name string, exporter interface{}) error {
+	// Validate Prometheus exporter
+	if name == "prometheus" {
+		if cfg, ok := exporter.(map[string]interface{}); ok {
+			if endpoint, ok := cfg["endpoint"].(string); ok && endpoint == "" {
+				return fmt.Errorf("Prometheus endpoint cannot be empty")
+			}
+		}
+	}
+	
+	// Validate OTLP exporter
+	if strings.HasPrefix(name, "otlp") {
+		if cfg, ok := exporter.(map[string]interface{}); ok {
+			if endpoint, ok := cfg["endpoint"].(string); ok && endpoint == "" {
+				return fmt.Errorf("OTLP endpoint cannot be empty")
+			}
+			
+			// Validate TLS config if present
+			if tls, ok := cfg["tls"].(map[string]interface{}); ok {
+				if _, ok := tls["insecure"].(bool); !ok {
+					return fmt.Errorf("TLS insecure must be a boolean")
+				}
+			}
+		}
+	}
+	
+	// Validate pushgateway exporter
+	if name == "pushgateway" {
+		if cfg, ok := exporter.(map[string]interface{}); ok {
+			if endpoint, ok := cfg["endpoint"].(string); ok && endpoint == "" {
+				return fmt.Errorf("Pushgateway endpoint cannot be empty")
+			}
+		}
+	}
+	
 	return nil
 }
 

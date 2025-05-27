@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
@@ -143,6 +144,18 @@ func (s *Server) handleStartExperiment(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to start experiment")
 		return
 	}
+	
+	// Broadcast experiment started event
+	startData, _ := json.Marshal(map[string]interface{}{
+		"experiment_id": expID,
+		"name":          exp.Name,
+		"phase":         exp.Phase,
+		"config":        exp.Config,
+	})
+	s.hub.Broadcast <- &websocket.Message{
+		Type: "experiment_started",
+		Data: startData,
+	}
 
 	w.WriteHeader(http.StatusAccepted)
 }
@@ -156,8 +169,104 @@ func (s *Server) handleStopExperiment(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to stop experiment")
 		return
 	}
+	
+	// Broadcast experiment stopped event
+	stopData, _ := json.Marshal(map[string]interface{}{
+		"experiment_id": expID,
+		"reason":        "user_requested",
+	})
+	s.hub.Broadcast <- &websocket.Message{
+		Type: "experiment_stopped",
+		Data: stopData,
+	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// GET /api/v1/experiments/{id}/metrics - Get experiment metrics
+func (s *Server) handleGetExperimentMetrics(w http.ResponseWriter, r *http.Request) {
+	expID := chi.URLParam(r, "id")
+	
+	// Get experiment to check if it exists
+	_, err := s.store.GetExperiment(r.Context(), expID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Experiment not found")
+		return
+	}
+	
+	// Get metrics from store
+	metrics, err := s.store.GetExperimentMetrics(r.Context(), expID)
+	if err != nil {
+		log.Error().Err(err).Str("experiment_id", expID).Msg("Failed to get experiment metrics")
+		respondError(w, http.StatusInternalServerError, "Failed to get metrics")
+		return
+	}
+	
+	respondJSON(w, http.StatusOK, metrics)
+}
+
+// GET /api/v1/experiments/{id}/metrics - Get experiment metrics (old implementation)
+func (s *Server) handleGetExperimentMetrics_old(w http.ResponseWriter, r *http.Request) {
+	expID := chi.URLParam(r, "id")
+	
+	// Get experiment to check if it exists
+	exp, err := s.store.GetExperiment(r.Context(), expID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Experiment not found")
+		return
+	}
+	
+	// Build metrics response structure that matches CLI expectations
+	metrics := map[string]interface{}{
+		"experiment_id": expID,
+		"timestamp":     time.Now(),
+		"summary": map[string]interface{}{
+			"total_metrics":          0,
+			"metrics_per_second":     0,
+			"cardinality_reduction":  0,
+			"cpu_usage":              0,
+			"memory_usage":           0,
+		},
+		"baseline": map[string]interface{}{
+			"cardinality":     []interface{}{},
+			"cpu_usage":       []interface{}{},
+			"memory_usage":    []interface{}{},
+			"network_traffic": []interface{}{},
+		},
+		"candidate": map[string]interface{}{
+			"cardinality":     []interface{}{},
+			"cpu_usage":       []interface{}{},
+			"memory_usage":    []interface{}{},
+			"network_traffic": []interface{}{},
+		},
+	}
+	
+	// If experiment has KPIs in status, add them to summary
+	if exp.Status.KPIs != nil && len(exp.Status.KPIs) > 0 {
+		if summary, ok := metrics["summary"].(map[string]interface{}); ok {
+			// Extract KPI values if they exist
+			if cardReduction, ok := exp.Status.KPIs["cardinality_reduction"]; ok {
+				summary["cardinality_reduction"] = cardReduction
+			}
+			if cpuUsage, ok := exp.Status.KPIs["cpu_usage"]; ok {
+				summary["cpu_usage"] = cpuUsage
+			}
+			if memUsage, ok := exp.Status.KPIs["memory_usage"]; ok {
+				summary["memory_usage"] = memUsage
+			}
+			if totalMetrics, ok := exp.Status.KPIs["total_metrics"]; ok {
+				summary["total_metrics"] = totalMetrics
+			}
+			if metricsPerSec, ok := exp.Status.KPIs["metrics_per_second"]; ok {
+				summary["metrics_per_second"] = metricsPerSec
+			}
+		}
+	}
+	
+	// TODO: In the future, integrate with MetricsCollector service to get time-series data
+	// For now, return empty time series arrays which the CLI can handle
+	
+	respondJSON(w, http.StatusOK, metrics)
 }
 
 // POST /api/v1/experiments/{id}/promote - Promote experiment to production

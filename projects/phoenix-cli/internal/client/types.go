@@ -53,7 +53,8 @@ type Experiment struct {
 	Description       string                 `json:"description"`
 	BaselinePipeline  string                 `json:"baseline_pipeline"`
 	CandidatePipeline string                 `json:"candidate_pipeline"`
-	Status            string                 `json:"status"`
+	Phase             string                 `json:"phase"`
+	Status            string                 `json:"status,omitempty"` // Deprecated: use Phase
 	TargetNodes       map[string]string      `json:"target_nodes"`
 	Parameters        map[string]interface{} `json:"parameters"`
 	CreatedAt         time.Time              `json:"created_at"`
@@ -99,14 +100,18 @@ type ListExperimentsResponse struct {
 
 // PipelineMetrics represents metrics for a pipeline
 type PipelineMetrics struct {
-	Cardinality         int64   `json:"cardinality"`
-	Throughput          float64 `json:"throughput"`
-	ErrorRate           float64 `json:"error_rate"`
-	Latency             float64 `json:"latency"`
-	CostPerHour         float64 `json:"cost_per_hour"`
-	DataLossPercent     float64 `json:"data_loss_percent"`
-	DataPointsPerSecond int64   `json:"data_points_per_second,omitempty"`
-	BytesPerSecond      int64   `json:"bytes_per_second,omitempty"`
+	Cardinality         int64     `json:"cardinality"`
+	Throughput          float64   `json:"throughput"`
+	ErrorRate           float64   `json:"error_rate"`
+	Latency             float64   `json:"latency"`
+	CostPerHour         float64   `json:"cost_per_hour"`
+	DataLossPercent     float64   `json:"data_loss_percent"`
+	DataPointsPerSecond float64   `json:"data_points_per_second"`
+	BytesPerSecond      float64   `json:"bytes_per_second"`
+	P50Latency          float64   `json:"p50_latency"`
+	P95Latency          float64   `json:"p95_latency"`
+	P99Latency          float64   `json:"p99_latency"`
+	Timestamp           time.Time `json:"timestamp"`
 }
 
 // MetricsSummary provides a summary of experiment metrics
@@ -120,6 +125,8 @@ type MetricsSummary struct {
 	DataLossPercent         float64 `json:"data_loss_percent"`
 	ProgressPercent         float64 `json:"progress_percent"`
 	EstimatedMonthlySavings float64 `json:"estimated_monthly_savings"`
+	DataProcessedGB         float64 `json:"data_processed_gb"`
+	ActiveCollectors        int     `json:"active_collectors"`
 }
 
 // ExperimentMetrics represents metrics for an experiment
@@ -130,6 +137,7 @@ type ExperimentMetrics struct {
 	PipelineB    PipelineMetrics `json:"pipeline_b"`
 	Baseline     TimeSeriesData  `json:"baseline"`
 	Candidate    TimeSeriesData  `json:"candidate"`
+	Timestamp    time.Time       `json:"timestamp"`
 }
 
 // ExperimentResults represents the results of an experiment

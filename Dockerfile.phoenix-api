@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.22-alpine AS builder
 
 # Install dependencies
 RUN apk add --no-cache git make
@@ -12,6 +12,9 @@ COPY . .
 
 # Change to project directory
 WORKDIR /workspace/projects/phoenix-api
+
+# Remove go.work to avoid version conflicts
+RUN rm -f /workspace/go.work
 
 # Download dependencies
 RUN go mod download

@@ -9,7 +9,7 @@ This directory contains everything needed to deploy Phoenix on a single VM for o
 - Ubuntu 20.04+ or RHEL 8+
 - Docker and Docker Compose installed
 - Domain pointing to VM (for HTTPS)
-- Ports 80, 443, 6700, 9091 accessible
+- Ports 80, 443, 8080, 9090, 9091 accessible
 
 ### 2. Deploy Control Plane
 
@@ -44,7 +44,7 @@ curl -fsSL https://phoenix.your-domain.com/install-agent.sh | sudo bash
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐           │
 │  │  Phoenix    │  │  PostgreSQL  │  │ Prometheus  │           │
 │  │  API + UI   │  │              │  │             │           │
-│  │  Port 443   │  │  Port 5432   │  │  Port 9090  │           │
+│  │  Port 8080  │  │  Port 5432   │  │  Port 9090  │           │
 │  └──────┬──────┘  └──────────────┘  └──────┬──────┘           │
 │         │                                    │                   │
 │         │         ┌──────────────┐          │                   │
@@ -55,7 +55,7 @@ curl -fsSL https://phoenix.your-domain.com/install-agent.sh | sudo bash
 └─────────┼────────────────┼──────────────────────────────────────┘
           │                │
           │ Agent Poll     │ Metrics Push
-          │ (Port 6700)    │ (Port 9091)
+          │ (Port 8080)    │ (Port 9091)
           │                │
      ┌────▼────┐      ┌────┴────┐      ┌─────────┐
      │ Agent   │      │ Agent   │      │ Agent   │
@@ -86,7 +86,7 @@ single-vm/
 
 | Service | Purpose | Port | Access |
 |---------|---------|------|--------|
-| Phoenix API | Control plane + UI | 443 | Public (HTTPS) |
+| Phoenix API | REST + WebSocket | 8080 | Public |
 | PostgreSQL | Data storage | 5432 | Internal only |
 | Prometheus | Metrics storage | 9090 | Internal only |
 | Pushgateway | Metrics ingestion | 9091 | Agents only |
@@ -152,8 +152,9 @@ curl -fsSL https://phoenix.your-domain.com/install-agent.sh | sudo bash
 
 This single-VM setup handles:
 - Up to 200 agents
-- 1M metrics/second
+- 500K metrics/second
 - 10 concurrent experiments
+- 70% cost reduction demonstrated
 
 When you outgrow this:
 1. Move PostgreSQL to RDS

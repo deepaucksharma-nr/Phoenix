@@ -139,23 +139,6 @@ func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleGetPipelineTemplates returns available pipeline templates
-func (s *Server) handleGetPipelineTemplates(w http.ResponseWriter, r *http.Request) {
-	templates := s.templateRenderer.GetBuiltinTemplates()
-	
-	response := make([]map[string]string, 0, len(templates))
-	for name := range templates {
-		response = append(response, map[string]string{
-			"name":        name,
-			"description": getPipelineTemplateDescription(name),
-		})
-	}
-	
-	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"templates": response,
-	})
-}
-
 // handleGeneratePipeline generates an optimized pipeline configuration
 func (s *Server) handleGeneratePipeline(w http.ResponseWriter, r *http.Request) {
 	experimentID := chi.URLParam(r, "id")

@@ -1,23 +1,23 @@
 # Phoenix Agent
 
-Lightweight polling agent that manages OpenTelemetry collectors on target hosts.
+Lightweight agent that polls Phoenix API for tasks and manages OpenTelemetry collectors for A/B testing experiments.
 
 ## Overview
 
 Phoenix Agent is a minimal footprint service that:
-- Polls Phoenix API for work assignments using long-polling
-- Manages multiple OTel collector processes
-- Pushes metrics to Prometheus Pushgateway
-- Self-registers with zero configuration
-- Handles automatic reconnection and retries
+- Polls Phoenix API for tasks using X-Agent-Host-ID authentication
+- Manages baseline/candidate OTel collectors for A/B testing
+- Executes pipeline templates (Adaptive Filter, TopK, Hybrid)
+- Uses 30-second long-polling for task distribution
+- Reports experiment results and metrics back to API
 
 ## Features
 
 - **Minimal Resource Usage**: <50MB RAM, <1% CPU
-- **Zero Configuration**: Automatically registers with API
-- **Multi-Collector Support**: Run 100+ collectors per agent
-- **Fault Tolerant**: Automatic reconnection and retry logic
-- **Secure**: No incoming connections required
+- **Task Queue Design**: Long-polling with 30s timeout
+- **A/B Testing Support**: Concurrent baseline/candidate pipelines
+- **Authentication**: X-Agent-Host-ID header for secure polling
+- **Secure**: Outbound-only connections (no incoming ports)
 
 ## Quick Start
 
@@ -28,8 +28,10 @@ Phoenix Agent is a minimal footprint service that:
 curl -L https://github.com/phoenix/releases/latest/phoenix-agent -o phoenix-agent
 chmod +x phoenix-agent
 
-# Run agent
-PHOENIX_API_URL=http://phoenix-api:8080 ./phoenix-agent
+# Run agent with host ID
+PHOENIX_API_URL=http://phoenix-api:8080 \
+AGENT_HOST_ID=$(hostname) \
+./phoenix-agent
 ```
 
 ### Docker
@@ -38,7 +40,7 @@ PHOENIX_API_URL=http://phoenix-api:8080 ./phoenix-agent
 docker run -d \
   --name phoenix-agent \
   -e PHOENIX_API_URL=http://phoenix-api:8080 \
-  -e HOST_ID=$(hostname) \
+  -e AGENT_HOST_ID=$(hostname) \
   -v /var/run/docker.sock:/var/run/docker.sock \
   phoenix/agent:latest
 ```
@@ -64,59 +66,63 @@ Environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PHOENIX_API_URL` | Phoenix API URL | Required |
-| `HOST_ID` | Unique host identifier | Hostname |
-| `POLL_INTERVAL` | Task polling interval | `10s` |
+| `AGENT_HOST_ID` | Unique agent identifier | Hostname |
+| `TASK_POLL_TIMEOUT` | Long-polling timeout | `30s` |
 | `CONFIG_DIR` | OTel config directory | `/etc/phoenix/configs` |
 | `LOG_LEVEL` | Logging level | `info` |
-| `PUSHGATEWAY_URL` | Metrics pushgateway | From API |
+| `MAX_RETRIES` | Task retry attempts | `3` |
 
 ## Architecture
 
 ```
-┌─────────────────┐
-│  Phoenix Agent  │
-├─────────────────┤
-│   Task Poller   │──────► Phoenix API
-├─────────────────┤
-│   Supervisor    │
-├─────────────────┤
-│ OTel Collectors │──────► Pushgateway
-└─────────────────┘
+┌────────────────────────────────────┐
+│           Phoenix Agent               │
+├────────────────────────────────────┤
+│ Task Poller (X-Agent-Host-ID)        │──► /api/v2/tasks/poll
+├────────────────────────────────────┤      (30s timeout)
+│          Supervisor                   │
+├─────────────────┬──────────────────┤
+│ Baseline OTel   │ Candidate OTel  │──► Metrics Backends
+└─────────────────┴──────────────────┘
 ```
 
 ## How It Works
 
-1. **Registration**: Agent registers with API on startup
-2. **Polling**: Long-polls API for task assignments
-3. **Execution**: Starts/stops OTel collectors based on tasks
-4. **Reporting**: Pushes metrics to Pushgateway
-5. **Health**: Sends periodic heartbeats to API
+1. **Authentication**: Uses X-Agent-Host-ID header for identification
+2. **Task Polling**: Long-polls `/api/v2/tasks/poll` with 30s timeout
+3. **A/B Testing**: Runs baseline and candidate pipelines concurrently
+4. **Pipeline Templates**: Executes Adaptive Filter, TopK, or Hybrid configs
+5. **Result Reporting**: Updates task status and experiment metrics
 
 ## OTel Collector Management
 
 The agent manages OTel collectors as child processes:
 
-```go
+```json
 // Task received from API
 {
-  "id": "exp-123-baseline",
+  "id": "task-789",
+  "type": "deploy_pipeline",
+  "experiment_id": "exp-123",
   "action": "start",
   "config": {
-    "config_url": "https://configs/baseline.yaml",
+    "pipeline_url": "http://api/configs/adaptive-filter-v1.yaml",
+    "variant": "candidate",
     "variables": {
-      "BATCH_SIZE": "1000",
-      "BATCH_TIMEOUT": "10s"
+      "threshold": "0.8",
+      "window_size": "60s"
     }
-  }
+  },
+  "priority": 1
 }
 ```
 
 Agent will:
-1. Download config from URL
-2. Apply variable substitution
-3. Start OTel collector process
-4. Monitor process health
-5. Report status back to API
+1. Download pipeline config from URL
+2. Apply variable substitution for template
+3. Start OTel collector for specified variant (baseline/candidate)
+4. Monitor metrics and cardinality reduction
+5. Report results via `/api/v2/tasks/{id}/status`
 
 ## Monitoring
 
@@ -132,9 +138,10 @@ curl http://localhost:8090/health
 Agent exposes Prometheus metrics:
 
 - `phoenix_agent_tasks_total` - Total tasks processed
-- `phoenix_agent_collectors_active` - Active collectors
-- `phoenix_agent_api_errors_total` - API communication errors
-- `phoenix_agent_uptime_seconds` - Agent uptime
+- `phoenix_agent_collectors_active` - Active collectors by variant
+- `phoenix_agent_poll_duration_seconds` - Task polling latency
+- `phoenix_agent_experiment_status` - Current experiment status
+- `phoenix_agent_cardinality_reduction` - Observed reduction percentage
 
 ## Troubleshooting
 
@@ -142,7 +149,7 @@ Agent exposes Prometheus metrics:
 
 ```bash
 # Check connectivity
-curl $PHOENIX_API_URL/health
+curl -H "X-Agent-Host-ID: $(hostname)" $PHOENIX_API_URL/api/v2/health
 
 # Check logs
 journalctl -u phoenix-agent -f
@@ -191,8 +198,8 @@ PHOENIX_API_URL=http://localhost:8080 make test-integration
 
 ## Security
 
-- No incoming network connections
-- All communication is outbound (polling)
-- Configs downloaded over HTTPS
-- Process isolation for collectors
+- No incoming network connections (outbound-only)
+- Task polling with X-Agent-Host-ID authentication
+- PostgreSQL task queue ensures atomic assignment
+- Process isolation between baseline/candidate collectors
 - Minimal system permissions required

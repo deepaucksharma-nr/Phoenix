@@ -71,6 +71,9 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	
+	// Track the pipeline config for versioning after rendering
+	var renderedConfig string
+	
 	// Create deployment tasks for each target node
 	for nodeName, nodeSelector := range deployment.TargetNodes {
 		// Render pipeline configuration for this deployment
@@ -103,6 +106,11 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 			pipelineConfig = ""
 		}
 		
+		// Store the first rendered config for versioning
+		if renderedConfig == "" && pipelineConfig != "" {
+			renderedConfig = pipelineConfig
+		}
+		
 		task := &internalModels.Task{
 			HostID:       nodeSelector,
 			Type:         "deployment",
@@ -117,6 +125,7 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 				"resources":         deployment.Resources,
 				"pipeline_config":   pipelineConfig,
 				"rendered_template": templateName,
+				"pushgateway_url":   s.config.PushgatewayURL,
 			},
 		}
 		
@@ -125,6 +134,22 @@ func (s *Server) handleCreateDeployment(w http.ResponseWriter, r *http.Request) 
 				Str("deployment_id", deployment.ID).
 				Str("node", nodeName).
 				Msg("Failed to enqueue deployment task")
+		}
+	}
+	
+	// Record deployment version if we have a rendered config
+	if renderedConfig != "" {
+		deployedBy := "system" // TODO: Get from auth context
+		version, err := s.store.RecordDeploymentVersion(r.Context(), deployment.ID, renderedConfig, deployment.Parameters, deployedBy, "Initial deployment")
+		if err != nil {
+			log.Error().Err(err).
+				Str("deployment_id", deployment.ID).
+				Msg("Failed to record deployment version")
+		} else {
+			log.Info().
+				Str("deployment_id", deployment.ID).
+				Int("version", version).
+				Msg("Recorded deployment version")
 		}
 	}
 	
@@ -441,4 +466,83 @@ func (s *Server) handleGetDeploymentStatus(w http.ResponseWriter, r *http.Reques
 	}
 	
 	respondJSON(w, http.StatusOK, statusResp)
+}
+
+// GET /api/v1/pipelines/deployments/{id}/config - Get pipeline configuration
+func (s *Server) handleGetPipelineConfig(w http.ResponseWriter, r *http.Request) {
+	deploymentID := chi.URLParam(r, "id")
+	
+	deployment, err := s.store.GetDeployment(r.Context(), deploymentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			respondError(w, http.StatusNotFound, "Deployment not found")
+			return
+		}
+		log.Error().Err(err).Msg("Failed to get deployment")
+		respondError(w, http.StatusInternalServerError, "Failed to get deployment")
+		return
+	}
+	
+	// Check if we have a rendered config in the deployment
+	if pipelineConfig, ok := deployment.Parameters["pipeline_config"].(string); ok && pipelineConfig != "" {
+		// Return the stored configuration as YAML
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(pipelineConfig))
+		return
+	}
+	
+	// If no config stored, try to render it
+	templateData := services.TemplateData{
+		ExperimentID: "",
+		Variant:      deployment.Variant,
+		HostID:       "",
+		Config:       deployment.Parameters,
+	}
+	
+	if templateData.Variant == "" {
+		templateData.Variant = "candidate"
+	}
+	
+	templateName := deployment.PipelineName
+	if templateName == "" {
+		templateName = "baseline"
+	}
+	
+	// Render the pipeline configuration
+	pipelineConfig, err := s.templateRenderer.RenderTemplate(r.Context(), templateName, templateData)
+	if err != nil {
+		log.Error().Err(err).
+			Str("deployment_id", deployment.ID).
+			Str("template", templateName).
+			Msg("Failed to render pipeline template")
+		respondError(w, http.StatusInternalServerError, "Failed to render pipeline configuration")
+		return
+	}
+	
+	// Return the configuration as YAML
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(pipelineConfig))
+}
+
+// GET /api/v1/deployments/{id}/versions - List deployment versions
+func (s *Server) handleListDeploymentVersions(w http.ResponseWriter, r *http.Request) {
+	deploymentID := chi.URLParam(r, "id")
+	
+	versions, err := s.store.ListDeploymentVersions(r.Context(), deploymentID)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			respondError(w, http.StatusNotFound, "Deployment not found")
+			return
+		}
+		log.Error().Err(err).Msg("Failed to list deployment versions")
+		respondError(w, http.StatusInternalServerError, "Failed to list deployment versions")
+		return
+	}
+	
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"deployment_id": deploymentID,
+		"versions":      versions,
+	})
 }

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-Phoenix Platform is a monorepo for an observability cost optimization system designed to reduce metrics cardinality by up to 90% while maintaining critical visibility. The architecture implements strict boundaries and comprehensive validation to prevent architectural drift, especially when using AI-assisted development.
+Phoenix Platform is a monorepo for an observability cost optimization system that reduces metrics cardinality by 70% while maintaining critical visibility. The platform uses an agent-based architecture with task polling, A/B testing for safe rollouts, and real-time monitoring through WebSocket connections.
 
 ## Critical Architecture Boundaries
 
@@ -58,8 +58,8 @@ make build-<project>     # Build specific project
 make test-<project>      # Test specific project
 make lint-<project>      # Lint specific project
 
-# Example for platform-api:
-cd projects/platform-api
+# Example for phoenix-api:
+cd projects/phoenix-api
 make build              # Build the service
 make test               # Run all tests
 make test-unit          # Run unit tests only
@@ -233,9 +233,9 @@ CODEOWNERS enforces review requirements:
 ## Recent Architecture Updates
 
 ### WebSocket Integration
-- Phoenix API now includes WebSocket support on port 8081
+- Phoenix API includes WebSocket support on same port as REST API (8080)
 - Real-time updates for experiments, metrics, and agent status
-- Hub pattern implementation in `pkg/common/websocket/`
+- Hub pattern implementation in `projects/phoenix-api/internal/websocket/`
 
 ### UI-First Experience
 - New UI handlers in `projects/phoenix-api/internal/api/ui_handlers.go`
@@ -244,13 +244,81 @@ CODEOWNERS enforces review requirements:
 
 ### Task Queue Pattern
 - PostgreSQL-based task queue for agent communication
-- Long-polling design for security (agents only make outbound connections)
-- Atomic task assignment and status tracking
+- Long-polling with 30-second timeout for agent task retrieval
+- Agent authentication via X-Agent-Host-ID header
+- Atomic task assignment with status tracking (pending → assigned → running → completed)
 
 ### Model Extensions
 - Added `Variant` field to PipelineDeployment for A/B testing
 - DeploymentMetrics includes `MetricsPerSecond` and `CardinalityReduction`
 - UpdateDeploymentRequest supports `StatusMessage` and `UpdatedBy` fields
 - New deployment statuses: `degraded` and `healthy`
+
+## Current Implementation Status (Latest)
+
+### Working Components
+1. **Phoenix API** (port 8080)
+   - REST API + WebSocket on same port
+   - Experiment management with A/B testing
+   - Agent task polling endpoints
+   - Pipeline deployment and validation
+   - Real-time cost flow monitoring
+
+2. **Agent Architecture**
+   - Task polling with 30-second timeout
+   - X-Agent-Host-ID header authentication
+   - Pipeline deployment execution
+   - Metrics collection and reporting
+
+3. **Experiment System**
+   - Complete lifecycle: created → running → analyzing → completed
+   - A/B testing with baseline/candidate pipelines
+   - Real-time metrics via WebSocket
+   - 70% cardinality reduction demonstrated
+
+4. **Pipeline Templates**
+   - Adaptive Filter: ML-based metric filtering
+   - TopK: Keep only top K important metrics
+   - Hybrid: Combination strategies
+   - Template rendering with Go text/template
+
+### Key API Endpoints
+```bash
+# Health & Status
+GET  /health
+GET  /api/v1/fleet/status
+
+# Experiments
+POST /api/v1/experiments
+GET  /api/v1/experiments/{id}
+POST /api/v1/experiments/{id}/start
+POST /api/v1/experiments/{id}/stop
+GET  /api/v1/experiments/{id}/metrics
+
+# Agent Operations
+GET  /api/v1/agent/tasks (with X-Agent-Host-ID header)
+POST /api/v1/agent/heartbeat
+POST /api/v1/agent/metrics
+
+# Pipeline Management
+GET  /api/v1/pipelines
+POST /api/v1/pipelines/validate
+POST /api/v1/pipelines/deployments
+
+# Real-time Monitoring
+WS   /ws (WebSocket connection)
+GET  /api/v1/cost-flow
+```
+
+### Database Schema
+- Uses PostgreSQL as primary datastore
+- Key tables: experiments, tasks, agents, pipeline_deployments
+- Task queue implemented with SQL queries and row-level locking
+- Supports concurrent agent polling
+
+### Demo Scripts
+- `scripts/demo-complete.sh`: Full platform demonstration
+- `scripts/demo-working.sh`: Basic functionality test
+- `scripts/demo-docker.sh`: Docker Compose setup
 
 Remember: The structure is designed to be self-validating. When in doubt, run `make validate` to check if your changes follow the architectural rules.

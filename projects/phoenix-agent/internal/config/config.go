@@ -3,10 +3,11 @@ package config
 import "time"
 
 type Config struct {
-	APIURL       string
-	HostID       string
-	PollInterval time.Duration
-	ConfigDir    string
+	APIURL         string
+	HostID         string
+	PollInterval   time.Duration
+	ConfigDir      string
+	PushgatewayURL string
 }
 
 // GetAPIEndpoint returns the full URL for an API endpoint

@@ -70,11 +70,11 @@ func runExperimentPromote(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if experiment can be promoted
-	if experiment.Status != "completed" && experiment.Status != "running" {
+	if experiment.Phase != "completed" && experiment.Phase != "running" {
 		if !promoteForce {
-			return fmt.Errorf("experiment is %s, typically only completed experiments should be promoted", experiment.Status)
+			return fmt.Errorf("experiment is %s, typically only completed experiments should be promoted", experiment.Phase)
 		}
-		output.PrintWarning(fmt.Sprintf("Promoting %s experiment - results may be incomplete", experiment.Status))
+		output.PrintWarning(fmt.Sprintf("Promoting %s experiment - results may be incomplete", experiment.Phase))
 	}
 
 	// Show promotion details

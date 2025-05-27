@@ -254,7 +254,7 @@ class NativeWebSocketService {
     }
   }
 
-  private send(message: WebSocketMessage) {
+  send(message: WebSocketMessage) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {
@@ -280,6 +280,14 @@ class NativeWebSocketService {
 
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN || false;
+  }
+
+  sendMessage(type: string, payload: any) {
+    this.send({
+      type,
+      data: payload,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   // Topic subscription methods

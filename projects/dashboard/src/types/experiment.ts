@@ -3,7 +3,8 @@ export interface Experiment {
   name: string
   description?: string
   spec?: ExperimentSpec
-  status: ExperimentStatus
+  phase: ExperimentPhase
+  status?: ExperimentStatus // Deprecated: use phase
   owner?: string
   createdAt: string
   updatedAt: string
@@ -12,14 +13,19 @@ export interface Experiment {
   results?: ExperimentResults
 }
 
-export type ExperimentStatus = 
+export type ExperimentPhase = 
   | 'pending' 
-  | 'initializing' 
+  | 'deploying'
   | 'running' 
   | 'analyzing' 
+  | 'stopping'
+  | 'stopped'
   | 'completed' 
   | 'failed' 
-  | 'cancelled'
+  | 'promoted'
+
+// Deprecated: use ExperimentPhase
+export type ExperimentStatus = ExperimentPhase
 
 export interface ExperimentSpec {
   baseline: PipelineConfig

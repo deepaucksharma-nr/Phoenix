@@ -26,6 +26,8 @@ type Server struct {
 	analysisService    *services.AnalysisService
 	templateRenderer   *services.PipelineTemplateRenderer
 	costService        *services.CostService
+	jwtService         *services.JWTService
+	wsUpgrader         websocket.Upgrader
 }
 
 func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*Server, error) {
@@ -37,6 +39,9 @@ func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*S
 	if err != nil {
 		return nil, err
 	}
+	
+	// TODO: Wire metrics collector to state machine for auto-start
+	// For now, metrics collection can be started manually via API
 	
 	// Initialize analysis service
 	analysisService, err := services.NewAnalysisService(store, config.PrometheusURL)
@@ -55,8 +60,20 @@ func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*S
 	}
 	
 	// Initialize cost service
-	costService := services.NewCostService(store)
+	costService := services.NewCostService(store, config.CostRates)
 	
+	// Initialize JWT service
+	jwtSecret := []byte(config.JWTSecret)
+	jwtService := services.NewJWTService(jwtSecret, "phoenix-platform", store)
+	
+	// Initialize WebSocket upgrader
+	wsUpgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			// Allow all origins for development (should be restricted in production)
+			return true
+		},
+	}
+
 	return &Server{
 		store:            store,
 		hub:              hub,
@@ -67,6 +84,8 @@ func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*S
 		analysisService:  analysisService,
 		templateRenderer: templateRenderer,
 		costService:      costService,
+		jwtService:       jwtService,
+		wsUpgrader:       wsUpgrader,
 	}, nil
 }
 
@@ -78,6 +97,14 @@ func (s *Server) GetTaskQueue() *tasks.Queue {
 func (s *Server) SetupRoutes(r chi.Router) {
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
+		// Authentication endpoints (no auth middleware)
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", s.handleLogin)
+			r.Post("/refresh", s.handleRefreshToken)
+			r.Post("/logout", s.handleLogout)
+			r.Post("/register", s.handleRegister) // Optional, for development
+		})
+		
 		// Experiment endpoints (from controller service)
 		r.Route("/experiments", func(r chi.Router) {
 			r.Post("/", s.handleCreateExperiment)
@@ -89,6 +116,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Post("/{id}/promote", s.handlePromoteExperiment)
 			r.Post("/{id}/kpis", s.handleCalculateKPIs)
 			r.Get("/{id}/kpis", s.handleGetKPIs)
+			r.Get("/{id}/metrics", s.handleGetExperimentMetrics)
 			r.Post("/{id}/analyze", s.handleAnalyzeExperiment)
 			r.Get("/{id}/cost-analysis", s.handleGetCostAnalysis)
 			// UI-focused experiment endpoints
@@ -107,17 +135,19 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/templates", s.handleGetPipelineTemplates)
 			r.Post("/preview", s.handlePreviewPipelineImpact)
 			r.Post("/quick-deploy", s.handleQuickDeploy)
-		})
-		
-		// Pipeline deployment endpoints
-		r.Route("/deployments", func(r chi.Router) {
-			r.Post("/", s.handleCreateDeployment)
-			r.Get("/", s.handleListDeployments)
-			r.Get("/{id}", s.handleGetDeployment)
-			r.Put("/{id}", s.handleUpdateDeployment)
-			r.Delete("/{id}", s.handleDeleteDeployment)
-			r.Post("/{id}/rollback", s.handleRollbackDeployment)
-			r.Get("/{id}/status", s.handleGetDeploymentStatus)
+			
+			// Pipeline deployment endpoints (nested under /pipelines)
+			r.Route("/deployments", func(r chi.Router) {
+				r.Post("/", s.handleCreateDeployment)
+				r.Get("/", s.handleListDeployments)
+				r.Get("/{id}", s.handleGetDeployment)
+				r.Put("/{id}", s.handleUpdateDeployment)
+				r.Delete("/{id}", s.handleDeleteDeployment)
+				r.Post("/{id}/rollback", s.handleRollbackDeployment)
+				r.Get("/{id}/status", s.handleGetDeploymentStatus)
+				r.Get("/{id}/config", s.handleGetPipelineConfig)
+				r.Get("/{id}/versions", s.handleListDeploymentVersions)
+			})
 		})
 		
 		// Load simulation endpoints
@@ -148,6 +178,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 		})
 		
 		r.Get("/cost-analytics", s.handleGetCostAnalytics)
+		r.Get("/cost-flow", s.handleGetMetricCostFlow) // Add top-level cost-flow route
 
 		// Agent endpoints (new for lean architecture)
 		r.Route("/agent", func(r chi.Router) {
@@ -168,6 +199,9 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			// Log streaming
 			r.Post("/logs", s.handleAgentLogs)
 		})
+		
+		// WebSocket endpoint
+		r.Get("/ws", s.handleWebSocket)
 	})
 }
 
@@ -187,6 +221,7 @@ func (s *Server) agentAuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
 
 // Compatibility wrappers for existing code
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {

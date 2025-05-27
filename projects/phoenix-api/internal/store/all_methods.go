@@ -2,10 +2,11 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
+	
+	"github.com/phoenix/platform/pkg/database"
 	
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/rs/zerolog/log"
@@ -50,9 +51,9 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 	
 	var task models.Task
 	var configJSON string
-	var resultJSON sql.NullString
-	var assignedAt, startedAt, completedAt sql.NullTime
-	var errorMessage sql.NullString
+	var resultJSON database.NullString
+	var assignedAt, startedAt, completedAt database.NullTime
+	var errorMessage database.NullString
 	
 	err := row.Scan(
 		&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
@@ -62,7 +63,7 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 		&task.CreatedAt, &task.UpdatedAt,
 	)
 	
-	if err == sql.ErrNoRows {
+	if err == database.ErrNoRows {
 		return nil, fmt.Errorf("task not found: %s", taskID)
 	}
 	if err != nil {
@@ -153,9 +154,9 @@ func (s *CompositeStore) ListTasks(ctx context.Context, filters map[string]inter
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
-		var resultJSON sql.NullString
-		var assignedAt, startedAt, completedAt sql.NullTime
-		var errorMessage sql.NullString
+		var resultJSON database.NullString
+		var assignedAt, startedAt, completedAt database.NullTime
+		var errorMessage database.NullString
 		
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
@@ -364,9 +365,9 @@ func (s *CompositeStore) getActiveTasksSpecial(ctx context.Context, hostID strin
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
-		var resultJSON sql.NullString
-		var assignedAt, startedAt, completedAt sql.NullTime
-		var errorMessage sql.NullString
+		var resultJSON database.NullString
+		var assignedAt, startedAt, completedAt database.NullTime
+		var errorMessage database.NullString
 		
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
@@ -478,7 +479,7 @@ func (s *CompositeStore) GetAgent(ctx context.Context, hostID string) (*models.A
 	
 	var agent models.AgentStatus
 	var capabilitiesJSON, activeTasksJSON, resourceUsageJSON, metadataJSON string
-	var startedAt sql.NullTime
+	var startedAt database.NullTime
 	
 	err := row.Scan(
 		&agent.HostID, &agent.Hostname, &agent.IPAddress, &agent.AgentVersion,
@@ -487,7 +488,7 @@ func (s *CompositeStore) GetAgent(ctx context.Context, hostID string) (*models.A
 		&agent.CreatedAt, &agent.UpdatedAt,
 	)
 	
-	if err == sql.ErrNoRows {
+	if err == database.ErrNoRows {
 		return nil, fmt.Errorf("agent not found: %s", hostID)
 	}
 	if err != nil {
@@ -534,7 +535,7 @@ func (s *CompositeStore) ListAgents(ctx context.Context) ([]*models.AgentStatus,
 	for rows.Next() {
 		var agent models.AgentStatus
 		var capabilitiesJSON, activeTasksJSON, resourceUsageJSON, metadataJSON string
-		var startedAt sql.NullTime
+		var startedAt database.NullTime
 		
 		err := rows.Scan(
 			&agent.HostID, &agent.Hostname, &agent.IPAddress, &agent.AgentVersion,
@@ -635,23 +636,36 @@ func (s *CompositeStore) GetAllAgents(ctx context.Context) ([]*models.AgentStatu
 	return s.ListAgents(ctx)
 }
 
-func (s *CompositeStore) GetAgentsWithLocation(ctx context.Context) ([]*models.AgentStatus, error) {
+func (s *CompositeStore) GetAgentsWithLocation(ctx context.Context) (map[string]interface{}, error) {
 	agents, err := s.ListAgents(ctx)
 	if err != nil {
 		return nil, err
 	}
 	
-	// Filter agents that have location metadata
-	var agentsWithLocation []*models.AgentStatus
+	// Filter agents that have location metadata and format for UI
+	var agentsWithLocation []map[string]interface{}
 	for _, agent := range agents {
 		if _, hasLat := agent.Metadata["latitude"]; hasLat {
 			if _, hasLon := agent.Metadata["longitude"]; hasLon {
-				agentsWithLocation = append(agentsWithLocation, agent)
+				agentMap := map[string]interface{}{
+					"host_id":   agent.HostID,
+					"hostname":  agent.Hostname,
+					"status":    agent.Status,
+					"latitude":  agent.Metadata["latitude"],
+					"longitude": agent.Metadata["longitude"],
+					"region":    agent.Metadata["region"],
+					"zone":      agent.Metadata["zone"],
+					"last_heartbeat": agent.LastHeartbeat,
+				}
+				agentsWithLocation = append(agentsWithLocation, agentMap)
 			}
 		}
 	}
 	
-	return agentsWithLocation, nil
+	return map[string]interface{}{
+		"agents": agentsWithLocation,
+		"total":  len(agentsWithLocation),
+	}, nil
 }
 
 func (s *CompositeStore) CacheMetric(ctx context.Context, hostID string, metric map[string]interface{}) error {
@@ -715,9 +729,9 @@ func (s *CompositeStore) GetStaleTasks(ctx context.Context, threshold time.Durat
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
-		var resultJSON sql.NullString
-		var assignedAt, startedAt, completedAt sql.NullTime
-		var errorMessage sql.NullString
+		var resultJSON database.NullString
+		var assignedAt, startedAt, completedAt database.NullTime
+		var errorMessage database.NullString
 		
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,

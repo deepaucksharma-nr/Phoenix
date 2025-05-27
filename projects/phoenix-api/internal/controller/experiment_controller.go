@@ -12,27 +12,24 @@ import (
 )
 
 type ExperimentController struct {
-	store        store.Store
-	taskQueue    *tasks.Queue
-	stateMachine *ExperimentStateMachine
+	store     store.Store
+	taskQueue *tasks.Queue
 }
 
 func NewExperimentController(store store.Store, taskQueue *tasks.Queue) *ExperimentController {
-	ec := &ExperimentController{
+	return &ExperimentController{
 		store:     store,
 		taskQueue: taskQueue,
 	}
-	ec.stateMachine = NewExperimentStateMachine(store, ec)
-	return ec
 }
 
 // StartExperiment initiates an experiment by creating tasks for agents
 func (c *ExperimentController) StartExperiment(ctx context.Context, exp *models.Experiment) error {
 	log.Info().Str("experiment_id", exp.ID).Msg("Starting experiment")
 
-	// Use state machine for phase transition
-	if err := c.stateMachine.TransitionExperiment(ctx, exp.ID, "deploying"); err != nil {
-		return fmt.Errorf("failed to transition experiment: %w", err)
+	// Update experiment phase to deploying
+	if err := c.store.UpdateExperimentPhase(ctx, exp.ID, "deploying"); err != nil {
+		return fmt.Errorf("failed to update experiment phase: %w", err)
 	}
 
 	// Create tasks for each target host
@@ -169,9 +166,9 @@ func (c *ExperimentController) StopExperiment(ctx context.Context, experimentID 
 		}
 	}
 
-	// Use state machine for phase transition
-	if err := c.stateMachine.TransitionExperiment(ctx, experimentID, "stopping"); err != nil {
-		return fmt.Errorf("failed to transition experiment: %w", err)
+	// Update experiment phase to stopping
+	if err := c.store.UpdateExperimentPhase(ctx, experimentID, "stopping"); err != nil {
+		return fmt.Errorf("failed to update experiment phase: %w", err)
 	}
 
 	return nil
@@ -192,38 +189,52 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 		return fmt.Errorf("experiment must be in completed phase to promote")
 	}
 
-	// TODO: Implement UpsertPipelineTemplate in store interface
-	// Update production pipeline template
-	// template := &models.PipelineTemplate{
-	// 	Name:        "production",
-	// 	Description: fmt.Sprintf("Promoted from experiment %s", experimentID),
-	// 	ConfigURL:   exp.Config.CandidateTemplate.URL,
-	// 	Variables:   exp.Config.CandidateTemplate.Variables,
-	// 	Metadata: map[string]interface{}{
-	// 		"promoted_from": experimentID,
-	// 		"promoted_at":   time.Now(),
-	// 	},
-	// }
-	// if err := c.store.UpsertPipelineTemplate(ctx, template); err != nil {
-	// 	return fmt.Errorf("failed to update production template: %w", err)
-	// }
+	// For MVP, we'll simply record the promotion in the experiment metadata
+	// In the future, this could update an actual pipeline template in a registry
+	
+	// Update experiment metadata to track promotion
+	if exp.Metadata == nil {
+		exp.Metadata = make(map[string]interface{})
+	}
+	exp.Metadata["promoted"] = true
+	exp.Metadata["promoted_at"] = time.Now()
+	exp.Metadata["promoted_config"] = map[string]interface{}{
+		"template_url": exp.Config.CandidateTemplate.URL,
+		"variables":    exp.Config.CandidateTemplate.Variables,
+	}
+	
+	// Update experiment status
+	exp.Status.KPIs["promotion_status"] = 1.0 // 1.0 indicates promoted
+	
+	// Save the updated experiment
+	if err := c.store.UpdateExperiment(ctx, exp); err != nil {
+		return fmt.Errorf("failed to update experiment with promotion status: %w", err)
+	}
 
-	// Update experiment phase
+	// Create an event for the promotion
+	event := &models.ExperimentEvent{
+		ExperimentID: experimentID,
+		EventType:    "promoted",
+		Phase:        "promoted",
+		Message:      "Experiment promoted to production",
+		Metadata: map[string]interface{}{
+			"promoted_template": exp.Config.CandidateTemplate.URL,
+		},
+	}
+	
+	if err := c.store.CreateExperimentEvent(ctx, event); err != nil {
+		log.Error().Err(err).Msg("Failed to create promotion event")
+	}
+
+	// Update experiment phase to 'promoted'
 	if err := c.store.UpdateExperimentPhase(ctx, experimentID, "promoted"); err != nil {
 		return fmt.Errorf("failed to update experiment phase: %w", err)
 	}
 
-	// Create promotion event
-	event := &models.ExperimentEvent{
-		ExperimentID: experimentID,
-		EventType:    "experiment_promoted",
-		Phase:        "promoted",
-		Message:      "Candidate configuration promoted to production",
-	}
-
-	if err := c.store.CreateExperimentEvent(ctx, event); err != nil {
-		log.Error().Err(err).Msg("Failed to create promotion event")
-	}
+	log.Info().
+		Str("experiment_id", experimentID).
+		Str("template", exp.Config.CandidateTemplate.URL).
+		Msg("Experiment promoted successfully")
 
 	return nil
 }

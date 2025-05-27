@@ -64,8 +64,8 @@ func runExperimentStop(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if experiment can be stopped
-	if experiment.Status != "running" && experiment.Status != "initializing" {
-		return fmt.Errorf("experiment is %s, can only stop running or initializing experiments", experiment.Status)
+	if experiment.Phase != "running" && experiment.Phase != "initializing" {
+		return fmt.Errorf("experiment is %s, can only stop running or initializing experiments", experiment.Phase)
 	}
 
 	// Confirm unless force flag is set

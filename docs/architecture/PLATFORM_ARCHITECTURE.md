@@ -13,18 +13,18 @@
 
 ## Executive Summary
 
-Phoenix Platform is an observability cost optimization system that reduces metrics cardinality by up to 90% while maintaining critical visibility. The platform uses a simplified architecture with a centralized control plane and lightweight distributed agents.
+Phoenix Platform is an observability cost optimization system that reduces metrics cardinality by up to 70% while maintaining critical visibility. The platform uses an agent-based architecture with centralized control plane, task queue system, and lightweight distributed agents that poll for work.
 
 ### Key Achievements
-- **90% reduction** in metrics cardinality
+- **70% reduction** in metrics cardinality (demonstrated)
 - **70% reduction** in observability costs
-- **Zero data loss** guarantee
-- **Sub-second** optimization decisions
-- **99.99%** uptime SLA
+- **A/B testing** with baseline/candidate pipelines
+- **Real-time monitoring** via WebSocket
+- **Agent-based** task distribution with PostgreSQL queue
 
 ## Architecture Overview
 
-Phoenix Platform implements a lean-core architecture with three main components:
+Phoenix Platform implements an agent-based architecture with task polling:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -33,16 +33,17 @@ Phoenix Platform implements a lean-core architecture with three main components:
 │                                                             │
 │  ┌─────────────────┐         ┌─────────────────┐          │
 │  │   Phoenix API   │         │   Dashboard     │          │
-│  │  (Control Plane)│◄────────┤   (React UI)    │          │
-│  └────────┬────────┘         └─────────────────┘          │
+│  │  (Port 8080)    │◄────────┤   (React UI)    │          │
+│  │  + WebSocket    │         └─────────────────┘          │
+│  └────────┬────────┘                                         │
 │           │                                                 │
-│           │ Task Queue                                      │
-│           │ (PostgreSQL)                                    │
+│           │ Task Queue (PostgreSQL)                         │
+│           │ Long-polling (30s timeout)                      │
 │           │                                                 │
 │      ┌────▼─────┐                                         │
 │      │ Phoenix   │                                         │
-│      │ Agents    │────────► Pushgateway ────► Prometheus  │
-│      │(Pollers) │                                         │
+│      │ Agents    │────────► OpenTelemetry ────► Backends │
+│      │ (X-Agent-Host-ID)       Collector                   │
 │      └──────────┘                                         │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
@@ -51,42 +52,43 @@ Phoenix Platform implements a lean-core architecture with three main components:
 ## Core Components
 
 ### 1. Phoenix API (Control Plane)
-The monolithic control plane that manages the entire platform:
+The central control plane running on port 8080 (REST + WebSocket):
 
-- **Experiment Management**: Creates and manages optimization experiments
-- **Task Distribution**: Uses PostgreSQL-based task queue for work distribution
-- **WebSocket Support**: Real-time updates to dashboard
-- **REST API**: Full RESTful API for all operations
-- **Metrics Analysis**: Calculates KPIs and analyzes experiment results
+- **Experiment Management**: A/B testing with baseline/candidate pipelines
+- **Task Queue**: PostgreSQL-based queue with atomic task assignment
+- **WebSocket Server**: Real-time updates on same port as REST API
+- **REST API v2**: Full API for experiments, agents, and pipelines
+- **Metrics Analysis**: Cardinality reduction and cost savings calculations
 
 **Technology Stack**:
-- Go 1.24+
-- PostgreSQL for state management
-- Redis for caching (optional)
-- WebSocket for real-time updates
+- Go 1.21+
+- PostgreSQL 15+ (primary datastore)
+- WebSocket for real-time monitoring
+- Pipeline templates (Adaptive Filter, TopK, Hybrid)
 
 ### 2. Phoenix Agent (Data Plane)
-Lightweight polling agents deployed on target hosts:
+Lightweight agents that poll for tasks using X-Agent-Host-ID authentication:
 
-- **Task Polling**: Long-polls Phoenix API for work assignments
-- **OTel Management**: Manages OpenTelemetry collectors
-- **Metrics Collection**: Pushes metrics to Prometheus Pushgateway
-- **Zero Configuration**: Self-registers with API on startup
-- **Fault Tolerant**: Automatic reconnection and retry logic
+- **Task Polling**: Long-polling with 30-second timeout
+- **OTel Management**: Deploys baseline/candidate pipeline configurations
+- **Authentication**: Uses X-Agent-Host-ID header for identification
+- **Pipeline Templates**: Supports Adaptive Filter, TopK, and Hybrid
+- **Status Reporting**: Reports metrics and experiment results
 
 **Key Features**:
 - Minimal resource footprint (<50MB RAM)
-- No incoming connections required
-- Supports multiple concurrent OTel collectors
-- Built-in health monitoring
+- Outbound-only connections (security)
+- Concurrent A/B test execution
+- Automatic task retry on failure
 
 ### 3. Dashboard
-Modern React-based web interface:
+Modern React 18 + Vite web interface:
 
-- **Real-time Monitoring**: WebSocket-based live updates
-- **Experiment Management**: Create and monitor experiments
-- **Metrics Visualization**: Integration with Grafana
-- **Pipeline Catalog**: Browse and deploy pipeline templates
+- **Real-time Monitoring**: WebSocket connection for live updates
+- **Experiment Creation**: A/B testing setup with pipeline selection
+- **Live Cost Analytics**: Real-time cost reduction visualization
+- **Pipeline Templates**: Pre-configured optimization strategies
+- **Agent Fleet View**: Monitor all connected agents
 
 ## Data Flow
 
@@ -99,20 +101,31 @@ User → Dashboard → Phoenix API → Database
 
 ### 2. Task Distribution
 ```
-Phoenix Agent → Long Poll → Phoenix API
+Phoenix Agent → Poll /api/v2/tasks/poll → Phoenix API
+       │                                         │
+       │         X-Agent-Host-ID: agent-123     │
+       │                                         │
+       └──────── 30s Long Poll ──────────────┘
                               ↓
-                         Task Queue
+                    PostgreSQL Task Queue
                               ↓
-                    Return Next Task
+                    Return Next Task (Atomic)
 ```
 
-### 3. Metrics Collection
+### 3. Metrics Collection & Analysis
 ```
-OTel Collector → Pushgateway → Prometheus
+Baseline Pipeline  ──┐
+                     ├──► OTel Collector ──► Metrics Backend
+                     │                            │
+Candidate Pipeline ──┘                            │
+                                                  ↓
+                              Phoenix API (Analysis Engine)
+                                        │
+                  ┌───────────────────────┬───────────────────────┐
+                  │  Cardinality: -70%     │  Cost Savings: 70%    │
+                  └───────────────────────┴───────────────────────┘
                                     ↓
-                              Phoenix API
-                                    ↓
-                               Analysis
+                              WebSocket ──► Dashboard
 ```
 
 ## Deployment Architecture
@@ -122,16 +135,18 @@ OTel Collector → Pushgateway → Prometheus
 # docker-compose.yml
 services:
   phoenix-api:
-    ports: ["8080:8080", "8081:8081"]
+    ports: ["8080:8080"]  # REST API + WebSocket
+    environment:
+      - DATABASE_URL=postgresql://phoenix:phoenix@postgres:5432/phoenix
   phoenix-agent:
     environment:
       - PHOENIX_API_URL=http://phoenix-api:8080
+      - AGENT_HOST_ID=${HOSTNAME}
+      - TASK_POLL_INTERVAL=30s
   postgres:
     ports: ["5432:5432"]
-  prometheus:
-    ports: ["9090:9090"]
-  pushgateway:
-    ports: ["9091:9091"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 ```
 
 ### Production Deployment (Kubernetes)
@@ -146,9 +161,10 @@ services:
 ## Security Model
 
 ### Authentication & Authorization
-- JWT-based authentication
+- JWT-based authentication for users
+- X-Agent-Host-ID header for agent authentication
 - Role-based access control (RBAC)
-- API key support for agents
+- Task queue with row-level security
 
 ### Network Security
 - TLS encryption for all communications
@@ -164,8 +180,9 @@ services:
 
 ### Phoenix API
 - Handles 10,000+ concurrent agents
-- Sub-100ms task assignment latency
-- Horizontal scaling via replicas
+- 30-second long-polling for task distribution
+- PostgreSQL-based task queue with atomic operations
+- WebSocket support for real-time updates
 
 ### Phoenix Agents
 - <50MB memory footprint
@@ -193,10 +210,11 @@ phoenix/
 ```
 
 ### API Standards
-- RESTful API design
+- RESTful API v2 design
 - OpenAPI 3.0 specification
 - Consistent error responses
-- Versioned endpoints (/api/v1)
+- Versioned endpoints (/api/v2)
+- WebSocket on same port as REST
 
 ### Testing Requirements
 - Unit tests: >80% coverage

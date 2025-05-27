@@ -81,9 +81,9 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 
 		// Filter by status if specified
 		for _, exp := range experiments.Experiments {
-			if statusFilter == "" || exp.Status == statusFilter {
+			if statusFilter == "" || exp.Phase == statusFilter {
 				// Skip running experiments
-				if exp.Status == "running" || exp.Status == "initializing" {
+				if exp.Phase == "running" || exp.Phase == "initializing" {
 					continue
 				}
 				experimentsToDelete = append(experimentsToDelete, exp)
@@ -104,9 +104,9 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 			}
 
 			// Check if experiment can be deleted
-			if experiment.Status == "running" || experiment.Status == "initializing" {
+			if experiment.Phase == "running" || experiment.Phase == "initializing" {
 				output.PrintWarning(fmt.Sprintf("Cannot delete %s experiment '%s' (%s). Stop it first.", 
-					experiment.Status, experiment.Name, experiment.ID))
+					experiment.Phase, experiment.Name, experiment.ID))
 				continue
 			}
 
@@ -122,7 +122,7 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 	// Show what will be deleted
 	fmt.Printf("The following %d experiment(s) will be deleted:\n\n", len(experimentsToDelete))
 	for _, exp := range experimentsToDelete {
-		fmt.Printf("  • %s - %s (%s)\n", exp.ID, exp.Name, exp.Status)
+		fmt.Printf("  • %s - %s (%s)\n", exp.ID, exp.Name, exp.Phase)
 	}
 
 	// Confirm unless force flag is set

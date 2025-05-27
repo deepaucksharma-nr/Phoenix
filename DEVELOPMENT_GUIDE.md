@@ -5,11 +5,11 @@ This guide helps you set up a development environment for the Phoenix Platform.
 ## Prerequisites
 
 ### Required Tools
-- **Go** 1.24+ ([install](https://golang.org/doc/install))
+- **Go** 1.21+ ([install](https://golang.org/doc/install))
 - **Node.js** 18+ ([install](https://nodejs.org/))
 - **Docker** 20.10+ ([install](https://docs.docker.com/get-docker/))
 - **Docker Compose** 2.0+ (included with Docker Desktop)
-- **PostgreSQL** 15+ (or use Docker)
+- **PostgreSQL** 15+ (primary database)
 - **Make** (usually pre-installed)
 
 ### Recommended Tools
@@ -40,11 +40,13 @@ make test
 ```
 phoenix/
 ├── pkg/                    # Shared Go packages
+│   ├── common/           # WebSocket, auth, interfaces
+│   └── database/         # PostgreSQL abstractions
 ├── projects/              # Microservices
-│   ├── phoenix-api/      # Control plane API
-│   ├── phoenix-agent/    # Data plane agent
+│   ├── phoenix-api/      # Control plane (port 8080 + WebSocket)
+│   ├── phoenix-agent/    # Task polling agent
 │   ├── phoenix-cli/      # CLI tool
-│   └── dashboard/        # React UI
+│   └── dashboard/        # React UI with WebSocket
 ├── docs/                 # Documentation
 ├── scripts/              # Utility scripts
 └── tests/               # Integration tests
@@ -57,13 +59,16 @@ phoenix/
 Create a `.env` file:
 
 ```bash
-# Database
+# Database (PostgreSQL)
 DATABASE_URL=postgres://phoenix:phoenix@localhost:5432/phoenix_dev?sslmode=disable
 
-# Services
+# Services  
 PHOENIX_API_URL=http://localhost:8080
-PROMETHEUS_URL=http://localhost:9090
-PUSHGATEWAY_URL=http://localhost:9091
+WEBSOCKET_URL=ws://localhost:8080/ws
+
+# Agent Configuration
+AGENT_HOST_ID=$(hostname)
+TASK_POLL_INTERVAL=30s
 
 # Development
 LOG_LEVEL=debug
@@ -96,15 +101,15 @@ goreman start
 
 #### Option B: Individual Services
 ```bash
-# Terminal 1: Phoenix API
+# Terminal 1: Phoenix API (includes WebSocket server)
 cd projects/phoenix-api
 make run
 
-# Terminal 2: Phoenix Agent
+# Terminal 2: Phoenix Agent (polls for tasks)
 cd projects/phoenix-agent
-make run
+AGENT_HOST_ID=agent-1 make run
 
-# Terminal 3: Dashboard
+# Terminal 3: Dashboard (connects via WebSocket)
 cd projects/dashboard
 npm run dev
 ```
@@ -191,11 +196,14 @@ make docker-build
 # Create new migration
 make migration-create name=add_new_table
 
-# Run migrations
+# Run migrations (PostgreSQL)
 make migrate
 
 # Rollback migration
 make migrate-down
+
+# View task queue status
+psql $DATABASE_URL -c "SELECT * FROM tasks WHERE status='pending';"
 ```
 
 ### Code Generation
@@ -304,16 +312,21 @@ go tool pprof cpu.prof
 # Run load tests
 make load-test
 
-# Custom load test
-hey -n 10000 -c 100 http://localhost:8080/api/v1/experiments
+# Test API endpoints
+hey -n 10000 -c 100 http://localhost:8080/api/v2/experiments
+
+# Test task polling (agent simulation)
+hey -n 1000 -c 50 -H "X-Agent-Host-ID: test-agent" \
+  http://localhost:8080/api/v2/tasks/poll
 ```
 
 ## 📚 Resources
 
 - [Architecture Documentation](docs/architecture/PLATFORM_ARCHITECTURE.md)
-- [API Documentation](docs/api/)
+- [API Documentation](docs/api/PHOENIX_API_v2.md)
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Phoenix CLI](projects/phoenix-cli/README.md)
+- [Task Queue Design](docs/architecture/MESSAGING_DECISION.md)
 
 ## 💬 Getting Help
 

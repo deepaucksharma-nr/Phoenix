@@ -345,9 +345,3 @@ func (s *PostgresPipelineDeploymentStore) UpdateDeploymentMetrics(ctx context.Co
 	return nil
 }
 
-// GetDeploymentHistory gets historical deployment configuration
-func (s *PostgresPipelineDeploymentStore) GetDeploymentHistory(ctx context.Context, deploymentID string, version int) (*models.PipelineDeployment, error) {
-	// TODO: Implement deployment versioning
-	// For now, just return the current deployment
-	return s.GetDeployment(ctx, deploymentID)
-}

@@ -1,83 +1,165 @@
-# dashboard
+# Phoenix Dashboard
 
 ## Overview
 
-[Brief description of the service]
+Modern React-based web interface for the Phoenix Platform with real-time monitoring, experiment management, and cost analytics. Built with React 18, TypeScript, and Vite for optimal development experience.
 
 ## Architecture
 
-[Service architecture and design decisions]
+The dashboard connects to Phoenix API via REST and WebSocket (both on port 8080) for real-time updates:
+
+```
+┌─────────────────────────────────┐
+│      Phoenix Dashboard          │
+│   (React 18 + TypeScript)       │
+├─────────────────────────────────┤
+│  • Experiment Wizard            │
+│  • Real-time Monitoring         │
+│  • Cost Analytics               │
+│  • Pipeline Builder             │
+└──────────┬──────────────────────┘
+           │
+     REST + WebSocket
+           │
+    ┌──────▼──────┐
+    │ Phoenix API │
+    │ (Port 8080) │
+    └─────────────┘
+```
 
 ## Development
 
 ### Prerequisites
 
-- Go 1.21+ (for Go services)
-- Node.js 18+ (for Node services)
-- Docker
-- Make
+- Node.js 18+
+- npm or yarn
+- Docker (optional)
+- Phoenix API running on port 8080
 
 ### Setup
 
 ```bash
 # Install dependencies
-make install
+npm install
 
 # Run tests
-make test
+npm test
 
-# Build the service
-make build
+# Build for production
+npm run build
 ```
 
 ### Running Locally
 
 ```bash
-# Start development server
-make dev
+# Start development server with hot reload
+npm run dev
 
-# Or run the built binary
-make run
+# Dashboard will be available at:
+# http://localhost:3000
+
+# API connection defaults to:
+# http://localhost:8080 (REST + WebSocket)
 ```
 
 ## Configuration
 
-Configuration is managed through environment variables and config files.
+Configuration is managed through environment variables:
 
-See `configs/` directory for configuration examples.
+```bash
+# .env file
+VITE_API_URL=http://localhost:8080
+VITE_WS_URL=ws://localhost:8080/ws
+VITE_ENABLE_AUTH=false
+VITE_REFRESH_INTERVAL=5000
+```
 
-## API Documentation
+For production builds, use `.env.production`.
 
-[Link to API documentation]
+## Key Features
+
+### 1. Experiment Management
+- **Wizard Interface**: Step-by-step experiment creation
+- **A/B Testing**: Compare baseline vs candidate pipelines
+- **Real-time Status**: Live updates via WebSocket
+- **Cost Analytics**: See savings as they happen (70% demonstrated)
+
+### 2. Pipeline Templates
+- **Adaptive Filter**: Dynamic metric filtering
+- **TopK**: Keep only top metrics by value
+- **Hybrid**: Combined optimization strategies
+
+### 3. Real-time Monitoring
+- **Agent Fleet View**: Monitor all connected agents
+- **Live Metrics**: Cardinality and cost reduction metrics
+- **WebSocket Updates**: Instant experiment progress
+
+### 4. Visual Pipeline Builder
+- **Drag-and-Drop**: Create custom pipelines visually
+- **Template Library**: Pre-configured optimization strategies
+- **Impact Preview**: See estimated savings before deployment
 
 ## Testing
 
 ```bash
 # Run unit tests
-make test
+npm test
 
-# Run integration tests
-make test-integration
+# Run tests in watch mode
+npm run test:watch
 
 # Run with coverage
-make test-coverage
+npm run test:coverage
+
+# Run E2E tests (requires API running)
+npm run test:e2e
 ```
 
 ## Deployment
 
 ```bash
 # Build Docker image
-make docker
+docker build -t phoenix/dashboard .
 
-# Push to registry
-make docker-push
+# Run container
+docker run -p 3000:80 \
+  -e VITE_API_URL=http://phoenix-api:8080 \
+  phoenix/dashboard
+
+# Or use docker-compose
+docker-compose up dashboard
 ```
 
-## Monitoring
+## Project Structure
 
-- Metrics: Available at `/metrics`
-- Health: Available at `/health`
-- Ready: Available at `/ready`
+```
+dashboard/
+├── src/
+│   ├── components/     # Reusable UI components
+│   ├── pages/         # Route pages
+│   ├── hooks/         # Custom React hooks
+│   ├── services/      # API and WebSocket services
+│   ├── store/         # Redux store and slices
+│   └── utils/         # Helper functions
+├── public/            # Static assets
+└── vite.config.ts     # Vite configuration
+```
+
+## WebSocket Integration
+
+```typescript
+// Real-time updates
+const ws = useWebSocket();
+
+ws.on('experiment_update', (data) => {
+  // Update experiment status
+  console.log(`Savings: ${data.savings_percent}%`);
+});
+
+ws.on('agent_status', (data) => {
+  // Update agent fleet view
+});
+```
 
 ## Contributing
 

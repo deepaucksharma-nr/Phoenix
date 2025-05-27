@@ -77,7 +77,7 @@ func runExperimentMetrics(cmd *cobra.Command, args []string) error {
 
 	// Display formatted metrics
 	fmt.Printf("Experiment: %s (%s)\n", experiment.Name, experiment.ID[:8])
-	fmt.Printf("Status:     %s\n", experiment.Status)
+	fmt.Printf("Status:     %s\n", experiment.Phase)
 	fmt.Printf("Time Range: %s\n\n", metricsTimeRange)
 
 	// Display summary

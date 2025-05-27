@@ -391,6 +391,30 @@ func (c *APIClient) DeletePipelineDeployment(deploymentID string) error {
 	return c.parseResponse(resp, nil)
 }
 
+// ListPipelineDeploymentVersions lists all versions of a pipeline deployment
+func (c *APIClient) ListPipelineDeploymentVersions(deploymentID string) ([]interface{}, error) {
+	resp, err := c.doRequest("GET", "/api/v1/pipelines/deployments/"+deploymentID+"/versions", nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to list deployment versions: %s", resp.Status)
+	}
+	
+	var result struct {
+		DeploymentID string        `json:"deployment_id"`
+		Versions     []interface{} `json:"versions"`
+	}
+	
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	
+	return result.Versions, nil
+}
+
 // DeleteExperiment deletes an experiment
 func (c *APIClient) DeleteExperiment(id string) error {
 	resp, err := c.doRequest("DELETE", "/api/v1/experiments/"+id, nil)

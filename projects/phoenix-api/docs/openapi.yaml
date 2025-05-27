@@ -1,0 +1,590 @@
+openapi: 3.0.3
+info:
+  title: Phoenix Platform API
+  description: |
+    Phoenix Platform API for managing observability cost optimization through
+    experiments, pipeline deployments, and metrics analysis.
+  version: 2.0.0
+  contact:
+    name: Phoenix Team
+    email: phoenix@example.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development
+  - url: https://phoenix.example.com/api/v1
+    description: Production
+
+security:
+  - bearerAuth: []
+
+paths:
+  # Authentication endpoints
+  /auth/login:
+    post:
+      summary: Login with username and password
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+
+  /auth/refresh:
+    post:
+      summary: Refresh access token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid refresh token
+
+  /auth/logout:
+    post:
+      summary: Logout and invalidate tokens
+      operationId: logout
+      responses:
+        '204':
+          description: Logout successful
+
+  # Experiment endpoints
+  /experiments:
+    get:
+      summary: List experiments
+      operationId: listExperiments
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [initializing, running, completed, failed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of experiments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Experiment'
+
+    post:
+      summary: Create experiment
+      operationId: createExperiment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExperimentRequest'
+      responses:
+        '201':
+          description: Experiment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+
+  /experiments/{id}:
+    get:
+      summary: Get experiment details
+      operationId: getExperiment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Experiment'
+        '404':
+          description: Experiment not found
+
+  /experiments/{id}/phase:
+    put:
+      summary: Update experiment phase
+      operationId: updateExperimentPhase
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phase
+              properties:
+                phase:
+                  type: string
+                  enum: [initializing, running, analyzing, completed, failed]
+      responses:
+        '200':
+          description: Phase updated
+
+  /experiments/{id}/start:
+    post:
+      summary: Start experiment
+      operationId: startExperiment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment started
+
+  /experiments/{id}/stop:
+    post:
+      summary: Stop experiment
+      operationId: stopExperiment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Experiment stopped
+
+  # Pipeline deployment endpoints
+  /pipelines/deployments:
+    get:
+      summary: List pipeline deployments
+      operationId: listDeployments
+      parameters:
+        - name: namespace
+          in: query
+          schema:
+            type: string
+        - name: pipeline
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of deployments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PipelineDeployment'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+
+    post:
+      summary: Create pipeline deployment
+      operationId: createDeployment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeploymentRequest'
+      responses:
+        '201':
+          description: Deployment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineDeployment'
+
+  /pipelines/deployments/{id}:
+    get:
+      summary: Get deployment details
+      operationId: getDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deployment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PipelineDeployment'
+
+    put:
+      summary: Update deployment
+      operationId: updateDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeploymentRequest'
+      responses:
+        '204':
+          description: Deployment updated
+
+    delete:
+      summary: Delete deployment
+      operationId: deleteDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Deletion accepted
+
+  /pipelines/deployments/{id}/rollback:
+    post:
+      summary: Rollback deployment to previous version
+      operationId: rollbackDeployment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                version:
+                  type: integer
+                  description: Target version to rollback to (-1 for previous)
+                  default: -1
+      responses:
+        '202':
+          description: Rollback accepted
+
+  /pipelines/deployments/{id}/versions:
+    get:
+      summary: List deployment versions
+      operationId: listDeploymentVersions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of versions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deployment_id:
+                    type: string
+                  versions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeploymentVersion'
+
+  /pipelines/deployments/{id}/config:
+    get:
+      summary: Get deployment pipeline configuration
+      operationId: getDeploymentConfig
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pipeline configuration YAML
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  # WebSocket endpoint
+  /ws:
+    get:
+      summary: WebSocket connection for real-time updates
+      operationId: websocket
+      responses:
+        '101':
+          description: Switching Protocols
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          default: Bearer
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+
+    Experiment:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        phase:
+          type: string
+          enum: [initializing, running, analyzing, completed, failed]
+        status:
+          type: string
+          deprecated: true
+          description: Deprecated, use phase instead
+        baseline_pipeline:
+          type: string
+        candidate_pipeline:
+          type: string
+        target_nodes:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateExperimentRequest:
+      type: object
+      required:
+        - name
+        - baseline_template
+        - candidate_template
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        baseline_template:
+          type: string
+        candidate_template:
+          type: string
+        target_hosts:
+          type: array
+          items:
+            type: string
+        duration:
+          type: string
+          example: "1h"
+        parameters:
+          type: object
+          additionalProperties: true
+
+    PipelineDeployment:
+      type: object
+      properties:
+        id:
+          type: string
+        deployment_name:
+          type: string
+        pipeline_name:
+          type: string
+        namespace:
+          type: string
+        variant:
+          type: string
+        target_nodes:
+          type: object
+          additionalProperties:
+            type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        resources:
+          $ref: '#/components/schemas/ResourceRequirements'
+        status:
+          type: string
+          enum: [pending, deploying, ready, failed, deleting, degraded, healthy]
+        phase:
+          type: string
+        metrics:
+          $ref: '#/components/schemas/DeploymentMetrics'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+
+    CreateDeploymentRequest:
+      type: object
+      required:
+        - deployment_name
+        - pipeline_name
+        - target_nodes
+      properties:
+        deployment_name:
+          type: string
+        pipeline_name:
+          type: string
+        namespace:
+          type: string
+          default: default
+        variant:
+          type: string
+        target_nodes:
+          type: object
+          additionalProperties:
+            type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        resources:
+          $ref: '#/components/schemas/ResourceRequirements'
+
+    UpdateDeploymentRequest:
+      type: object
+      properties:
+        status:
+          type: string
+        phase:
+          type: string
+        metrics:
+          $ref: '#/components/schemas/DeploymentMetrics'
+        status_message:
+          type: string
+        updated_by:
+          type: string
+
+    ResourceRequirements:
+      type: object
+      properties:
+        cpu:
+          type: string
+          example: "100m"
+        memory:
+          type: string
+          example: "128Mi"
+        storage:
+          type: string
+          example: "1Gi"
+
+    DeploymentMetrics:
+      type: object
+      properties:
+        metrics_per_second:
+          type: number
+        cardinality_reduction:
+          type: number
+        error_rate:
+          type: number
+        latency_p99:
+          type: number
+
+    DeploymentVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+        deployment_id:
+          type: string
+        version:
+          type: integer
+        pipeline_config:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        deployed_by:
+          type: string
+        deployed_at:
+          type: string
+          format: date-time
+        notes:
+          type: string

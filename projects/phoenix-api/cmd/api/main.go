@@ -51,8 +51,12 @@ func main() {
 	defer postgresStore.Close()
 
 	// Run migrations using the store's DB connection
-	if err := runMigrations(postgresStore, cfg.DatabaseURL); err != nil {
-		log.Fatal().Err(err).Msg("Failed to run migrations")
+	if os.Getenv("SKIP_MIGRATIONS") != "true" {
+		if err := runMigrations(postgresStore, cfg.DatabaseURL); err != nil {
+			log.Fatal().Err(err).Msg("Failed to run migrations")
+		}
+	} else {
+		log.Info().Msg("Skipping migrations as SKIP_MIGRATIONS=true")
 	}
 
 	pipelineStore := store.NewPostgresPipelineDeploymentStore(postgresStore)

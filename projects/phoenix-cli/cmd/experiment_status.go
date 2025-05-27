@@ -69,7 +69,7 @@ func runExperimentStatus(cmd *cobra.Command, args []string) error {
 	output.PrintExperiment(experiment, outputFormat)
 
 	// Show deployment status if available
-	if experiment.Status == "running" || experiment.Status == "initializing" {
+	if experiment.Phase == "running" || experiment.Phase == "initializing" {
 		fmt.Println("\nDeployment Status:")
 		fmt.Printf("  Baseline:  🟢 Running\n")
 		fmt.Printf("  Candidate: 🟢 Running\n")
@@ -100,8 +100,8 @@ func followExperimentStatus(apiClient *client.APIClient, experimentID string) er
 
 		// Check if experiment is complete
 		experiment, _ := apiClient.GetExperiment(experimentID)
-		if experiment != nil && (experiment.Status == "completed" || experiment.Status == "failed" || experiment.Status == "cancelled") {
-			fmt.Printf("\nExperiment %s. Stopping follow mode.\n", experiment.Status)
+		if experiment != nil && (experiment.Phase == "completed" || experiment.Phase == "failed" || experiment.Phase == "cancelled") {
+			fmt.Printf("\nExperiment %s. Stopping follow mode.\n", experiment.Phase)
 			break
 		}
 	}
@@ -117,7 +117,7 @@ func displayExperimentStatus(apiClient *client.APIClient, experimentID string) e
 
 	// Display summary
 	fmt.Printf("Experiment: %s (%s)\n", experiment.Name, experiment.ID[:8])
-	fmt.Printf("Status:     %s\n", output.ColorizeStatus(experiment.Status))
+	fmt.Printf("Status:     %s\n", output.ColorizeStatus(experiment.Phase))
 	
 	if experiment.StartedAt != nil {
 		duration := time.Since(*experiment.StartedAt)
@@ -125,7 +125,7 @@ func displayExperimentStatus(apiClient *client.APIClient, experimentID string) e
 	}
 
 	// Display metrics if available
-	if experiment.Status == "running" && experiment.Results != nil {
+	if experiment.Phase == "running" && experiment.Results != nil {
 		fmt.Printf("\nCurrent Metrics:\n")
 		fmt.Printf("  Baseline Cardinality:   %d\n", experiment.Results.BaselineMetrics.Cardinality)
 		fmt.Printf("  Candidate Cardinality:  %d\n", experiment.Results.CandidateMetrics.Cardinality)

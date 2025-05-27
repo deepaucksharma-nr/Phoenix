@@ -1,97 +1,107 @@
 # Phoenix Platform Documentation
 
-Welcome to the Phoenix Platform documentation. This guide will help you understand, deploy, and operate Phoenix.
+Welcome to the Phoenix Platform documentation. Phoenix is an observability cost optimization platform that reduces metrics cardinality by up to 70% while maintaining critical visibility.
 
-## 📚 Documentation Structure
+## Documentation by Role
 
-### Getting Started
+### 👤 For Users
+
+**Getting Started**
 - [Quick Start Guide](../QUICKSTART.md) - Get Phoenix running in 5 minutes
-- [Development Guide](../DEVELOPMENT_GUIDE.md) - Set up your development environment
-- [Architecture Overview](architecture/PLATFORM_ARCHITECTURE.md) - Understand the system design
+- [Core Concepts](getting-started/concepts.md) - Understand Phoenix terminology
+- [First Experiment](getting-started/first-experiment.md) - Create your first optimization
 
-### API & Integration
-- [API Documentation](api/) - RESTful API reference
-- [API v2 Specification](api/PHOENIX_API_v2.md) - Detailed API documentation
-- [CLI Documentation](../projects/phoenix-cli/README.md) - Command-line interface
+**User Guides**
+- [Dashboard Overview](user-guide/dashboard.md) - Navigate the Phoenix UI
+- [Managing Experiments](user-guide/experiments.md) - Run A/B tests safely
+- [Pipeline Configuration](user-guide/pipelines.md) - Configure optimization strategies
+- [Monitoring Setup](user-guide/monitoring.md) - Track performance and savings
 
-### Architecture & Design
-- [Platform Architecture](architecture/PLATFORM_ARCHITECTURE.md) - System architecture
-- [Component Interactions](architecture/PHOENIX_COMPONENT_INTERACTIONS.mmd) - Service communication
-- [Data Model](architecture/PHOENIX_DATA_MODEL.mmd) - Database schema
-- [Network Topology](architecture/PHOENIX_NETWORK_TOPOLOGY.mmd) - Network design
-- [Messaging Decision](architecture/MESSAGING_DECISION.md) - Architecture decisions
+### 👨‍💻 For Developers
 
-### User Experience
-- [UX Design Overview](design/UX_DESIGN.md) - Design philosophy and principles
-- [UX Revolution](design/ux-revolution-overview.md) - Revolutionary UX features
-- [Implementation Plan](design/ux-implementation-plan.md) - UX implementation roadmap
-- [Design Review](design/ux-design-review.md) - Design decisions and learnings
+**Development**
+- [Development Setup](../DEVELOPMENT_GUIDE.md) - Set up your local environment
+- [Project Structure](developer-guide/project-structure.md) - Understand the codebase
+- [API Reference](api/rest-api.md) - REST API documentation
+- [WebSocket API](api/websocket-api.md) - Real-time updates
 
-### Operations
-- [Operations Guide](operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment and management
-- [Single VM Deployment](../deployments/single-vm/README.md) - Simple deployment option
-- [Troubleshooting Guide](../deployments/single-vm/docs/troubleshooting.md) - Common issues
-- [Workflows](../deployments/single-vm/docs/workflows.md) - Operational workflows
+**Contributing**
+- [Contributing Guide](../CONTRIBUTING.md) - How to contribute
+- [Testing Guide](developer-guide/testing.md) - Write and run tests
+- [Best Practices](developer-guide/best-practices.md) - Coding standards
 
-### Configuration
-- [Control Configuration](../configs/control/README.md) - Control plane settings
-- [Monitoring Configuration](../configs/monitoring/README.md) - Prometheus & Grafana
-- [OTel Configuration](../configs/otel/README.md) - OpenTelemetry setup
-- [Production Configuration](../configs/production/README.md) - Production settings
+### 🔧 For Operators
 
-### Development
-- [Contributing Guidelines](../CONTRIBUTING.md) - How to contribute
-- [Shared Interfaces](../pkg/common/interfaces/README.md) - Common interfaces
-- [Contract Definitions](../pkg/contracts/README.md) - API contracts
-- [Test Documentation](../tests/e2e/README.md) - Testing guidelines
+**Deployment**
+- [Kubernetes Deployment](operations/deployment/kubernetes.md) - Production K8s setup
+- [Docker Compose](operations/deployment/docker-compose.md) - Quick deployment
+- [Single VM Setup](operations/deployment/single-vm.md) - Standalone installation
 
-## 🔍 Quick Links by Role
+**Operations**
+- [Configuration Reference](operations/configuration.md) - All configuration options
+- [Production Guide](operations/OPERATIONS_GUIDE_COMPLETE.md) - Production best practices
+- [Scaling Strategies](operations/scaling.md) - Handle growth
+- [Backup & Recovery](operations/backup-recovery.md) - Data protection
 
-### For Operators
-1. [Quick Start](../QUICKSTART.md)
-2. [Operations Guide](operations/OPERATIONS_GUIDE_COMPLETE.md)
-3. [Troubleshooting](../deployments/single-vm/docs/troubleshooting.md)
-4. [Monitoring Setup](../configs/monitoring/README.md)
+### 🏛️ For Architects
 
-### For Developers
-1. [Development Guide](../DEVELOPMENT_GUIDE.md)
-2. [API Documentation](api/)
-3. [Architecture](architecture/PLATFORM_ARCHITECTURE.md)
-4. [Contributing](../CONTRIBUTING.md)
+**Architecture**
+- [System Design](architecture/system-design.md) - High-level architecture
+- [Component Overview](architecture/components.md) - Service descriptions
+- [Data Flow](architecture/data-flow.md) - Request and data paths
+- [Security Architecture](architecture/security.md) - Security model
 
-### For Users
-1. [Dashboard Guide](design/ux-revolution-overview.md)
-2. [CLI Reference](../projects/phoenix-cli/README.md)
-3. [Experiment Workflows](../deployments/single-vm/docs/workflows.md)
+**Design Decisions**
+- [Messaging Architecture](architecture/MESSAGING_DECISION.md) - Why task polling
+- [Platform Architecture](architecture/PLATFORM_ARCHITECTURE.md) - Detailed design
 
-## 📖 Documentation Standards
+## Quick Links
 
-### File Naming
-- Use lowercase with hyphens for file names
-- Use `.md` extension for all documentation
-- Keep names descriptive but concise
+### Essential Documentation
+- 🚀 [Quick Start](../QUICKSTART.md)
+- 📖 [Architecture Overview](architecture/system-design.md)
+- 🔌 [API Reference](api/rest-api.md)
+- 🛠️ [Development Guide](../DEVELOPMENT_GUIDE.md)
 
-### Content Structure
-1. Start with a clear title and purpose
-2. Include a table of contents for long documents
-3. Use code examples liberally
-4. Add diagrams where helpful
-5. Include troubleshooting sections
+### Common Tasks
+- [Create an Experiment](user-guide/experiments.md#creating-experiments)
+- [Deploy a Pipeline](user-guide/pipelines.md#deployment)
+- [Monitor Cost Savings](user-guide/monitoring.md#cost-tracking)
+- [Troubleshoot Issues](user-guide/troubleshooting.md)
 
-### Markdown Standards
-- Use ATX-style headers (`#`, `##`, etc.)
-- Indent code blocks with language hints
-- Use tables for structured data
-- Include links to related documents
+### Tutorials
+- [Reduce Metrics by 70%](tutorials/reduce-cardinality.md)
+- [Build Custom Pipelines](tutorials/custom-pipelines.md)
+- [Integrate with Existing Systems](tutorials/integration-guide.md)
 
-## 🤝 Contributing to Docs
+## Component Documentation
 
-To contribute to documentation:
+### Core Services
+- [Phoenix API](../projects/phoenix-api/README.md) - Central control plane
+- [Phoenix Agent](../projects/phoenix-agent/README.md) - Distributed agents
+- [Phoenix CLI](../projects/phoenix-cli/README.md) - Command-line interface
+- [Dashboard](../projects/dashboard/README.md) - Web UI
 
-1. Follow the standards above
-2. Check for broken links
-3. Ensure examples are tested
-4. Update the index when adding new docs
-5. Submit PR with clear description
+### Shared Packages
+- [Authentication](../pkg/auth/) - JWT-based auth
+- [Database](../pkg/database/) - Database abstractions
+- [Telemetry](../pkg/telemetry/) - Logging and metrics
+- [Contracts](../pkg/contracts/) - API contracts
 
-See [Contributing Guidelines](../CONTRIBUTING.md) for more details.
+## Documentation Standards
+
+All documentation follows these principles:
+- **Clear and Concise** - Direct, actionable content
+- **Example-Driven** - Real-world examples included
+- **Up-to-Date** - Reflects current implementation
+- **Cross-Referenced** - Links to related content
+
+## Getting Help
+
+- 💬 [Discord Community](https://discord.gg/phoenix) - Ask questions
+- 🐛 [Issue Tracker](https://github.com/phoenix/platform/issues) - Report bugs
+- 📧 [Email Support](mailto:support@phoenix.io) - Enterprise support
+
+## Version
+
+This documentation is for Phoenix Platform v3.0.0. For other versions, see the [releases page](https://github.com/phoenix/platform/releases).

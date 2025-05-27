@@ -2,12 +2,12 @@
 
 ## Overview
 
-Phoenix Platform API provides a unified control plane for observability cost optimization. The API follows REST principles with JSON payloads and includes WebSocket support for real-time updates.
+Phoenix Platform API provides a unified control plane for observability cost optimization through agent-based task distribution. The API follows REST principles with JSON payloads and includes WebSocket support for real-time updates on the same port.
 
 ## Base URLs
 
-- **API**: `http://localhost:8080/api/v1`
-- **WebSocket**: `ws://localhost:8081/api/v1/ws`
+- **API**: `http://localhost:8080/api/v2`
+- **WebSocket**: `ws://localhost:8080/ws` (same port as REST API)
 
 ## Table of Contents
 
@@ -24,11 +24,11 @@ Phoenix Platform API provides a unified control plane for observability cost opt
 
 ## Authentication
 
-Agent endpoints require the `X-Agent-Host-ID` header. User-facing endpoints currently don't require authentication in development mode.
+Agent endpoints require the `X-Agent-Host-ID` header for authentication. User-facing endpoints use JWT tokens (optional in development).
 
 ```bash
-# Agent authentication
-curl -H "X-Agent-Host-ID: agent-001" http://localhost:8080/api/v1/agent/tasks
+# Agent authentication with long-polling
+curl -H "X-Agent-Host-ID: agent-001" http://localhost:8080/api/v2/tasks/poll
 ```
 
 ---
@@ -37,7 +37,7 @@ curl -H "X-Agent-Host-ID: agent-001" http://localhost:8080/api/v1/agent/tasks
 
 ### Create Experiment (Wizard)
 
-**POST** `/api/v1/experiments/wizard`
+**POST** `/api/v2/experiments/wizard`
 
 Simplified experiment creation for UI.
 
@@ -46,7 +46,8 @@ Simplified experiment creation for UI.
   "name": "Reduce API costs Q1",
   "description": "Optimize high-traffic API metrics",
   "host_selector": ["group:prod-api", "env=production"],
-  "pipeline_type": "top-k-20",
+  "baseline_template": "standard",
+  "candidate_template": "adaptive-filter-v1",
   "duration_hours": 24
 }
 ```
@@ -58,13 +59,15 @@ Simplified experiment creation for UI.
   "name": "Reduce API costs Q1",
   "status": "pending",
   "created_at": "2024-01-15T10:00:00Z",
-  "estimated_savings_percent": 72
+  "baseline_template": "standard",
+  "candidate_template": "adaptive-filter-v1",
+  "estimated_savings_percent": 70
 }
 ```
 
 ### List Experiments
 
-**GET** `/api/v1/experiments`
+**GET** `/api/v2/experiments`
 
 **Response**: `200 OK`
 ```json
@@ -84,25 +87,25 @@ Simplified experiment creation for UI.
 
 ### Get Experiment Details
 
-**GET** `/api/v1/experiments/{id}`
+**GET** `/api/v2/experiments/{id}`
 
 ### Start Experiment
 
-**POST** `/api/v1/experiments/{id}/start`
+**POST** `/api/v2/experiments/{id}/start`
 
 ### Stop Experiment
 
-**POST** `/api/v1/experiments/{id}/stop`
+**POST** `/api/v2/experiments/{id}/stop`
 
 ### Promote Experiment
 
-**POST** `/api/v1/experiments/{id}/promote`
+**POST** `/api/v2/experiments/{id}/promote`
 
 Promotes candidate pipeline to production.
 
 ### Instant Rollback
 
-**POST** `/api/v1/experiments/{id}/rollback`
+**POST** `/api/v2/experiments/{id}/rollback`
 
 Immediately rolls back to baseline configuration.
 
@@ -121,7 +124,7 @@ Immediately rolls back to baseline configuration.
 
 ### Get Fleet Status
 
-**GET** `/api/v1/fleet/status`
+**GET** `/api/v2/agents`
 
 Returns comprehensive agent fleet status.
 
@@ -158,7 +161,7 @@ Returns comprehensive agent fleet status.
 
 ### Get Agent Map
 
-**GET** `/api/v1/fleet/map`
+**GET** `/api/v2/agents/map`
 
 Returns agents with geographical location for map visualization.
 
@@ -168,35 +171,41 @@ Returns agents with geographical location for map visualization.
 
 ### List Pipeline Templates
 
-**GET** `/api/v1/pipelines/templates`
+**GET** `/api/v2/pipeline-templates`
 
 **Response**: `200 OK`
 ```json
 [
   {
-    "id": "top-k-20",
-    "name": "Top-K Filter (K=20)",
-    "description": "Keep only top 20 metrics by value",
+    "id": "adaptive-filter-v1",
+    "name": "Adaptive Filter",
+    "description": "Dynamically filters low-value metrics",
     "category": "cost_optimization",
-    "estimated_savings_percent": 72,
-    "estimated_cpu_impact": 0.5,
-    "estimated_memory_impact_mb": 10,
-    "ui_preview": {
-      "processor_blocks": [
-        {
-          "type": "top_k",
-          "name": "Top 20 Filter",
-          "config": {"k": 20}
-        }
-      ]
-    }
+    "config_url": "/configs/adaptive-filter-v1.yaml",
+    "estimated_savings_percent": 70
+  },
+  {
+    "id": "topk-v1",
+    "name": "Top-K Filter",
+    "description": "Keep only top K metrics by value",
+    "category": "cost_optimization",
+    "config_url": "/configs/topk-v1.yaml",
+    "estimated_savings_percent": 65
+  },
+  {
+    "id": "hybrid-v1",
+    "name": "Hybrid Optimization",
+    "description": "Combines multiple filtering techniques",
+    "category": "advanced",
+    "config_url": "/configs/hybrid-v1.yaml",
+    "estimated_savings_percent": 75
   }
 ]
 ```
 
 ### Preview Pipeline Impact
 
-**POST** `/api/v1/pipelines/preview`
+**POST** `/api/v2/pipelines/preview`
 
 Calculate impact without deploying.
 
@@ -224,15 +233,16 @@ Calculate impact without deploying.
 
 ### Quick Deploy Pipeline
 
-**POST** `/api/v1/pipelines/quick-deploy`
+**POST** `/api/v2/pipeline-deployments`
 
 One-click pipeline deployment.
 
 ```json
 {
-  "pipeline_template": "top-k-20",
+  "pipeline_template_id": "adaptive-filter-v1",
   "target_hosts": ["group:prod-api"],
-  "auto_rollback": true
+  "variant": "candidate",
+  "experiment_id": "exp-123"
 }
 ```
 
@@ -251,7 +261,7 @@ One-click pipeline deployment.
 
 ### Get Metric Cost Flow
 
-**GET** `/api/v1/metrics/cost-flow`
+**GET** `/api/v2/metrics/cost-flow`
 
 Real-time metric cost breakdown.
 
@@ -285,11 +295,13 @@ Real-time metric cost breakdown.
 
 ### Get Cardinality Breakdown
 
-**GET** `/api/v1/metrics/cardinality?namespace=production&service=api`
+**GET** `/api/v2/metrics/cardinality?namespace=production&service=api`
 
 ### Get Cost Analytics
 
-**GET** `/api/v1/cost-analytics?period=30d`
+**GET** `/api/v2/experiments/{id}/kpis`
+
+Returns calculated KPIs including cardinality reduction and cost savings.
 
 ---
 
@@ -299,11 +311,11 @@ These endpoints are used by Phoenix agents.
 
 ### Poll for Tasks (Long-poll)
 
-**GET** `/api/v1/agent/tasks`
+**GET** `/api/v2/tasks/poll`
 
 Headers: `X-Agent-Host-ID: agent-001`
 
-Long-polling endpoint with 30s timeout.
+Long-polling endpoint with 30-second timeout. Returns immediately if tasks are available, otherwise waits up to 30 seconds.
 
 **Response**: `200 OK`
 ```json
@@ -323,7 +335,7 @@ Long-polling endpoint with 30s timeout.
 
 ### Update Task Status
 
-**POST** `/api/v1/agent/tasks/{taskId}/status`
+**POST** `/api/v2/tasks/{taskId}/status`
 
 ```json
 {
@@ -337,7 +349,7 @@ Long-polling endpoint with 30s timeout.
 
 ### Send Heartbeat
 
-**POST** `/api/v1/agent/heartbeat`
+**POST** `/api/v2/agents/{hostId}/heartbeat`
 
 ```json
 {
@@ -356,7 +368,7 @@ Long-polling endpoint with 30s timeout.
 
 ## WebSocket Events
 
-Connect to `ws://localhost:8081/api/v1/ws` for real-time updates.
+Connect to `ws://localhost:8080/ws` for real-time updates. WebSocket runs on the same port as the REST API.
 
 ### Event Types
 
@@ -443,11 +455,11 @@ Send subscription message after connecting:
 
 ### Get Active Tasks
 
-**GET** `/api/v1/tasks/active?status=running&limit=100`
+**GET** `/api/v2/tasks?status=running&limit=100`
 
 ### Get Task Queue Status
 
-**GET** `/api/v1/tasks/queue`
+**GET** `/api/v2/tasks/queue`
 
 **Response**: `200 OK`
 ```json
@@ -509,8 +521,8 @@ Headers:
 
 ### JavaScript/TypeScript
 ```typescript
-// Connect to WebSocket
-const ws = new WebSocket('ws://localhost:8081/api/v1/ws');
+// Connect to WebSocket (same port as API)
+const ws = new WebSocket('ws://localhost:8080/ws');
 
 ws.on('open', () => {
   // Subscribe to events
@@ -528,13 +540,14 @@ ws.on('message', (data) => {
 });
 
 // Create experiment via API
-const response = await fetch('/api/v1/experiments/wizard', {
+const response = await fetch('/api/v2/experiments/wizard', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     name: 'Optimize API costs',
     host_selector: ['env=prod'],
-    pipeline_type: 'top-k-20',
+    baseline_template: 'standard',
+    candidate_template: 'adaptive-filter-v1',
     duration_hours: 24
   })
 });
@@ -545,16 +558,17 @@ const response = await fetch('/api/v1/experiments/wizard', {
 import requests
 import websocket
 
-# Get fleet status
-response = requests.get('http://localhost:8080/api/v1/fleet/status')
+# Get agent status
+response = requests.get('http://localhost:8080/api/v2/agents')
 fleet = response.json()
 print(f"Healthy agents: {fleet['healthy_agents']}/{fleet['total_agents']}")
 
-# Quick deploy pipeline
-response = requests.post('http://localhost:8080/api/v1/pipelines/quick-deploy',
+# Deploy pipeline
+response = requests.post('http://localhost:8080/api/v2/pipeline-deployments',
     json={
-        'pipeline_template': 'top-k-20',
-        'target_hosts': ['group:prod-api']
+        'pipeline_template_id': 'adaptive-filter-v1',
+        'target_hosts': ['group:prod-api'],
+        'variant': 'candidate'
     })
 print(f"Deployment started: {response.json()['deployment_id']}")
 ```
@@ -576,7 +590,7 @@ data, _ := json.Marshal(Heartbeat{
     },
 })
 
-req, _ := http.NewRequest("POST", "http://localhost:8080/api/v1/agent/heartbeat", bytes.NewBuffer(data))
+req, _ := http.NewRequest("POST", "http://localhost:8080/api/v2/agents/agent-001/heartbeat", bytes.NewBuffer(data))
 req.Header.Set("X-Agent-Host-ID", "agent-001")
 req.Header.Set("Content-Type", "application/json")
 client.Do(req)
@@ -584,17 +598,18 @@ client.Do(req)
 
 ---
 
-## Migration from v1
+## Key Implementation Details
 
-Key changes from previous API:
-- Consolidated endpoints under single Phoenix API
-- Agent-based instead of Kubernetes-centric
-- WebSocket for real-time updates
-- Simplified experiment creation with wizard
-- Visual pipeline configuration support
+- **Task Queue**: PostgreSQL-based with atomic assignment
+- **Long-polling**: 30-second timeout for agent task polling
+- **A/B Testing**: Baseline vs candidate pipeline comparison
+- **Authentication**: X-Agent-Host-ID header for agents
+- **WebSocket**: Real-time updates on same port as REST API
+- **Pipeline Templates**: Adaptive Filter, TopK, and Hybrid approaches
+- **Cost Reduction**: Demonstrated 70% reduction in metrics cardinality
 
 ---
 
 ## OpenAPI Specification
 
-Available at: `http://localhost:8080/api/v1/openapi.json` (planned)
+Available at: `http://localhost:8080/api/v2/openapi.json`

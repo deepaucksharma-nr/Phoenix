@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/phoenix/platform/projects/phoenix-api/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"
 )
@@ -21,13 +22,34 @@ type CostService struct {
 }
 
 // NewCostService creates a new cost calculation service
-func NewCostService(store store.Store) *CostService {
+func NewCostService(store store.Store, costRates config.CostRates) *CostService {
+	// Use industry-standard defaults if not configured
+	ingestionCost := costRates.MetricsIngestionPerMillion
+	if ingestionCost == 0 {
+		ingestionCost = 0.10 // $0.10 per million datapoints
+	}
+	
+	storageCost := costRates.StorageRetentionPerGB
+	if storageCost == 0 {
+		storageCost = 0.05 // $0.05 per GB stored
+	}
+	
+	cpuCost := costRates.CPUCostPerCore
+	if cpuCost == 0 {
+		cpuCost = 50.0 // $50 per core per month
+	}
+	
+	memoryCost := costRates.MemoryCostPerGB
+	if memoryCost == 0 {
+		memoryCost = 10.0 // $10 per GB per month
+	}
+	
 	return &CostService{
 		store:                          store,
-		metricsIngestionCostPerMillion: 50.0,   // $50 per million metrics/month
-		storageRetentionCostPerGB:      10.0,   // $10 per GB/month
-		cpuCostPerCore:                 100.0,  // $100 per core/month
-		memoryCostPerGB:                20.0,   // $20 per GB/month
+		metricsIngestionCostPerMillion: ingestionCost,
+		storageRetentionCostPerGB:      storageCost,
+		cpuCostPerCore:                 cpuCost,
+		memoryCostPerGB:                memoryCost,
 	}
 }
 
@@ -81,7 +103,8 @@ func (cs *CostService) calculateVariantCost(metrics []*models.Metric) VariantCos
 	
 	// Calculate metrics ingestion rate (metrics per second)
 	metricsPerSecond := float64(len(metrics)) / 300.0 // Assuming 5-minute window
-	metricsPerMonth := metricsPerSecond * 60 * 60 * 24 * 30
+	const secondsPerMonth = 30 * 24 * 3600 // ~2.6M seconds
+	metricsPerMonth := metricsPerSecond * float64(secondsPerMonth)
 	
 	// Calculate cardinality
 	uniqueMetrics := make(map[string]bool)
@@ -94,12 +117,14 @@ func (cs *CostService) calculateVariantCost(metrics []*models.Metric) VariantCos
 	}
 	cost.Cardinality = len(uniqueMetrics)
 	
-	// Calculate costs
-	cost.MetricsIngestionCost = (metricsPerMonth / 1_000_000) * cs.metricsIngestionCostPerMillion
+	// Calculate costs using same model as KPI calculator
+	millionDatapoints := metricsPerMonth / 1_000_000
 	
-	// Estimate storage based on cardinality and retention
-	// Assume 100 bytes per metric point, 30-day retention
-	storageGB := (float64(cost.Cardinality) * 100 * 60 * 24 * 30) / (1024 * 1024 * 1024)
+	// Base ingestion cost
+	cost.MetricsIngestionCost = millionDatapoints * cs.metricsIngestionCostPerMillion
+	
+	// Storage cost (assuming 30-day retention, 8 bytes per datapoint)
+	storageGB := (float64(cost.Cardinality) * 8 * 60 * 60 * 24 * 30) / (1024 * 1024 * 1024)
 	cost.StorageRetentionCost = storageGB * cs.storageRetentionCostPerGB
 	
 	// Resource costs (get from metrics if available)
@@ -107,16 +132,28 @@ func (cs *CostService) calculateVariantCost(metrics []*models.Metric) VariantCos
 	memoryGB := 2.0  // Default 2GB
 	
 	for _, m := range metrics {
-		if m.Name == "cpu_usage" && m.Type == "gauge" {
-			cpuUsage = m.Value
+		if m.Name == "process_cpu_seconds_total" && m.Type == "counter" {
+			// Convert CPU seconds to cores (assuming 5-minute rate)
+			cpuUsage = m.Value / 300.0
 		}
-		if m.Name == "memory_usage_bytes" && m.Type == "gauge" {
+		if m.Name == "process_resident_memory_bytes" && m.Type == "gauge" {
+			memoryGB = m.Value / (1024 * 1024 * 1024)
+		}
+		// Also check agent metrics
+		if m.Name == "agent.cpu.percent" && m.Type == "gauge" {
+			cpuUsage = m.Value / 100.0 // Convert percentage to cores
+		}
+		if m.Name == "agent.memory.used_bytes" && m.Type == "gauge" {
 			memoryGB = m.Value / (1024 * 1024 * 1024)
 		}
 	}
 	
 	cost.ResourceCost = (cpuUsage * cs.cpuCostPerCore) + (memoryGB * cs.memoryCostPerGB)
-	cost.TotalMonthlyCost = cost.MetricsIngestionCost + cost.StorageRetentionCost + cost.ResourceCost
+	
+	// Add 20% processing overhead (same as KPI calculator)
+	processingOverhead := (cost.MetricsIngestionCost + cost.StorageRetentionCost) * 0.20
+	
+	cost.TotalMonthlyCost = cost.MetricsIngestionCost + cost.StorageRetentionCost + cost.ResourceCost + processingOverhead
 	
 	return cost
 }
@@ -124,24 +161,69 @@ func (cs *CostService) calculateVariantCost(metrics []*models.Metric) VariantCos
 // estimateBaselineCost estimates baseline cost when no metrics are available
 func (cs *CostService) estimateBaselineCost(exp *models.Experiment) VariantCost {
 	// Typical baseline: high cardinality, no optimization
+	// Assume 10k metrics per second for a medium-sized deployment
+	const (
+		baselineMetricsPerSecond = 10000.0
+		baselineCardinality = 100000
+		secondsPerMonth = 30 * 24 * 3600
+	)
+	
+	monthlyDatapoints := baselineMetricsPerSecond * secondsPerMonth
+	millionDatapoints := monthlyDatapoints / 1_000_000
+	
+	// Calculate costs
+	ingestionCost := millionDatapoints * cs.metricsIngestionCostPerMillion
+	
+	// Storage: 8 bytes per datapoint, 30-day retention
+	storageGB := (float64(baselineCardinality) * 8 * 60 * 60 * 24 * 30) / (1024 * 1024 * 1024)
+	storageCost := storageGB * cs.storageRetentionCostPerGB
+	
+	// Resources: typical baseline usage
+	resourceCost := (2.0 * cs.cpuCostPerCore) + (8.0 * cs.memoryCostPerGB) // 2 cores, 8GB RAM
+	
+	// Add 20% processing overhead
+	processingOverhead := (ingestionCost + storageCost) * 0.20
+	
 	return VariantCost{
-		Cardinality:          100000, // 100k unique time series
-		MetricsIngestionCost: 500.0,  // $500/month for ingestion
-		StorageRetentionCost: 200.0,  // $200/month for storage
-		ResourceCost:         150.0,  // $150/month for compute
-		TotalMonthlyCost:     850.0,
+		Cardinality:          baselineCardinality,
+		MetricsIngestionCost: ingestionCost,
+		StorageRetentionCost: storageCost,
+		ResourceCost:         resourceCost,
+		TotalMonthlyCost:     ingestionCost + storageCost + resourceCost + processingOverhead,
 	}
 }
 
 // estimateCandidateCost estimates candidate cost with optimization
 func (cs *CostService) estimateCandidateCost(exp *models.Experiment) VariantCost {
 	// Candidate with 70% cardinality reduction
+	const (
+		candidateMetricsPerSecond = 3000.0  // 70% reduction
+		candidateCardinality = 30000        // 70% reduction
+		secondsPerMonth = 30 * 24 * 3600
+	)
+	
+	monthlyDatapoints := candidateMetricsPerSecond * secondsPerMonth
+	millionDatapoints := monthlyDatapoints / 1_000_000
+	
+	// Calculate costs
+	ingestionCost := millionDatapoints * cs.metricsIngestionCostPerMillion
+	
+	// Storage: 8 bytes per datapoint, 30-day retention
+	storageGB := (float64(candidateCardinality) * 8 * 60 * 60 * 24 * 30) / (1024 * 1024 * 1024)
+	storageCost := storageGB * cs.storageRetentionCostPerGB
+	
+	// Resources: reduced due to less processing
+	resourceCost := (1.0 * cs.cpuCostPerCore) + (4.0 * cs.memoryCostPerGB) // 1 core, 4GB RAM
+	
+	// Add 20% processing overhead
+	processingOverhead := (ingestionCost + storageCost) * 0.20
+	
 	return VariantCost{
-		Cardinality:          30000,  // 30k unique time series (70% reduction)
-		MetricsIngestionCost: 150.0,  // $150/month for ingestion
-		StorageRetentionCost: 60.0,   // $60/month for storage
-		ResourceCost:         100.0,  // $100/month for compute (less processing)
-		TotalMonthlyCost:     310.0,
+		Cardinality:          candidateCardinality,
+		MetricsIngestionCost: ingestionCost,
+		StorageRetentionCost: storageCost,
+		ResourceCost:         resourceCost,
+		TotalMonthlyCost:     ingestionCost + storageCost + resourceCost + processingOverhead,
 	}
 }
 
@@ -207,8 +289,36 @@ type VariantCost struct {
 
 // GetRealTimeCostFlow returns real-time cost flow data
 func (cs *CostService) GetRealTimeCostFlow(ctx context.Context) (*store.MetricCostFlow, error) {
-	// Delegate to store for now, but we could add caching or aggregation here
-	return cs.store.GetMetricCostFlow(ctx)
+	// Get the data from store as map and convert it back to struct
+	data, err := cs.store.GetMetricCostFlow(ctx)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert map back to struct for backwards compatibility
+	flow := &store.MetricCostFlow{}
+	
+	if totalCost, ok := data["total_cost_per_minute"].(float64); ok {
+		flow.TotalCostPerMinute = totalCost
+	}
+	
+	if topMetrics, ok := data["top_metrics"].([]store.MetricCostDetail); ok {
+		flow.TopMetrics = topMetrics
+	}
+	
+	if byService, ok := data["by_service"].(map[string]float64); ok {
+		flow.ByService = byService
+	}
+	
+	if byNamespace, ok := data["by_namespace"].(map[string]float64); ok {
+		flow.ByNamespace = byNamespace
+	}
+	
+	if lastUpdated, ok := data["last_updated"].(time.Time); ok {
+		flow.LastUpdated = lastUpdated
+	}
+	
+	return flow, nil
 }
 
 // GetCardinalityTrends returns cardinality trends over time
@@ -241,6 +351,42 @@ func (cs *CostService) GetCardinalityTrends(ctx context.Context, duration time.D
 	}
 	
 	return trends, nil
+}
+
+// CalculateRealTimeCost calculates the current cost based on real-time metrics rate
+func (cs *CostService) CalculateRealTimeCost(metricsPerSecond float64) map[string]float64 {
+	const secondsPerMonth = 30 * 24 * 3600
+	
+	// Calculate monthly projections
+	monthlyDatapoints := metricsPerSecond * float64(secondsPerMonth)
+	millionDatapoints := monthlyDatapoints / 1_000_000
+	
+	// Calculate cost components
+	ingestionCost := millionDatapoints * cs.metricsIngestionCostPerMillion
+	
+	// Estimate storage based on typical cardinality ratio (10:1)
+	estimatedCardinality := metricsPerSecond * 10
+	storageGB := (estimatedCardinality * 8 * 60 * 60 * 24 * 30) / (1024 * 1024 * 1024)
+	storageCost := storageGB * cs.storageRetentionCostPerGB
+	
+	// Processing overhead
+	processingOverhead := (ingestionCost + storageCost) * 0.20
+	
+	// Total costs
+	totalMonthlyCost := ingestionCost + storageCost + processingOverhead
+	
+	return map[string]float64{
+		"metrics_per_second":    metricsPerSecond,
+		"monthly_datapoints":    monthlyDatapoints,
+		"ingestion_cost":        ingestionCost,
+		"storage_cost":          storageCost,
+		"processing_overhead":   processingOverhead,
+		"total_monthly_cost":    totalMonthlyCost,
+		"total_yearly_cost":     totalMonthlyCost * 12,
+		"cost_per_minute":       totalMonthlyCost / (30 * 24 * 60),
+		"cost_per_hour":         totalMonthlyCost / (30 * 24),
+		"estimated_cardinality": estimatedCardinality,
+	}
 }
 
 // CardinalityTrends represents cardinality trends over time

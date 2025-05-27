@@ -77,65 +77,152 @@ func showStaticProfiles() error {
 
 	profiles := []struct {
 		Name        string
+		Aliases     []string
 		Description string
-		Patterns    []string
+		MaxDuration string
+		Impact      struct {
+			CPU     string
+			Memory  string
+			Network string
+		}
+		UseCases []string
 	}{
 		{
-			Name:        "realistic",
-			Description: "Simulates a typical production environment",
-			Patterns: []string{
-				"70% long-running processes (web servers, databases)",
-				"30% short-lived processes (cron jobs, batch tasks)",
-				"Steady CPU/memory usage with occasional spikes",
-				"Process names follow common patterns (webapp-N, job-N)",
-			},
-		},
-		{
 			Name:        "high-cardinality",
-			Description: "Tests cardinality reduction effectiveness",
-			Patterns: []string{
-				"Many unique process names",
-				"Combinations of service/environment/region",
-				"Random CPU and memory patterns",
-				"Designed to create high metrics volume",
+			Aliases:     []string{"high-card"},
+			Description: "Simulates high cardinality metrics explosion",
+			MaxDuration: "30m",
+			Impact: struct {
+				CPU     string
+				Memory  string
+				Network string
+			}{
+				CPU:     "low",
+				Memory:  "high",
+				Network: "medium",
+			},
+			UseCases: []string{
+				"Testing cardinality reduction processors",
+				"Validating memory limits and safeguards",
+				"Demonstrating the need for Phoenix optimization",
 			},
 		},
 		{
-			Name:        "process-churn",
-			Description: "Rapid process creation and destruction",
-			Patterns: []string{
-				"80% churn rate every 2 seconds",
-				"Short-lived processes (5 second lifetime)",
-				"Spiky CPU and memory usage",
-				"Tests metric collection under high churn",
+			Name:        "realistic",
+			Aliases:     []string{"normal"},
+			Description: "Simulates normal production workload",
+			MaxDuration: "1h",
+			Impact: struct {
+				CPU     string
+				Memory  string
+				Network string
+			}{
+				CPU:     "medium",
+				Memory:  "low",
+				Network: "low",
+			},
+			UseCases: []string{
+				"Baseline performance testing",
+				"Comparing optimized vs non-optimized pipelines",
+				"General system validation",
 			},
 		},
 		{
-			Name:        "custom",
-			Description: "User-defined patterns (requires configuration)",
-			Patterns: []string{
-				"Configurable process patterns",
-				"Custom CPU/memory profiles",
-				"Adjustable churn rates",
-				"Define via environment variables or config file",
+			Name:        "spike",
+			Aliases:     []string{},
+			Description: "Simulates traffic spikes and recovery",
+			MaxDuration: "10m",
+			Impact: struct {
+				CPU     string
+				Memory  string
+				Network string
+			}{
+				CPU:     "variable",
+				Memory:  "low",
+				Network: "variable",
+			},
+			UseCases: []string{
+				"Testing auto-scaling triggers",
+				"Validating buffer and queue handling",
+				"Checking recovery behavior",
+			},
+		},
+		{
+			Name:        "steady",
+			Aliases:     []string{"process-churn"},
+			Description: "Maintains constant load for stability testing",
+			MaxDuration: "24h",
+			Impact: struct {
+				CPU     string
+				Memory  string
+				Network string
+			}{
+				CPU:     "low",
+				Memory:  "minimal",
+				Network: "low",
+			},
+			UseCases: []string{
+				"Baseline measurements",
+				"Long-term stability testing",
+				"Resource leak detection",
 			},
 		},
 	}
 
+	// Table header
+	headers := []string{"Profile", "Aliases", "Description", "Max Duration", "Resource Impact"}
+	var data [][]string
+
 	for _, profile := range profiles {
-		fmt.Printf("Profile: %s\n", output.Bold(profile.Name))
-		fmt.Printf("Description: %s\n", profile.Description)
-		fmt.Println("Patterns:")
-		for _, pattern := range profile.Patterns {
-			fmt.Printf("  - %s\n", pattern)
+		aliasStr := "-"
+		if len(profile.Aliases) > 0 {
+			aliasStr = profile.Aliases[0]
+			for i := 1; i < len(profile.Aliases); i++ {
+				aliasStr += ", " + profile.Aliases[i]
+			}
+		}
+		
+		impactStr := fmt.Sprintf("CPU: %s, Mem: %s, Net: %s", 
+			profile.Impact.CPU, profile.Impact.Memory, profile.Impact.Network)
+		
+		data = append(data, []string{
+			profile.Name,
+			aliasStr,
+			profile.Description,
+			profile.MaxDuration,
+			impactStr,
+		})
+	}
+
+	output.Table(headers, data)
+	fmt.Println()
+
+	// Show detailed information
+	fmt.Println("Profile Details:")
+	fmt.Println()
+	
+	for _, profile := range profiles {
+		fmt.Printf("%s (%s)\n", output.Bold(profile.Name), profile.Description)
+		if len(profile.Aliases) > 0 {
+			fmt.Printf("  Aliases: %v\n", profile.Aliases)
+		}
+		fmt.Printf("  Max Duration: %s\n", profile.MaxDuration)
+		fmt.Printf("  Resource Impact: CPU=%s, Memory=%s, Network=%s\n", 
+			profile.Impact.CPU, profile.Impact.Memory, profile.Impact.Network)
+		fmt.Println("  Use Cases:")
+		for _, useCase := range profile.UseCases {
+			fmt.Printf("    - %s\n", useCase)
 		}
 		fmt.Println()
 	}
 
 	fmt.Println("Usage Examples:")
-	fmt.Println("  phoenix loadsim start exp-12345678 --profile realistic --duration 1h")
-	fmt.Println("  phoenix loadsim start exp-12345678 --profile high-cardinality --process-count 500")
-	fmt.Println("  phoenix loadsim start exp-12345678 --profile process-churn --duration 30m")
+	fmt.Println("  phoenix-cli loadsim start --profile high-cardinality --duration 5m")
+	fmt.Println("  phoenix-cli loadsim start --profile realistic --duration 30m")
+	fmt.Println("  phoenix-cli loadsim start --profile spike --duration 2m")
+	fmt.Println("  phoenix-cli loadsim start --profile steady --duration 1h")
+	fmt.Println()
+	fmt.Println("Note: Profiles can be referenced by name or alias")
 
 	return nil
 }

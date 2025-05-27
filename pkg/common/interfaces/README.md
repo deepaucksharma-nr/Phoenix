@@ -1,6 +1,6 @@
 # Phoenix Platform Interface Definitions
 
-This package contains all the interface definitions that define contracts between different modules in the Phoenix platform. These interfaces ensure clean architectural boundaries and enable independent development and testing of components.
+Interface contracts for Phoenix Platform's 70% cost reduction observability system. Defines clean boundaries for agent-based architecture, A/B testing, and real-time monitoring components.
 
 ## Overview
 
@@ -15,25 +15,25 @@ The interfaces are organized by domain:
    - Implemented by: Experiment Controller, PostgreSQL Store
 
 2. **Pipeline Management** (`pipeline.go`)
-   - `PipelineService`: Pipeline CRUD and deployment operations
-   - `ConfigGenerator`: OTel configuration generation
-   - `PipelineOperator`: Kubernetes pipeline deployments
-   - Consumed by: API Service, Controller
-   - Implemented by: Config Generator, Pipeline Operator
+   - `PipelineService`: Template-based pipeline deployment
+   - `PipelineRenderer`: OpenTelemetry configuration rendering
+   - `TaskQueue`: Agent task distribution system
+   - Consumed by: API Service, Agent System
+   - Implemented by: Template Renderer, PostgreSQL Queue
 
 3. **Monitoring & Metrics** (`monitoring.go`)
-   - `MonitoringService`: Metrics collection and analysis
-   - `MetricsCollector`: Real-time metrics gathering
-   - `CostAnalyzer`: Cost analysis and projections
+   - `MetricsCollector`: Agent metrics collection
+   - `CostAnalyzer`: Real-time cost savings calculation
+   - `WebSocketHub`: Live update broadcasting
    - Consumed by: Dashboard, API Service
-   - Implemented by: Monitoring Service, Prometheus Integration
+   - Implemented by: Prometheus Integration, WebSocket Service
 
-4. **Load Simulation** (`simulation.go`)
-   - `SimulationService`: Load simulation management
-   - `LoadGenerator`: Load pattern generation
-   - `ProcessSimulator`: Process behavior simulation
-   - Consumed by: API Service, Controller
-   - Implemented by: Process Simulator
+4. **Agent Management** (`agent.go`)
+   - `AgentService`: Agent registration and health monitoring
+   - `TaskDistributor`: Task assignment and polling
+   - `HeartbeatCollector`: Agent status tracking
+   - Consumed by: API Service, Task Queue
+   - Implemented by: Agent Controller, PostgreSQL Store
 
 ### Infrastructure Interfaces
 

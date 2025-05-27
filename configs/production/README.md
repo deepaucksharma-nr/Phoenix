@@ -1,24 +1,58 @@
-# production Configuration
+# Phoenix Production Configuration
 
 ## Overview
-This directory contains production configuration files for the Phoenix platform.
+Production-ready configurations for the Phoenix observability cost optimization platform.
+
+## Phoenix Platform Features
+- **70% cost reduction** in observability expenses
+- **Agent-based architecture** with task polling
+- **A/B testing** for safe pipeline rollouts
+- **Real-time monitoring** via WebSocket
 
 ## Structure
-./certificates
-./environments
-./secrets
-./tls
+```
+production/
+├── otel_collector_main_prod.yaml  # OpenTelemetry configuration
+├── tls/
+│   └── generate_certs.sh          # TLS certificate generation
+└── README.md
+```
 
-## Usage
-These configurations are used by various services in the Phoenix platform.
-See individual configuration files for specific details.
+## Production Deployment
 
-## Environment Variables
-Configuration files may reference environment variables for sensitive values.
-Ensure all required variables are set before deployment.
+### Prerequisites
+- Kubernetes cluster or Docker Compose
+- PostgreSQL database (managed or self-hosted)
+- TLS certificates for secure communication
+- Agent nodes with network access to control plane
 
-## Validation
-To validate configurations:
+### Environment Variables
 ```bash
-make validate-configs CONFIG_TYPE=production
+# Core Configuration
+DATABASE_URL=postgresql://user:pass@host:5432/phoenix
+JWT_SECRET=your-secure-jwt-secret
+PORT=8080
+
+# Monitoring
+PROMETHEUS_URL=http://prometheus:9090
+PUSHGATEWAY_URL=http://pushgateway:9091
+
+# Features
+ENABLE_WEBSOCKET=true
+ENVIRONMENT=production
+```
+
+### Security
+- All agent communication over TLS
+- JWT authentication for API access
+- X-Agent-Host-ID header for agent auth
+- Database connections encrypted
+
+### Validation
+```bash
+# Validate production configuration
+go run cmd/api/main.go --validate-config
+
+# Test agent connectivity
+curl -H "X-Agent-Host-ID: test-agent" http://api:8080/api/v1/agent/tasks
 ```

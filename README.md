@@ -1,10 +1,10 @@
 # Phoenix Platform
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24%2B-blue)](go.mod)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](go.mod)
 [![Documentation](https://img.shields.io/badge/docs-latest-green)](docs/)
 
-Phoenix is an observability cost optimization platform that reduces metrics cardinality by up to 90% while maintaining critical visibility. Using intelligent pipeline optimization and a lean-core architecture, Phoenix helps organizations cut observability costs without sacrificing insights.
+Phoenix is an observability cost optimization platform that reduces metrics cardinality by up to 70% while maintaining critical visibility. Using intelligent pipeline optimization and agent-based architecture, Phoenix helps organizations cut observability costs without sacrificing insights.
 
 ## 🚀 Quick Start
 
@@ -14,7 +14,7 @@ git clone https://github.com/phoenix/platform.git
 cd phoenix
 
 # Start Phoenix with Docker Compose
-./scripts/run-phoenix.sh
+docker-compose up -d
 
 # Access the dashboard
 open http://localhost:3000
@@ -24,47 +24,87 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
 
 ## 📋 Key Features
 
-- **90% Metrics Reduction** - Intelligent filtering reduces cardinality without data loss
-- **Real-time Cost Analytics** - See savings as they happen
-- **Zero-Config Agents** - Self-registering agents with automatic discovery
-- **A/B Testing Framework** - Compare pipeline configurations with production traffic
-- **Visual Pipeline Builder** - Drag-and-drop interface for creating optimization rules
-- **Enterprise Security** - JWT auth, RBAC, and full audit logging
+- **70% Cost Reduction** - Intelligent metrics filtering reduces cardinality without losing critical data
+- **Real-time Monitoring** - WebSocket-based live updates for experiments and metrics
+- **Agent-Based Architecture** - Distributed agents with task polling and heartbeat monitoring
+- **A/B Testing Framework** - Safe rollout with baseline vs candidate pipeline comparison
+- **Pipeline Templates** - Pre-built optimization strategies (Adaptive Filter, TopK, Hybrid)
+- **Enterprise Ready** - PostgreSQL storage, TLS support, comprehensive monitoring
 
-## 🏗️ Architecture
+## 🏗️ Architecture Overview
 
-Phoenix uses a lean-core architecture with three main components:
+Phoenix uses a modular monorepo structure with agent-based architecture:
 
 ```
 ┌─────────────────┐         ┌─────────────────┐
 │   Phoenix API   │◄────────┤   Dashboard     │
-│  (Control Plane)│         │   (React UI)    │
-└────────┬────────┘         └─────────────────┘
-         │ Task Queue
+│  (Port 8080)    │         │   (React 18)    │
+│  REST + WS      │         └─────────────────┘
+└────────┬────────┘
+         │ Task Queue (PostgreSQL)
+         │ Long-polling (30s timeout)
     ┌────▼────┐
-    │ Phoenix │────► Pushgateway ────► Prometheus
-    │ Agents  │
-    └─────────┘
+    │ Phoenix │────► OpenTelemetry ────► Observability
+    │ Agents  │      Collector          │ Backends
+    └─────────┘      (Modified)         └─────────────
 ```
 
-See [Architecture Documentation](docs/architecture/PLATFORM_ARCHITECTURE.md) for details.
+### Core Components
+
+- **Phoenix API** - Central control plane with REST/WebSocket APIs
+- **Phoenix Agent** - Distributed agents deploying pipeline configurations
+- **Phoenix CLI** - Command-line interface for operations
+- **Dashboard** - React-based UI for monitoring and management
 
 ## 📚 Documentation
 
-- [Architecture Overview](docs/architecture/PLATFORM_ARCHITECTURE.md)
-- [Development Guide](DEVELOPMENT_GUIDE.md)
-- [API Documentation](docs/api/)
-- [Operations Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md)
-- [Contributing Guidelines](CONTRIBUTING.md)
+### Getting Started
+- [Quick Start Guide](QUICKSTART.md) - Get running in 5 minutes
+- [Concepts & Terminology](docs/getting-started/concepts.md) - Core concepts
+- [First Experiment](docs/getting-started/first-experiment.md) - Create your first cost optimization
+
+### Architecture & Design
+- [System Architecture](docs/architecture/system-design.md) - High-level design
+- [Component Details](docs/architecture/components.md) - Service descriptions
+- [Data Flow](docs/architecture/data-flow.md) - Request and data paths
+- [Security Model](docs/architecture/security.md) - Authentication and authorization
+
+### API Reference
+- [REST API](docs/api/rest-api.md) - HTTP endpoints reference
+- [WebSocket API](docs/api/websocket-api.md) - Real-time updates
+- [OpenAPI Spec](docs/api/openapi.yaml) - Machine-readable specification
+
+### User Guides
+- [Dashboard Guide](docs/user-guide/dashboard.md) - UI walkthrough
+- [Managing Experiments](docs/user-guide/experiments.md) - A/B testing workflows
+- [Pipeline Management](docs/user-guide/pipelines.md) - Configuration and deployment
+- [Monitoring & Alerts](docs/user-guide/monitoring.md) - Observability setup
+
+### Developer Resources
+- [Development Setup](DEVELOPMENT_GUIDE.md) - Local environment setup
+- [Project Structure](docs/developer-guide/project-structure.md) - Codebase organization
+- [Testing Guide](docs/developer-guide/testing.md) - Test strategies and execution
+- [Contributing](CONTRIBUTING.md) - Contribution guidelines
+
+### Operations
+- [Deployment Options](docs/operations/deployment/) - K8s, Docker, Single VM
+- [Configuration Reference](docs/operations/configuration.md) - All config options
+- [Production Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment
+- [Scaling & Performance](docs/operations/scaling.md) - Scaling strategies
+
+### Tutorials
+- [Reduce Cardinality by 70%](docs/tutorials/reduce-cardinality.md)
+- [Building Custom Pipelines](docs/tutorials/custom-pipelines.md)
+- [Integration Guide](docs/tutorials/integration-guide.md)
 
 ## 🛠️ Development
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.21+
 - Node.js 18+
 - Docker & Docker Compose
-- PostgreSQL 15+
+- PostgreSQL 15+ (primary database)
 
 ### Build from Source
 

@@ -62,8 +62,8 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if experiment can be started
-	if experiment.Status != "pending" {
-		return fmt.Errorf("experiment is %s, can only start pending experiments", experiment.Status)
+	if experiment.Phase != "pending" {
+		return fmt.Errorf("experiment is %s, can only start pending experiments", experiment.Phase)
 	}
 
 	// Start the experiment

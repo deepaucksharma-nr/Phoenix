@@ -240,13 +240,12 @@ func (m *CollectorManager) downloadConfig(url string) (string, error) {
 func (m *CollectorManager) applyVariables(config string, vars map[string]string, id, variant string) (string, error) {
 	// Add default variables
 	allVars := map[string]string{
-		"EXPERIMENT_ID":          strings.Split(id, "-")[0],
-		"VARIANT":                variant,
-		"HOST_ID":                m.config.HostID,
-		// TODO: Add pushgateway URL support
-		// "METRICS_PUSHGATEWAY_URL": m.config.PushgatewayURL,
-		"BATCH_TIMEOUT":          "1s",
-		"BATCH_SIZE":             "1000",
+		"EXPERIMENT_ID":           strings.Split(id, "-")[0],
+		"VARIANT":                 variant,
+		"HOST_ID":                 m.config.HostID,
+		"METRICS_PUSHGATEWAY_URL": m.config.PushgatewayURL,
+		"BATCH_TIMEOUT":           "1s",
+		"BATCH_SIZE":              "1000",
 	}
 
 	// Merge with provided variables

@@ -1,32 +1,35 @@
 # Phoenix API
 
-The Phoenix API is the central control plane for the Phoenix Platform, managing experiments, task distribution, and metrics analysis.
+The Phoenix API is the central control plane for the Phoenix Platform, managing experiments through agent-based task distribution, A/B testing, and real-time metrics analysis.
 
 ## Overview
 
 Phoenix API provides:
-- RESTful API for all platform operations
-- WebSocket support for real-time updates
-- PostgreSQL-based task queue for agent work distribution
-- Built-in metrics analysis and KPI calculation
-- JWT-based authentication and authorization
+- RESTful API v2 with WebSocket on port 8080
+- PostgreSQL-based task queue with 30-second long-polling
+- A/B testing framework with baseline/candidate pipelines
+- Real-time KPI calculation (70% cost reduction demonstrated)
+- Agent authentication via X-Agent-Host-ID header
 
 ## Architecture
 
 ```
-┌─────────────────┐
-│   HTTP/REST     │───► Experiments, Pipelines, Agents
-│   WebSocket     │───► Real-time Updates
-└────────┬────────┘
-         │
-    ┌────▼────┐
-    │  Core   │
-    │ Services│
-    └────┬────┘
-         │
-    ┌────▼────┐
-    │PostgreSQL│
-    └─────────┘
+┌───────────────────────────────┐
+│   Phoenix API (Port 8080)     │
+│   REST API v2 + WebSocket     │
+└─────────────┬────────────────┘
+              │
+    ┌─────────▼─────────┐
+    │   Core Services    │
+    │  - Experiments     │
+    │  - Task Queue      │
+    │  - KPI Analysis    │
+    └─────────┬─────────┘
+              │
+    ┌─────────▼─────────┐
+    │   PostgreSQL       │
+    │  (Task Queue DB)   │
+    └───────────────────┘
 ```
 
 ## Quick Start
@@ -53,8 +56,8 @@ make test
 # Build image
 docker build -t phoenix/api .
 
-# Run container
-docker run -p 8080:8080 -p 8081:8081 \
+# Run container (single port for REST + WebSocket)
+docker run -p 8080:8080 \
   -e DATABASE_URL=postgresql://... \
   phoenix/api
 ```
@@ -65,54 +68,67 @@ Environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PORT` | HTTP API port | `8080` |
-| `WEBSOCKET_PORT` | WebSocket port | `8081` |
+| `PORT` | API port (REST + WebSocket) | `8080` |
 | `DATABASE_URL` | PostgreSQL connection string | Required |
-| `PROMETHEUS_URL` | Prometheus server URL | `http://localhost:9090` |
-| `PUSHGATEWAY_URL` | Pushgateway URL | `http://localhost:9091` |
-| `JWT_SECRET` | JWT signing secret | Required |
+| `TASK_POLL_TIMEOUT` | Long-polling timeout | `30s` |
 | `LOG_LEVEL` | Logging level | `info` |
+| `ENABLE_AUTH` | Enable authentication | `true` |
+| `METRICS_INTERVAL` | KPI calculation interval | `30s` |
 
 ## API Endpoints
 
 ### Experiments
-- `GET /api/v1/experiments` - List experiments
-- `POST /api/v1/experiments` - Create experiment
-- `GET /api/v1/experiments/{id}` - Get experiment details
-- `POST /api/v1/experiments/{id}/start` - Start experiment
-- `POST /api/v1/experiments/{id}/stop` - Stop experiment
-- `POST /api/v1/experiments/{id}/promote` - Promote to production
+- `GET /api/v2/experiments` - List experiments
+- `POST /api/v2/experiments` - Create A/B test experiment
+- `GET /api/v2/experiments/{id}` - Get experiment details
+- `POST /api/v2/experiments/{id}/start` - Start experiment
+- `POST /api/v2/experiments/{id}/stop` - Stop experiment
+- `POST /api/v2/experiments/{id}/promote` - Promote candidate
+- `GET /api/v2/experiments/{id}/kpis` - Get calculated KPIs
 
 ### Agents
-- `GET /api/v1/agents` - List registered agents
-- `POST /api/v1/agents/heartbeat` - Agent heartbeat
-- `GET /api/v1/agents/tasks` - Poll for tasks (long-polling)
-- `PUT /api/v1/agents/tasks/{id}` - Update task status
+- `GET /api/v2/agents` - List registered agents
+- `POST /api/v2/agents/{hostId}/heartbeat` - Agent heartbeat
+- `GET /api/v2/tasks/poll` - Poll for tasks (30s long-poll)
+- `POST /api/v2/tasks/{id}/status` - Update task status
 
-### Pipelines
-- `GET /api/v1/pipelines` - List pipeline templates
-- `GET /api/v1/pipelines/{id}` - Get pipeline details
-- `POST /api/v1/pipelines/{id}/deploy` - Deploy pipeline
+### Pipeline Templates
+- `GET /api/v2/pipeline-templates` - List templates
+- `GET /api/v2/pipeline-templates/{id}` - Get template details
+- `POST /api/v2/pipeline-deployments` - Deploy pipeline
 
 ## WebSocket Events
 
-Connect to `ws://localhost:8081/ws` for real-time updates:
+Connect to `ws://localhost:8080/ws` for real-time updates (same port as REST):
 
 ```javascript
 // Event types
 {
-  "type": "experiment_started",
-  "data": { "experiment_id": "...", "phase": "warmup" }
+  "type": "experiment_update",
+  "data": { 
+    "experiment_id": "exp-123", 
+    "phase": "running",
+    "baseline_cost": 5000,
+    "candidate_cost": 1500,
+    "savings_percent": 70
+  }
 }
 
 {
-  "type": "metrics_updated", 
-  "data": { "experiment_id": "...", "kpis": {...} }
+  "type": "agent_status", 
+  "data": { 
+    "host_id": "agent-001", 
+    "status": "healthy",
+    "active_tasks": ["task-123"]
+  }
 }
 
 {
-  "type": "agent_status_changed",
-  "data": { "host_id": "...", "status": "active" }
+  "type": "metric_flow",
+  "data": { 
+    "total_cost_rate": 125.50,
+    "cardinality_reduction": 70
+  }
 }
 ```
 
@@ -124,12 +140,14 @@ Connect to `ws://localhost:8081/ws` for real-time updates:
 phoenix-api/
 ├── cmd/api/          # Application entrypoint
 ├── internal/
-│   ├── api/         # HTTP handlers
-│   ├── controller/  # Business logic
+│   ├── api/         # HTTP handlers + WebSocket
+│   ├── controller/  # Experiment controller
 │   ├── models/      # Data models
-│   ├── store/       # Database layer
+│   ├── services/    # Pipeline services
+│   ├── store/       # PostgreSQL store
+│   ├── tasks/       # Task queue implementation
 │   └── websocket/   # WebSocket hub
-├── migrations/      # SQL migrations
+├── migrations/      # PostgreSQL migrations
 └── Dockerfile      # Container definition
 ```
 

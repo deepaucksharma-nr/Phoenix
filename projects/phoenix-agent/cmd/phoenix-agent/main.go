@@ -20,11 +20,12 @@ import (
 func main() {
 	// Command line flags
 	var (
-		apiURL       = flag.String("api-url", getEnv("PHOENIX_API_URL", "http://phoenix-api:8080"), "Phoenix API URL")
-		hostID       = flag.String("host-id", getHostID(), "Unique host identifier")
-		pollInterval = flag.Duration("poll-interval", getDurationEnv("POLL_INTERVAL", 15*time.Second), "Task poll interval")
-		configDir    = flag.String("config-dir", getEnv("CONFIG_DIR", "/etc/phoenix-agent"), "Directory for agent configs")
-		logLevel     = flag.String("log-level", getEnv("LOG_LEVEL", "info"), "Log level (debug, info, warn, error)")
+		apiURL         = flag.String("api-url", getEnv("PHOENIX_API_URL", "http://phoenix-api:8080"), "Phoenix API URL")
+		hostID         = flag.String("host-id", getHostID(), "Unique host identifier")
+		pollInterval   = flag.Duration("poll-interval", getDurationEnv("POLL_INTERVAL", 15*time.Second), "Task poll interval")
+		configDir      = flag.String("config-dir", getEnv("CONFIG_DIR", "/etc/phoenix-agent"), "Directory for agent configs")
+		logLevel       = flag.String("log-level", getEnv("LOG_LEVEL", "info"), "Log level (debug, info, warn, error)")
+		pushgatewayURL = flag.String("pushgateway-url", getEnv("PUSHGATEWAY_URL", "http://prometheus-pushgateway:9091"), "Prometheus Pushgateway URL")
 	)
 	flag.Parse()
 
@@ -48,10 +49,11 @@ func main() {
 
 	// Initialize configuration
 	cfg := &config.Config{
-		APIURL:       *apiURL,
-		HostID:       *hostID,
-		PollInterval: *pollInterval,
-		ConfigDir:    *configDir,
+		APIURL:         *apiURL,
+		HostID:         *hostID,
+		PollInterval:   *pollInterval,
+		ConfigDir:      *configDir,
+		PushgatewayURL: *pushgatewayURL,
 	}
 
 	// Initialize components
@@ -106,17 +108,14 @@ func main() {
 
 	log.Info().Msg("Shutting down agent...")
 
-	// Stop all supervised processes
-	taskSupervisor.StopAll()
-
-	// Give processes time to shut down gracefully
+	// Create shutdown context with timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
 
-	select {
-	case <-shutdownCtx.Done():
-		log.Warn().Msg("Shutdown timeout exceeded")
-	case <-time.After(5 * time.Second):
+	// Gracefully shutdown supervisor
+	if err := taskSupervisor.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("Error during supervisor shutdown")
+	} else {
 		log.Info().Msg("Graceful shutdown completed")
 	}
 }
