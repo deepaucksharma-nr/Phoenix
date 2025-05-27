@@ -19,7 +19,7 @@ Phoenix uses an **agent-based architecture** with three main components:
          │ Task Queue (PostgreSQL)
          │ Long-polling (30s timeout)
     ┌────▼────┐
-    │ Phoenix │────► OpenTelemetry ────► Backends
+    │ Phoenix │────► OTel/NRDOT ────► Backends
     │ Agents  │      Collector
     └─────────┘
 ```
@@ -60,6 +60,7 @@ Phoenix uses an **agent-based architecture** with three main components:
 3. **Reliability**: PostgreSQL for state, automatic retries
 4. **Security**: JWT auth, no inbound agent connections
 5. **Performance**: Sub-second decisions, minimal overhead
+6. **Flexibility**: Support for multiple collectors (OpenTelemetry, NRDOT)
 
 ## Data Flow
 
@@ -77,7 +78,7 @@ User → Dashboard → API → PostgreSQL → Task Queue
 ### Communication Patterns
 - **Dashboard ↔ API**: REST (port 8080) + WebSocket (same port)
 - **Agent → API**: HTTP long-polling with X-Agent-Host-ID header
-- **Agent → Backends**: OpenTelemetry protocol (OTLP)
+- **Agent → Backends**: OpenTelemetry protocol (OTLP) or New Relic OTLP
 - **Task Queue**: PostgreSQL-based with atomic assignment
 
 ## Deployment Architecture
@@ -111,13 +112,18 @@ User → Dashboard → API → PostgreSQL → Task Queue
 - **Secrets Management**: Environment files with proper permissions
 - **TLS Everywhere**: HTTPS for API, encrypted database connections
 
-## Migration Path
+## Deployment Options
 
-For users migrating from previous Kubernetes deployments:
-- See [MIGRATION_FROM_KUBERNETES.md](MIGRATION_FROM_KUBERNETES.md)
-- Data migration scripts provided
-- Zero-downtime migration possible
-- **Data Protection**: TLS encryption, PostgreSQL row-level security
+### Single-VM Deployment (Recommended)
+- Production-ready deployment on a single VM
+- Docker Compose for container orchestration  
+- Integrated monitoring and backup scripts
+- See [Single-VM Deployment Guide](deployments/single-vm/README.md)
+
+### Data Protection
+- **TLS encryption**: All communications encrypted
+- **PostgreSQL security**: Row-level security and encrypted connections
+- **Secret management**: Environment-based configuration
 
 ## Performance Characteristics
 
@@ -135,7 +141,9 @@ For users migrating from previous Kubernetes deployments:
 - **Language**: Go 1.21+
 - **Database**: PostgreSQL 15+ (primary datastore)
 - **Task Queue**: PostgreSQL-based with long-polling
-- **Metrics**: OpenTelemetry Collector + various backends
+- **Metrics Collectors**: 
+  - OpenTelemetry Collector (default)
+  - NRDOT (New Relic Distribution) with advanced cardinality reduction
 
 ### Frontend
 - **Framework**: React 18+ with Vite
@@ -151,7 +159,9 @@ For users migrating from previous Kubernetes deployments:
 
 ## Extension Points
 
-1. **Pipeline Templates**: Adaptive Filter, TopK, Hybrid processors
+1. **Pipeline Templates**: 
+   - Standard processors: Adaptive Filter, TopK, Hybrid
+   - NRDOT processors: Baseline, Cardinality Reduction
 2. **Analysis Metrics**: Cardinality reduction, cost savings calculations
 3. **UI Components**: Live monitoring, cost flow visualization
 4. **API Extensions**: RESTful API v2 with WebSocket support

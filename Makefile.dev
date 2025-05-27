@@ -1,0 +1,47 @@
+# Phoenix Development Makefile
+
+.PHONY: help dev-up dev-down dev-logs dev-status dev-reset build-all test-all
+
+help:
+	@echo "Phoenix Development Commands:"
+	@echo "  make dev-up      - Start all development services"
+	@echo "  make dev-down    - Stop all development services"
+	@echo "  make dev-logs    - Show logs from all services"
+	@echo "  make dev-status  - Check status of all services"
+	@echo "  make dev-reset   - Reset development environment"
+	@echo "  make build-all   - Build all services"
+	@echo "  make test-all    - Run all tests"
+
+dev-up:
+	@echo "Starting development services..."
+	@docker-compose -f docker-compose.dev.yml up -d
+	@echo "Waiting for services to be healthy..."
+	@sleep 5
+	@./scripts/dev-status.sh
+
+dev-down:
+	@echo "Stopping development services..."
+	@docker-compose -f docker-compose.dev.yml down
+
+dev-logs:
+	@docker-compose -f docker-compose.dev.yml logs -f
+
+dev-status:
+	@./scripts/dev-status.sh
+
+dev-reset:
+	@./scripts/dev-reset.sh
+
+build-all:
+	@echo "Building all services..."
+	@cd projects/phoenix-api && make build
+	@cd projects/phoenix-agent && make build
+	@cd projects/phoenix-cli && make build
+	@echo "Build complete!"
+
+test-all:
+	@echo "Running all tests..."
+	@cd projects/phoenix-api && make test
+	@cd projects/phoenix-agent && make test
+	@cd projects/phoenix-cli && make test
+	@echo "Tests complete!"

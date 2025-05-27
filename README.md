@@ -1,6 +1,6 @@
 # Phoenix Platform
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)](go.mod)
 [![Documentation](https://img.shields.io/badge/docs-latest-green)](docs/)
 
@@ -74,20 +74,21 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
 
 ### Architecture & Design
 - [System Architecture](docs/architecture/system-design.md) - High-level design
-- [Component Details](docs/architecture/components.md) - Service descriptions
-- [Data Flow](docs/architecture/data-flow.md) - Request and data paths
-- [Security Model](docs/architecture/security.md) - Authentication and authorization
+- [Platform Architecture](docs/architecture/PLATFORM_ARCHITECTURE.md) - Detailed platform architecture
+- [Messaging Decision](docs/architecture/MESSAGING_DECISION.md) - Messaging architecture decisions
+- [Main Architecture](ARCHITECTURE.md) - Core architecture overview
 
 ### API Reference
 - [REST API](docs/api/rest-api.md) - HTTP endpoints reference
 - [WebSocket API](docs/api/websocket-api.md) - Real-time updates
-- [OpenAPI Spec](docs/api/openapi.yaml) - Machine-readable specification
+- [Phoenix API v2](docs/api/PHOENIX_API_v2.md) - Comprehensive API documentation
+- [Pipeline Validation](docs/api/PIPELINE_VALIDATION_API.md) - Pipeline validation API
 
 ### User Guides
-- [Dashboard Guide](docs/user-guide/dashboard.md) - UI walkthrough
-- [Managing Experiments](docs/user-guide/experiments.md) - A/B testing workflows
-- [Pipeline Management](docs/user-guide/pipelines.md) - Configuration and deployment
-- [Monitoring & Alerts](docs/user-guide/monitoring.md) - Observability setup
+- [Getting Started](docs/getting-started/concepts.md) - Core concepts
+- [First Experiment](docs/getting-started/first-experiment.md) - Create your first experiment
+- [UX Design](docs/design/UX_DESIGN.md) - UI/UX documentation
+- [Load Simulation](docs/LOAD_SIMULATION_PROFILES.md) - Load testing profiles
 
 ### Developer Resources
 - [Development Setup](DEVELOPMENT_GUIDE.md) - Local environment setup
@@ -102,12 +103,12 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
 - [Production Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment
 - [NRDOT Integration](docs/operations/nrdot-integration.md) - New Relic collector setup
 - [Scaling & Performance](docs/operations/scaling.md) - Scaling strategies
-- [Migration from Kubernetes](MIGRATION_FROM_KUBERNETES.md) - Migration guide
+- [Troubleshooting](docs/operations/nrdot-troubleshooting.md) - Troubleshooting guide
 
 ### Tutorials
-- [Reduce Cardinality by 70%](docs/tutorials/reduce-cardinality.md)
-- [Building Custom Pipelines](docs/tutorials/custom-pipelines.md)
-- [Integration Guide](docs/tutorials/integration-guide.md)
+- [First Experiment](docs/getting-started/first-experiment.md) - Step-by-step guide
+- [NRDOT Integration](docs/operations/nrdot-integration.md) - New Relic integration
+- [Docker Compose Setup](docs/operations/docker-compose.md) - Container deployment
 
 ## 🔌 Collector Support
 
@@ -178,7 +179,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ## 📄 License
 
-This project is licensed under the Apache License 2.0 - see [LICENSE](LICENSE) for details.
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🔗 Links
 

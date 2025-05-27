@@ -90,7 +90,7 @@ fi
 # Start Phoenix API
 echo -e "\n${YELLOW}Starting Phoenix API...${NC}"
 cd "$PROJECT_ROOT/projects/phoenix-api"
-SKIP_MIGRATIONS="${SKIP_MIGRATIONS:-false}" nohup ./bin/phoenix-api > "$LOG_DIR/phoenix-api.log" 2>&1 &
+DATABASE_PASSWORD=phoenix-dev SKIP_MIGRATIONS=true nohup ./bin/phoenix-api > "$LOG_DIR/phoenix-api.log" 2>&1 &
 API_PID=$!
 echo "Phoenix API started (PID: $API_PID)"
 

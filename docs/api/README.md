@@ -1,125 +1,179 @@
-# Phoenix API Documentation
+# Phoenix Platform API Documentation
 
-The Phoenix Platform provides comprehensive REST and WebSocket APIs for managing experiments, pipelines, and real-time monitoring.
+This directory contains comprehensive API documentation for the Phoenix Platform.
 
-## API Documentation
+## 📚 API Documentation
 
-### REST API
-- [REST API Reference](rest-api.md) - Complete HTTP endpoint documentation
-- [Authentication Guide](authentication.md) - JWT and agent authentication
-- [OpenAPI Specification](openapi.yaml) - Machine-readable API spec
+### Core API References
+- [Phoenix API v2](PHOENIX_API_v2.md) - Complete API v2 documentation with examples
+- [REST API Reference](rest-api.md) - RESTful endpoint reference
+- [WebSocket API](websocket-api.md) - Real-time WebSocket events
+- [Pipeline Validation API](PIPELINE_VALIDATION_API.md) - Pipeline validation endpoints
 
-### WebSocket API
-- [WebSocket API Reference](websocket-api.md) - Real-time event streaming
-- Channels: experiments, metrics, agents, deployments, alerts, cost-flow
+### Quick Start
 
-### Legacy Documentation
-- [Phoenix API v2](PHOENIX_API_v2.md) - Previous API version (deprecated)
+#### Base URLs
+- **REST API**: `http://localhost:8080/api/v2`
+- **WebSocket**: `ws://localhost:8080/ws` (same port as REST)
+- **Health Check**: `http://localhost:8080/health`
 
-## Quick Start
+#### Authentication
 
-### 1. Obtain Authentication Token
+**For Agents:**
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "password"}'
+curl -H "X-Agent-Host-ID: agent-001" \
+     http://localhost:8080/api/v2/agent/tasks
 ```
 
-### 2. Create an Experiment
+**For Users (optional in dev):**
 ```bash
-curl -X POST http://localhost:8080/api/v1/experiments \
-  -H "Authorization: Bearer <token>" \
+curl -H "Authorization: Bearer <jwt-token>" \
+     http://localhost:8080/api/v2/experiments
+```
+
+## 🚀 Common Operations
+
+### 1. Create an Experiment
+```bash
+curl -X POST http://localhost:8080/api/v2/experiments \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Reduce metrics cardinality",
-    "baseline_pipeline_id": "default",
-    "candidate_pipeline_id": "adaptive-filter-v2",
-    "traffic_split": 20
+    "name": "Reduce API Costs",
+    "baseline_pipeline": "baseline",
+    "candidate_pipeline": "adaptive-filter",
+    "duration": "24h"
   }'
+```
+
+### 2. Start Agent Polling
+```bash
+# Long-polling with 30s timeout
+curl -H "X-Agent-Host-ID: agent-001" \
+     http://localhost:8080/api/v2/agent/tasks
 ```
 
 ### 3. Connect to WebSocket
 ```javascript
-const ws = new WebSocket('ws://localhost:8080/ws?token=<token>');
-ws.onmessage = (event) => {
-  console.log('Real-time update:', JSON.parse(event.data));
-};
+const ws = new WebSocket('ws://localhost:8080/ws');
+ws.on('open', () => {
+  ws.send(JSON.stringify({
+    type: 'subscribe',
+    payload: { events: ['experiment_update'] }
+  }));
+});
 ```
 
-## API Features
+## 🔌 Collector Support
 
-### Core Capabilities
-- **Experiment Management** - Create, monitor, and analyze A/B tests
-- **Pipeline Configuration** - Deploy and validate optimization pipelines
-- **Agent Orchestration** - Manage distributed agent fleet
-- **Real-time Monitoring** - WebSocket streaming for live updates
-- **Cost Analysis** - Track savings and optimization impact
-
-### Key Endpoints
-
-#### Experiments
-- `POST /api/v1/experiments` - Create new experiment
-- `GET /api/v1/experiments/{id}` - Get experiment details
-- `POST /api/v1/experiments/{id}/start` - Start experiment
-- `GET /api/v1/experiments/{id}/metrics` - Get experiment metrics
-
-#### Pipelines
-- `GET /api/v1/pipelines` - List available pipelines
-- `POST /api/v1/pipelines/validate` - Validate configuration
-- `POST /api/v1/pipelines/render` - Render pipeline template
-
-#### Agents
-- `GET /api/v1/agent/tasks` - Poll for tasks (agent-only)
-- `POST /api/v1/agent/heartbeat` - Send heartbeat
-- `POST /api/v1/agent/metrics` - Report metrics
-
-#### Analysis
-- `GET /api/v1/cost-flow` - Real-time cost analysis
-- `GET /api/v1/fleet/status` - Fleet overview
-
-## Authentication
-
-### JWT Authentication (Users/CLI)
-```
-Authorization: Bearer <jwt-token>
+### OpenTelemetry (Default)
+```json
+{
+  "collector_type": "otel",
+  "pipeline_template": "adaptive-filter"
+}
 ```
 
-### Agent Authentication
-```
-X-Agent-Host-ID: <agent-host-id>
+### NRDOT (New Relic)
+```json
+{
+  "collector_type": "nrdot",
+  "pipeline_template": "nrdot-cardinality",
+  "nrdot_config": {
+    "license_key": "your-key",
+    "otlp_endpoint": "otlp.nr-data.net:4317"
+  }
+}
 ```
 
-## Error Handling
+## 📊 Key Endpoints
 
-Standard error response format:
+### Experiments
+- `POST /api/v2/experiments` - Create experiment
+- `GET /api/v2/experiments/{id}` - Get experiment details
+- `POST /api/v2/experiments/{id}/start` - Start experiment
+- `POST /api/v2/experiments/{id}/stop` - Stop experiment
+- `GET /api/v2/experiments/{id}/metrics` - Get metrics
+
+### Pipelines
+- `GET /api/v2/pipelines/templates` - List templates
+- `POST /api/v2/pipelines/validate` - Validate config
+- `POST /api/v2/pipelines/render` - Render template
+
+### Agent Operations
+- `GET /api/v2/agent/tasks` - Poll for tasks (long-poll)
+- `POST /api/v2/agent/heartbeat` - Send heartbeat
+- `POST /api/v2/agent/metrics` - Report metrics
+
+### Real-time Monitoring
+- `WS /ws` - WebSocket connection
+- `GET /api/v2/metrics/cost-flow` - Live cost data
+- `GET /api/v2/fleet/status` - Agent fleet status
+
+## 🛠️ SDKs and Tools
+
+### CLI Tool
+```bash
+# Install Phoenix CLI
+go install github.com/phoenix/platform/phoenix-cli
+
+# Create experiment
+phoenix-cli experiment create \
+  --name "Test" \
+  --baseline "baseline" \
+  --candidate "topk"
+```
+
+### Language SDKs
+- **Go**: Built-in client in `/pkg/client`
+- **Python**: Coming soon
+- **JavaScript/TypeScript**: Coming soon
+
+## 📖 Additional Resources
+
+- [API Changelog](../../CHANGELOG.md)
+- [Error Codes Reference](PHOENIX_API_v2.md#error-handling)
+- [Rate Limiting](PHOENIX_API_v2.md#rate-limiting)
+- [OpenAPI Specification](http://localhost:8080/api/v2/openapi.json)
+
+## 🔍 API Version History
+
+- **v2** (Current) - REST + WebSocket, NRDOT support
+- **v1** (Deprecated) - Legacy REST API
+
+## 💡 Best Practices
+
+1. **Use Long-Polling**: Agents should use 30s timeout
+2. **Batch Operations**: Group related API calls
+3. **Handle Retries**: Implement exponential backoff
+4. **Monitor Rate Limits**: Check X-RateLimit headers
+5. **Use WebSocket**: For real-time updates
+
+## 🚨 Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| 401 Unauthorized | Check authentication headers |
+| 404 Not Found | Verify API version (v2) |
+| 429 Too Many Requests | Implement rate limiting |
+| WebSocket drops | Implement reconnection logic |
+
+## Error Response Format
+
 ```json
 {
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "Invalid pipeline configuration",
     "details": {
-      "field": "config.importance_threshold",
+      "field": "config.threshold",
       "reason": "Must be between 0.1 and 0.99"
     }
   }
 }
 ```
 
-## Rate Limits
-
-- Standard endpoints: 1000 req/min
-- Agent endpoints: 10000 req/min
-- WebSocket: 100 concurrent connections
-
-## SDK Support
-
-Official SDKs available:
-- Go SDK: `github.com/phoenix/platform/sdk/go`
-- Python SDK: `pip install phoenix-platform`
-- Node.js SDK: `npm install @phoenix/platform-sdk`
-
 ## Support
 
-- [Issue Tracker](https://github.com/phoenix/platform/issues)
+- [GitHub Issues](https://github.com/phoenix/platform/issues)
 - [Discord Community](https://discord.gg/phoenix)
-- Email: api-support@phoenix.io
+- [Documentation](https://docs.phoenix.io)
