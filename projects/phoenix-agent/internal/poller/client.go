@@ -28,11 +28,11 @@ type Task struct {
 }
 
 type AgentStatus struct {
-	HostID        string                 `json:"host_id"`
-	AgentVersion  string                 `json:"agent_version"`
-	Status        string                 `json:"status"`
-	ActiveTasks   []string               `json:"active_tasks"`
-	ResourceUsage ResourceUsage          `json:"resource_usage"`
+	HostID        string        `json:"host_id"`
+	AgentVersion  string        `json:"agent_version"`
+	Status        string        `json:"status"`
+	ActiveTasks   []string      `json:"active_tasks"`
+	ResourceUsage ResourceUsage `json:"resource_usage"`
 }
 
 type ResourceUsage struct {

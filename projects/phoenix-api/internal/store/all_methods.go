@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-	
+
 	"github.com/phoenix/platform/pkg/database"
-	
+
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/rs/zerolog/log"
 )
@@ -18,7 +18,7 @@ func (s *CompositeStore) CreateTask(ctx context.Context, task *models.Task) erro
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	
+
 	query := `
 		INSERT INTO tasks (
 			host_id, experiment_id, task_type, action, config,
@@ -26,16 +26,16 @@ func (s *CompositeStore) CreateTask(ctx context.Context, task *models.Task) erro
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, updated_at
 	`
-	
+
 	err = s.pipelineStore.db.DB().QueryRowContext(ctx, query,
 		task.HostID, task.ExperimentID, task.Type, task.Action,
 		string(configJSON), task.Priority, task.Status, task.RetryCount,
 	).Scan(&task.ID, &task.CreatedAt, &task.UpdatedAt)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to create task: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -46,15 +46,15 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 		       result, error_message, retry_count, created_at, updated_at
 		FROM tasks WHERE id = $1
 	`
-	
+
 	row := s.pipelineStore.db.DB().QueryRowContext(ctx, query, taskID)
-	
+
 	var task models.Task
 	var configJSON string
 	var resultJSON database.NullString
 	var assignedAt, startedAt, completedAt database.NullTime
 	var errorMessage database.NullString
-	
+
 	err := row.Scan(
 		&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
 		&configJSON, &task.Priority, &task.Status,
@@ -62,14 +62,14 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 		&resultJSON, &errorMessage, &task.RetryCount,
 		&task.CreatedAt, &task.UpdatedAt,
 	)
-	
+
 	if err == database.ErrNoRows {
 		return nil, fmt.Errorf("task not found: %s", taskID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
-	
+
 	// Handle nullable fields
 	if assignedAt.Valid {
 		task.AssignedAt = &assignedAt.Time
@@ -83,7 +83,7 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 	if errorMessage.Valid {
 		task.ErrorMessage = errorMessage.String
 	}
-	
+
 	// Unmarshal JSON fields
 	if err := json.Unmarshal([]byte(configJSON), &task.Config); err != nil {
 		task.Config = make(map[string]interface{})
@@ -93,7 +93,7 @@ func (s *CompositeStore) GetTask(ctx context.Context, taskID string) (*models.Ta
 			task.Result = make(map[string]interface{})
 		}
 	}
-	
+
 	return &task, nil
 }
 
@@ -104,60 +104,60 @@ func (s *CompositeStore) ListTasks(ctx context.Context, filters map[string]inter
 		       result, error_message, retry_count, created_at, updated_at
 		FROM tasks WHERE 1=1
 	`
-	
+
 	var args []interface{}
 	argCount := 0
-	
+
 	// Build dynamic query based on filters
 	if hostID, ok := filters["host_id"].(string); ok && hostID != "" {
 		argCount++
 		query += fmt.Sprintf(" AND host_id = $%d", argCount)
 		args = append(args, hostID)
 	}
-	
+
 	if experimentID, ok := filters["experiment_id"].(string); ok && experimentID != "" {
 		argCount++
 		query += fmt.Sprintf(" AND experiment_id = $%d", argCount)
 		args = append(args, experimentID)
 	}
-	
+
 	if status, ok := filters["status"].(string); ok && status != "" {
 		argCount++
 		query += fmt.Sprintf(" AND status = $%d", argCount)
 		args = append(args, status)
 	}
-	
+
 	if taskType, ok := filters["type"].(string); ok && taskType != "" {
 		argCount++
 		query += fmt.Sprintf(" AND task_type = $%d", argCount)
 		args = append(args, taskType)
 	}
-	
+
 	// Add ordering
 	query += " ORDER BY priority DESC, created_at ASC"
-	
+
 	// Add limit if specified
 	if limit, ok := filters["limit"].(int); ok && limit > 0 {
 		argCount++
 		query += fmt.Sprintf(" LIMIT $%d", argCount)
 		args = append(args, limit)
 	}
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list tasks: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var tasks []*models.Task
-	
+
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
 		var resultJSON database.NullString
 		var assignedAt, startedAt, completedAt database.NullTime
 		var errorMessage database.NullString
-		
+
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
 			&configJSON, &task.Priority, &task.Status,
@@ -165,12 +165,12 @@ func (s *CompositeStore) ListTasks(ctx context.Context, filters map[string]inter
 			&resultJSON, &errorMessage, &task.RetryCount,
 			&task.CreatedAt, &task.UpdatedAt,
 		)
-		
+
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan task row")
 			continue
 		}
-		
+
 		// Handle nullable fields
 		if assignedAt.Valid {
 			task.AssignedAt = &assignedAt.Time
@@ -184,7 +184,7 @@ func (s *CompositeStore) ListTasks(ctx context.Context, filters map[string]inter
 		if errorMessage.Valid {
 			task.ErrorMessage = errorMessage.String
 		}
-		
+
 		// Unmarshal JSON fields
 		if err := json.Unmarshal([]byte(configJSON), &task.Config); err != nil {
 			task.Config = make(map[string]interface{})
@@ -194,10 +194,10 @@ func (s *CompositeStore) ListTasks(ctx context.Context, filters map[string]inter
 				task.Result = make(map[string]interface{})
 			}
 		}
-		
+
 		tasks = append(tasks, &task)
 	}
-	
+
 	return tasks, nil
 }
 
@@ -206,12 +206,12 @@ func (s *CompositeStore) UpdateTask(ctx context.Context, task *models.Task) erro
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	
+
 	resultJSON, err := json.Marshal(task.Result)
 	if err != nil {
 		resultJSON = []byte("null")
 	}
-	
+
 	query := `
 		UPDATE tasks SET
 			status = $2,
@@ -225,17 +225,17 @@ func (s *CompositeStore) UpdateTask(ctx context.Context, task *models.Task) erro
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
-	
+
 	_, err = s.pipelineStore.db.DB().ExecContext(ctx, query,
 		task.ID, task.Status, task.AssignedAt, task.StartedAt,
 		task.CompletedAt, string(resultJSON), task.ErrorMessage,
 		task.RetryCount, string(configJSON),
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -246,7 +246,7 @@ func (s *CompositeStore) GetPendingTasksForHost(ctx context.Context, hostID stri
 		"status":  "pending",
 		"limit":   10,
 	}
-	
+
 	return s.ListTasks(ctx, filters)
 }
 
@@ -254,7 +254,7 @@ func (s *CompositeStore) GetTasksByExperiment(ctx context.Context, experimentID 
 	filters := map[string]interface{}{
 		"experiment_id": experimentID,
 	}
-	
+
 	return s.ListTasks(ctx, filters)
 }
 
@@ -272,7 +272,7 @@ func (s *CompositeStore) GetTaskStats(ctx context.Context) (map[string]interface
 		FROM tasks
 		WHERE created_at > NOW() - INTERVAL '24 hours'
 	`
-	
+
 	var stats struct {
 		Total             int
 		Pending           int
@@ -283,16 +283,16 @@ func (s *CompositeStore) GetTaskStats(ctx context.Context) (map[string]interface
 		UniqueHosts       int
 		UniqueExperiments int
 	}
-	
+
 	err := s.pipelineStore.db.DB().QueryRowContext(ctx, query).Scan(
 		&stats.Total, &stats.Pending, &stats.Assigned, &stats.Running,
 		&stats.Completed, &stats.Failed, &stats.UniqueHosts, &stats.UniqueExperiments,
 	)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get task stats: %w", err)
 	}
-	
+
 	return map[string]interface{}{
 		"total":              stats.Total,
 		"pending":            stats.Pending,
@@ -307,7 +307,7 @@ func (s *CompositeStore) GetTaskStats(ctx context.Context) (map[string]interface
 
 func (s *CompositeStore) GetActiveTasks(ctx context.Context, status, hostID string, limit int) ([]*models.Task, error) {
 	filters := make(map[string]interface{})
-	
+
 	if status != "" {
 		// Handle "active" as a special case meaning non-completed tasks
 		if status == "active" {
@@ -315,15 +315,15 @@ func (s *CompositeStore) GetActiveTasks(ctx context.Context, status, hostID stri
 		}
 		filters["status"] = status
 	}
-	
+
 	if hostID != "" {
 		filters["host_id"] = hostID
 	}
-	
+
 	if limit > 0 {
 		filters["limit"] = limit
 	}
-	
+
 	return s.ListTasks(ctx, filters)
 }
 
@@ -336,39 +336,39 @@ func (s *CompositeStore) getActiveTasksSpecial(ctx context.Context, hostID strin
 		FROM tasks 
 		WHERE status IN ('pending', 'assigned', 'running')
 	`
-	
+
 	var args []interface{}
 	argCount := 0
-	
+
 	if hostID != "" {
 		argCount++
 		query += fmt.Sprintf(" AND host_id = $%d", argCount)
 		args = append(args, hostID)
 	}
-	
+
 	query += " ORDER BY priority DESC, created_at ASC"
-	
+
 	if limit > 0 {
 		argCount++
 		query += fmt.Sprintf(" LIMIT $%d", argCount)
 		args = append(args, limit)
 	}
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active tasks: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var tasks []*models.Task
-	
+
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
 		var resultJSON database.NullString
 		var assignedAt, startedAt, completedAt database.NullTime
 		var errorMessage database.NullString
-		
+
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
 			&configJSON, &task.Priority, &task.Status,
@@ -376,12 +376,12 @@ func (s *CompositeStore) getActiveTasksSpecial(ctx context.Context, hostID strin
 			&resultJSON, &errorMessage, &task.RetryCount,
 			&task.CreatedAt, &task.UpdatedAt,
 		)
-		
+
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan task row")
 			continue
 		}
-		
+
 		// Handle nullable fields
 		if assignedAt.Valid {
 			task.AssignedAt = &assignedAt.Time
@@ -395,7 +395,7 @@ func (s *CompositeStore) getActiveTasksSpecial(ctx context.Context, hostID strin
 		if errorMessage.Valid {
 			task.ErrorMessage = errorMessage.String
 		}
-		
+
 		// Unmarshal JSON fields
 		if err := json.Unmarshal([]byte(configJSON), &task.Config); err != nil {
 			task.Config = make(map[string]interface{})
@@ -405,10 +405,10 @@ func (s *CompositeStore) getActiveTasksSpecial(ctx context.Context, hostID strin
 				task.Result = make(map[string]interface{})
 			}
 		}
-		
+
 		tasks = append(tasks, &task)
 	}
-	
+
 	return tasks, nil
 }
 
@@ -418,22 +418,22 @@ func (s *CompositeStore) UpsertAgent(ctx context.Context, agent *models.AgentSta
 	if err != nil {
 		return fmt.Errorf("failed to marshal capabilities: %w", err)
 	}
-	
+
 	activeTasksJSON, err := json.Marshal(agent.ActiveTasks)
 	if err != nil {
 		return fmt.Errorf("failed to marshal active_tasks: %w", err)
 	}
-	
+
 	resourceUsageJSON, err := json.Marshal(agent.ResourceUsage)
 	if err != nil {
 		return fmt.Errorf("failed to marshal resource_usage: %w", err)
 	}
-	
+
 	metadataJSON, err := json.Marshal(agent.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	
+
 	query := `
 		INSERT INTO agents (
 			host_id, hostname, ip_address, agent_version, started_at,
@@ -452,18 +452,18 @@ func (s *CompositeStore) UpsertAgent(ctx context.Context, agent *models.AgentSta
 			metadata = EXCLUDED.metadata,
 			updated_at = CURRENT_TIMESTAMP
 	`
-	
+
 	_, err = s.pipelineStore.db.DB().ExecContext(ctx, query,
 		agent.HostID, agent.Hostname, agent.IPAddress, agent.AgentVersion,
 		agent.StartedAt, agent.LastHeartbeat, agent.Status,
 		string(capabilitiesJSON), string(activeTasksJSON),
 		string(resourceUsageJSON), string(metadataJSON),
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to upsert agent: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -474,31 +474,31 @@ func (s *CompositeStore) GetAgent(ctx context.Context, hostID string) (*models.A
 		       resource_usage, metadata, created_at, updated_at
 		FROM agents WHERE host_id = $1
 	`
-	
+
 	row := s.pipelineStore.db.DB().QueryRowContext(ctx, query, hostID)
-	
+
 	var agent models.AgentStatus
 	var capabilitiesJSON, activeTasksJSON, resourceUsageJSON, metadataJSON string
 	var startedAt database.NullTime
-	
+
 	err := row.Scan(
 		&agent.HostID, &agent.Hostname, &agent.IPAddress, &agent.AgentVersion,
 		&startedAt, &agent.LastHeartbeat, &agent.Status,
 		&capabilitiesJSON, &activeTasksJSON, &resourceUsageJSON, &metadataJSON,
 		&agent.CreatedAt, &agent.UpdatedAt,
 	)
-	
+
 	if err == database.ErrNoRows {
 		return nil, fmt.Errorf("agent not found: %s", hostID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get agent: %w", err)
 	}
-	
+
 	if startedAt.Valid {
 		agent.StartedAt = &startedAt.Time
 	}
-	
+
 	// Unmarshal JSON fields
 	if err := json.Unmarshal([]byte(capabilitiesJSON), &agent.Capabilities); err != nil {
 		agent.Capabilities = make(map[string]interface{})
@@ -512,7 +512,7 @@ func (s *CompositeStore) GetAgent(ctx context.Context, hostID string) (*models.A
 	if err := json.Unmarshal([]byte(metadataJSON), &agent.Metadata); err != nil {
 		agent.Metadata = make(map[string]interface{})
 	}
-	
+
 	return &agent, nil
 }
 
@@ -523,36 +523,36 @@ func (s *CompositeStore) ListAgents(ctx context.Context) ([]*models.AgentStatus,
 		       resource_usage, metadata, created_at, updated_at
 		FROM agents ORDER BY hostname
 	`
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list agents: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var agents []*models.AgentStatus
-	
+
 	for rows.Next() {
 		var agent models.AgentStatus
 		var capabilitiesJSON, activeTasksJSON, resourceUsageJSON, metadataJSON string
 		var startedAt database.NullTime
-		
+
 		err := rows.Scan(
 			&agent.HostID, &agent.Hostname, &agent.IPAddress, &agent.AgentVersion,
 			&startedAt, &agent.LastHeartbeat, &agent.Status,
 			&capabilitiesJSON, &activeTasksJSON, &resourceUsageJSON, &metadataJSON,
 			&agent.CreatedAt, &agent.UpdatedAt,
 		)
-		
+
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan agent row")
 			continue
 		}
-		
+
 		if startedAt.Valid {
 			agent.StartedAt = &startedAt.Time
 		}
-		
+
 		// Unmarshal JSON fields
 		if err := json.Unmarshal([]byte(capabilitiesJSON), &agent.Capabilities); err != nil {
 			agent.Capabilities = make(map[string]interface{})
@@ -566,10 +566,10 @@ func (s *CompositeStore) ListAgents(ctx context.Context) ([]*models.AgentStatus,
 		if err := json.Unmarshal([]byte(metadataJSON), &agent.Metadata); err != nil {
 			agent.Metadata = make(map[string]interface{})
 		}
-		
+
 		agents = append(agents, &agent)
 	}
-	
+
 	return agents, nil
 }
 
@@ -581,7 +581,7 @@ func (s *CompositeStore) UpdateAgentHeartbeat(ctx context.Context, heartbeat *mo
 	if err != nil {
 		return fmt.Errorf("failed to check agent existence: %w", err)
 	}
-	
+
 	if !exists {
 		// Create new agent entry
 		agent := &models.AgentStatus{
@@ -597,18 +597,18 @@ func (s *CompositeStore) UpdateAgentHeartbeat(ctx context.Context, heartbeat *mo
 		}
 		return s.UpsertAgent(ctx, agent)
 	}
-	
+
 	// Update existing agent
 	activeTasksJSON, err := json.Marshal(heartbeat.ActiveTasks)
 	if err != nil {
 		return fmt.Errorf("failed to marshal active_tasks: %w", err)
 	}
-	
+
 	resourceUsageJSON, err := json.Marshal(heartbeat.ResourceUsage)
 	if err != nil {
 		return fmt.Errorf("failed to marshal resource_usage: %w", err)
 	}
-	
+
 	query := `
 		UPDATE agents SET
 			agent_version = $2,
@@ -619,16 +619,16 @@ func (s *CompositeStore) UpdateAgentHeartbeat(ctx context.Context, heartbeat *mo
 			updated_at = CURRENT_TIMESTAMP
 		WHERE host_id = $1
 	`
-	
+
 	_, err = s.pipelineStore.db.DB().ExecContext(ctx, query,
 		heartbeat.HostID, heartbeat.AgentVersion, heartbeat.LastHeartbeat,
 		heartbeat.Status, string(activeTasksJSON), string(resourceUsageJSON),
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to update agent heartbeat: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -641,27 +641,27 @@ func (s *CompositeStore) GetAgentsWithLocation(ctx context.Context) (map[string]
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Filter agents that have location metadata and format for UI
 	var agentsWithLocation []map[string]interface{}
 	for _, agent := range agents {
 		if _, hasLat := agent.Metadata["latitude"]; hasLat {
 			if _, hasLon := agent.Metadata["longitude"]; hasLon {
 				agentMap := map[string]interface{}{
-					"host_id":   agent.HostID,
-					"hostname":  agent.Hostname,
-					"status":    agent.Status,
-					"latitude":  agent.Metadata["latitude"],
-					"longitude": agent.Metadata["longitude"],
-					"region":    agent.Metadata["region"],
-					"zone":      agent.Metadata["zone"],
+					"host_id":        agent.HostID,
+					"hostname":       agent.Hostname,
+					"status":         agent.Status,
+					"latitude":       agent.Metadata["latitude"],
+					"longitude":      agent.Metadata["longitude"],
+					"region":         agent.Metadata["region"],
+					"zone":           agent.Metadata["zone"],
 					"last_heartbeat": agent.LastHeartbeat,
 				}
 				agentsWithLocation = append(agentsWithLocation, agentMap)
 			}
 		}
 	}
-	
+
 	return map[string]interface{}{
 		"agents": agentsWithLocation,
 		"total":  len(agentsWithLocation),
@@ -678,28 +678,28 @@ func (s *CompositeStore) CacheMetric(ctx context.Context, hostID string, metric 
 	if !ok {
 		timestamp = time.Now()
 	}
-	
+
 	labelsJSON, err := json.Marshal(metric["labels"])
 	if err != nil {
 		labelsJSON = []byte("{}")
 	}
-	
+
 	query := `
 		INSERT INTO metric_cache (
 			experiment_id, timestamp, metric_name, variant,
 			host_id, value, labels
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	
+
 	_, err = s.pipelineStore.db.DB().ExecContext(ctx, query,
 		experimentID, timestamp, metricName, variant,
 		hostID, value, string(labelsJSON),
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to cache metric: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -715,24 +715,24 @@ func (s *CompositeStore) GetStaleTasks(ctx context.Context, threshold time.Durat
 		AND assigned_at < $1
 		ORDER BY assigned_at ASC
 	`
-	
+
 	cutoffTime := time.Now().Add(-threshold)
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, query, cutoffTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get stale tasks: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var tasks []*models.Task
-	
+
 	for rows.Next() {
 		var task models.Task
 		var configJSON string
 		var resultJSON database.NullString
 		var assignedAt, startedAt, completedAt database.NullTime
 		var errorMessage database.NullString
-		
+
 		err := rows.Scan(
 			&task.ID, &task.HostID, &task.ExperimentID, &task.Type, &task.Action,
 			&configJSON, &task.Priority, &task.Status,
@@ -740,12 +740,12 @@ func (s *CompositeStore) GetStaleTasks(ctx context.Context, threshold time.Durat
 			&resultJSON, &errorMessage, &task.RetryCount,
 			&task.CreatedAt, &task.UpdatedAt,
 		)
-		
+
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to scan stale task row")
 			continue
 		}
-		
+
 		// Handle nullable fields
 		if assignedAt.Valid {
 			task.AssignedAt = &assignedAt.Time
@@ -759,7 +759,7 @@ func (s *CompositeStore) GetStaleTasks(ctx context.Context, threshold time.Durat
 		if errorMessage.Valid {
 			task.ErrorMessage = errorMessage.String
 		}
-		
+
 		// Unmarshal JSON fields
 		if err := json.Unmarshal([]byte(configJSON), &task.Config); err != nil {
 			task.Config = make(map[string]interface{})
@@ -769,10 +769,10 @@ func (s *CompositeStore) GetStaleTasks(ctx context.Context, threshold time.Durat
 				task.Result = make(map[string]interface{})
 			}
 		}
-		
+
 		tasks = append(tasks, &task)
 	}
-	
+
 	return tasks, nil
 }
 
@@ -783,21 +783,21 @@ func (s *CompositeStore) DeleteOldTasks(ctx context.Context, before time.Time) e
 		WHERE created_at < $1
 		AND status IN ('completed', 'failed')
 	`
-	
+
 	result, err := s.pipelineStore.db.DB().ExecContext(ctx, query, before)
 	if err != nil {
 		return fmt.Errorf("failed to delete old tasks: %w", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	log.Info().
 		Int64("deleted_count", rowsAffected).
 		Time("before", before).
 		Msg("Deleted old tasks")
-	
+
 	return nil
 }

@@ -12,9 +12,9 @@ import (
 
 // JWTService provides JWT authentication services
 type JWTService struct {
-	generator  *jwt.TokenGenerator
-	validator  *jwt.TokenValidator
-	store      store.Store
+	generator *jwt.TokenGenerator
+	validator *jwt.TokenValidator
+	store     store.Store
 }
 
 // JWTClaims represents simplified claims for the API
@@ -44,10 +44,10 @@ func (s *JWTService) GenerateToken(claims JWTClaims) (token string, jti string, 
 	if claims.JTI == "" {
 		claims.JTI = uuid.New().String()
 	}
-	
+
 	// Convert single role to roles array
 	roles := []string{claims.Role}
-	
+
 	// The JWT package automatically generates a JTI in the ID field
 	token, err = s.generator.GenerateToken(
 		claims.UserID,
@@ -55,17 +55,17 @@ func (s *JWTService) GenerateToken(claims JWTClaims) (token string, jti string, 
 		roles,
 		"", // No namespace for now
 	)
-	
+
 	if err != nil {
 		return "", "", time.Time{}, err
 	}
-	
+
 	// Parse the token to get the JTI
 	parsedClaims, _ := s.validator.ValidateToken(token)
 	if parsedClaims != nil {
 		jti = parsedClaims.ID // JWT ID is stored in the ID field
 	}
-	
+
 	expiresAt = time.Now().Add(24 * time.Hour)
 	return token, jti, expiresAt, nil
 }
@@ -123,20 +123,20 @@ func (s *JWTService) RevokeToken(ctx context.Context, tokenString string, reason
 		// to prevent any edge cases
 		return fmt.Errorf("failed to parse token for revocation: %w", err)
 	}
-	
+
 	// Add to blacklist
 	if s.store != nil {
 		err = s.store.BlacklistToken(
 			ctx,
-			claims.ID,                   // JTI
-			claims.UserID,               // User ID
-			claims.ExpiresAt.Time,       // Expiration time
-			reason,                      // Reason for revocation
+			claims.ID,             // JTI
+			claims.UserID,         // User ID
+			claims.ExpiresAt.Time, // Expiration time
+			reason,                // Reason for revocation
 		)
 		if err != nil {
 			return fmt.Errorf("failed to blacklist token: %w", err)
 		}
 	}
-	
+
 	return nil
 }

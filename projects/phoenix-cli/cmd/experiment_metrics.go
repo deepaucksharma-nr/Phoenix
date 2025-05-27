@@ -102,19 +102,19 @@ func runExperimentMetrics(cmd *cobra.Command, args []string) error {
 	if len(metrics.Baseline.Cardinality) > 0 && len(metrics.Candidate.Cardinality) > 0 {
 		fmt.Println("\nComparison:")
 		fmt.Println("============")
-		
+
 		baselineLatest := metrics.Baseline.Cardinality[len(metrics.Baseline.Cardinality)-1].Value
 		candidateLatest := metrics.Candidate.Cardinality[len(metrics.Candidate.Cardinality)-1].Value
 		reduction := (baselineLatest - candidateLatest) / baselineLatest * 100
-		
+
 		fmt.Printf("Current Cardinality Reduction: %.1f%%\n", reduction)
-		
+
 		// Resource usage comparison
 		if len(metrics.Baseline.CPUUsage) > 0 && len(metrics.Candidate.CPUUsage) > 0 {
 			baselineCPU := metrics.Baseline.CPUUsage[len(metrics.Baseline.CPUUsage)-1].Value
 			candidateCPU := metrics.Candidate.CPUUsage[len(metrics.Candidate.CPUUsage)-1].Value
 			cpuDiff := candidateCPU - baselineCPU
-			
+
 			if cpuDiff > 0 {
 				fmt.Printf("CPU Overhead: +%.1f%%\n", cpuDiff)
 			} else {
@@ -136,17 +136,17 @@ func displayMetricsSummary(data client.TimeSeriesData) {
 		latest := data.Cardinality[len(data.Cardinality)-1]
 		fmt.Printf("  Cardinality:    %.0f metrics\n", latest.Value)
 	}
-	
+
 	if len(data.CPUUsage) > 0 {
 		latest := data.CPUUsage[len(data.CPUUsage)-1]
 		fmt.Printf("  CPU Usage:      %.1f%%\n", latest.Value)
 	}
-	
+
 	if len(data.MemoryUsage) > 0 {
 		latest := data.MemoryUsage[len(data.MemoryUsage)-1]
 		fmt.Printf("  Memory Usage:   %.1f MB\n", latest.Value)
 	}
-	
+
 	if len(data.NetworkTraffic) > 0 {
 		latest := data.NetworkTraffic[len(data.NetworkTraffic)-1]
 		fmt.Printf("  Network:        %.1f KB/s\n", latest.Value)
@@ -175,22 +175,22 @@ func printTimeSeriesTable(data client.TimeSeriesData) {
 		fmt.Println("  No data available")
 		return
 	}
-	
+
 	fmt.Println("  Time                  Cardinality  CPU%   Memory(MB)  Network(KB/s)")
 	fmt.Println("  ==================== ============ ====== =========== =============")
-	
+
 	// Show last 10 data points
 	start := 0
 	if len(data.Cardinality) > 10 {
 		start = len(data.Cardinality) - 10
 	}
-	
+
 	for i := start; i < len(data.Cardinality); i++ {
 		point := data.Cardinality[i]
 		cpu := "N/A"
 		memory := "N/A"
 		network := "N/A"
-		
+
 		if i < len(data.CPUUsage) {
 			cpu = fmt.Sprintf("%.1f", data.CPUUsage[i].Value)
 		}
@@ -200,7 +200,7 @@ func printTimeSeriesTable(data client.TimeSeriesData) {
 		if i < len(data.NetworkTraffic) {
 			network = fmt.Sprintf("%.1f", data.NetworkTraffic[i].Value)
 		}
-		
+
 		fmt.Printf("  %s %12.0f %6s %11s %13s\n",
 			point.Time.Format("2006-01-02 15:04:05"),
 			point.Value,

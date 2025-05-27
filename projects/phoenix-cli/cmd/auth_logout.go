@@ -21,7 +21,7 @@ func init() {
 
 func runLogout(cmd *cobra.Command, args []string) error {
 	cfg := config.New()
-	
+
 	// Check if we're logged in
 	if cfg.GetToken() == "" {
 		fmt.Println("You are not logged in.")

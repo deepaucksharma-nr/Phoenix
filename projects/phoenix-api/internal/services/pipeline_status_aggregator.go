@@ -302,7 +302,6 @@ func (a *PipelineStatusAggregator) generateSummary(status *AggregatedStatus) Sta
 	return summary
 }
 
-
 // UpdateDeploymentStatusFromAggregation updates deployment status based on aggregated data
 func (a *PipelineStatusAggregator) UpdateDeploymentStatusFromAggregation(ctx context.Context, deploymentID string) error {
 	// Get aggregated status

@@ -41,9 +41,9 @@ type ProcessorConfig struct {
 
 // ReceiverConfig represents a receiver configuration
 type ReceiverConfig struct {
-	Type      string                       `yaml:"type"`
-	Protocols map[string]ProtocolConfig   `yaml:"protocols,omitempty"`
-	Config    map[string]interface{}      `yaml:"config,omitempty"`
+	Type      string                    `yaml:"type"`
+	Protocols map[string]ProtocolConfig `yaml:"protocols,omitempty"`
+	Config    map[string]interface{}    `yaml:"config,omitempty"`
 }
 
 // ProtocolConfig represents a protocol configuration
@@ -121,7 +121,7 @@ func (ptr *PipelineTemplateRenderer) GenerateOptimizedPipeline(ctx context.Conte
 		Processors: []ProcessorConfig{},
 		Exporters: map[string]interface{}{
 			"prometheus": map[string]interface{}{
-				"endpoint": "0.0.0.0:8889",
+				"endpoint":  "0.0.0.0:8889",
 				"namespace": "phoenix",
 				"const_labels": map[string]string{
 					"experiment_id": experiment.ID,
@@ -165,7 +165,7 @@ func (ptr *PipelineTemplateRenderer) selectProcessors(experiment *models.Experim
 		Name: "batch",
 		Type: "batch",
 		Config: map[string]interface{}{
-			"timeout":   "1s",
+			"timeout":         "1s",
 			"send_batch_size": 1024,
 		},
 	})
@@ -175,8 +175,8 @@ func (ptr *PipelineTemplateRenderer) selectProcessors(experiment *models.Experim
 		Name: "memory_limiter",
 		Type: "memory_limiter",
 		Config: map[string]interface{}{
-			"check_interval": "1s",
-			"limit_mib":      512,
+			"check_interval":  "1s",
+			"limit_mib":       512,
 			"spike_limit_mib": 128,
 		},
 	})
@@ -187,8 +187,8 @@ func (ptr *PipelineTemplateRenderer) selectProcessors(experiment *models.Experim
 		if topkConfig, ok := experiment.Metadata["topk"]; ok {
 			if config, ok := topkConfig.(map[string]interface{}); ok {
 				processors = append(processors, ProcessorConfig{
-					Name: "topk",
-					Type: "topk",
+					Name:   "topk",
+					Type:   "topk",
 					Config: config,
 				})
 			}
@@ -198,8 +198,8 @@ func (ptr *PipelineTemplateRenderer) selectProcessors(experiment *models.Experim
 		if afConfig, ok := experiment.Metadata["adaptive_filter"]; ok {
 			if config, ok := afConfig.(map[string]interface{}); ok {
 				processors = append(processors, ProcessorConfig{
-					Name: "adaptive_filter",
-					Type: "adaptive_filter",
+					Name:   "adaptive_filter",
+					Type:   "adaptive_filter",
 					Config: config,
 				})
 			}
@@ -209,8 +209,8 @@ func (ptr *PipelineTemplateRenderer) selectProcessors(experiment *models.Experim
 		if filterConfig, ok := experiment.Metadata["filter"]; ok {
 			if config, ok := filterConfig.(map[string]interface{}); ok {
 				processors = append(processors, ProcessorConfig{
-					Name: "filter",
-					Type: "filter",
+					Name:   "filter",
+					Type:   "filter",
 					Config: config,
 				})
 			}
@@ -352,14 +352,14 @@ func (ptr *PipelineTemplateRenderer) validateReceiver(name string, receiver inte
 				if len(protocols) == 0 {
 					return fmt.Errorf("OTLP receiver must have at least one protocol configured")
 				}
-				
+
 				// Validate gRPC config
 				if grpc, ok := protocols["grpc"].(map[string]interface{}); ok {
 					if endpoint, ok := grpc["endpoint"].(string); ok && endpoint == "" {
 						return fmt.Errorf("gRPC endpoint cannot be empty")
 					}
 				}
-				
+
 				// Validate HTTP config
 				if http, ok := protocols["http"].(map[string]interface{}); ok {
 					if endpoint, ok := http["endpoint"].(string); ok && endpoint == "" {
@@ -371,7 +371,7 @@ func (ptr *PipelineTemplateRenderer) validateReceiver(name string, receiver inte
 			}
 		}
 	}
-	
+
 	// Validate hostmetrics receiver
 	if name == "hostmetrics" {
 		if cfg, ok := receiver.(map[string]interface{}); ok {
@@ -382,7 +382,7 @@ func (ptr *PipelineTemplateRenderer) validateReceiver(name string, receiver inte
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -398,7 +398,7 @@ func (ptr *PipelineTemplateRenderer) validateProcessor(processor ProcessorConfig
 		if processor.SendBatchSize < 0 {
 			return fmt.Errorf("send_batch_size cannot be negative")
 		}
-		
+
 	case "memory_limiter":
 		if processor.Limit < 0 {
 			return fmt.Errorf("limit_mib cannot be negative")
@@ -408,7 +408,7 @@ func (ptr *PipelineTemplateRenderer) validateProcessor(processor ProcessorConfig
 				return fmt.Errorf("invalid check_interval: %v", err)
 			}
 		}
-		
+
 	case "phoenix_adaptive_filter":
 		if processor.Config != nil {
 			if af, ok := processor.Config["adaptive_filter"].(map[string]interface{}); ok {
@@ -420,7 +420,7 @@ func (ptr *PipelineTemplateRenderer) validateProcessor(processor ProcessorConfig
 				}
 			}
 		}
-		
+
 	case "phoenix_topk":
 		if processor.Config != nil {
 			if topk, ok := processor.Config["topk"].(map[string]interface{}); ok {
@@ -437,7 +437,7 @@ func (ptr *PipelineTemplateRenderer) validateProcessor(processor ProcessorConfig
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -451,14 +451,14 @@ func (ptr *PipelineTemplateRenderer) validateExporter(name string, exporter inte
 			}
 		}
 	}
-	
+
 	// Validate OTLP exporter
 	if strings.HasPrefix(name, "otlp") {
 		if cfg, ok := exporter.(map[string]interface{}); ok {
 			if endpoint, ok := cfg["endpoint"].(string); ok && endpoint == "" {
 				return fmt.Errorf("OTLP endpoint cannot be empty")
 			}
-			
+
 			// Validate TLS config if present
 			if tls, ok := cfg["tls"].(map[string]interface{}); ok {
 				if _, ok := tls["insecure"].(bool); !ok {
@@ -467,7 +467,7 @@ func (ptr *PipelineTemplateRenderer) validateExporter(name string, exporter inte
 			}
 		}
 	}
-	
+
 	// Validate pushgateway exporter
 	if name == "pushgateway" {
 		if cfg, ok := exporter.(map[string]interface{}); ok {
@@ -476,19 +476,19 @@ func (ptr *PipelineTemplateRenderer) validateExporter(name string, exporter inte
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // GetBuiltinTemplates returns a map of built-in pipeline templates
 func (ptr *PipelineTemplateRenderer) GetBuiltinTemplates() map[string]string {
 	return map[string]string{
-		"baseline":             baselinePipelineTemplate,
-		"topk":                 topkPipelineTemplate,
-		"adaptive":             adaptiveFilterPipelineTemplate,
-		"hybrid":               hybridPipelineTemplate,
-		"nrdot-baseline":       nrdotBaselinePipelineTemplate,
-		"nrdot-cardinality":    nrdotCardinalityPipelineTemplate,
+		"baseline":          baselinePipelineTemplate,
+		"topk":              topkPipelineTemplate,
+		"adaptive":          adaptiveFilterPipelineTemplate,
+		"hybrid":            hybridPipelineTemplate,
+		"nrdot-baseline":    nrdotBaselinePipelineTemplate,
+		"nrdot-cardinality": nrdotCardinalityPipelineTemplate,
 	}
 }
 

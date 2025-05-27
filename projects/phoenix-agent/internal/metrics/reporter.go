@@ -45,7 +45,7 @@ func (r *Reporter) Start(ctx context.Context) {
 
 func (r *Reporter) reportMetrics(ctx context.Context) {
 	metrics := r.collectSystemMetrics()
-	
+
 	if err := r.client.SendMetrics(ctx, metrics); err != nil {
 		log.Error().Err(err).Msg("Failed to send metrics")
 	}
@@ -77,7 +77,7 @@ func (r *Reporter) collectSystemMetrics() []map[string]interface{} {
 				"host_id": r.config.HostID,
 			},
 		})
-		
+
 		metrics = append(metrics, map[string]interface{}{
 			"name":      "agent.memory.percent",
 			"value":     memInfo.UsedPercent,
@@ -99,7 +99,7 @@ func (r *Reporter) collectSystemMetrics() []map[string]interface{} {
 				"path":    "/",
 			},
 		})
-		
+
 		metrics = append(metrics, map[string]interface{}{
 			"name":      "agent.disk.percent",
 			"value":     diskInfo.UsedPercent,
@@ -121,7 +121,7 @@ func (r *Reporter) collectSystemMetrics() []map[string]interface{} {
 				"host_id": r.config.HostID,
 			},
 		})
-		
+
 		metrics = append(metrics, map[string]interface{}{
 			"name":      "agent.network.bytes_recv",
 			"value":     netStats[0].BytesRecv,

@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 // loadsimListProfilesCmd represents the loadsim list-profiles command
@@ -181,10 +181,10 @@ func showStaticProfiles() error {
 				aliasStr += ", " + profile.Aliases[i]
 			}
 		}
-		
-		impactStr := fmt.Sprintf("CPU: %s, Mem: %s, Net: %s", 
+
+		impactStr := fmt.Sprintf("CPU: %s, Mem: %s, Net: %s",
 			profile.Impact.CPU, profile.Impact.Memory, profile.Impact.Network)
-		
+
 		data = append(data, []string{
 			profile.Name,
 			aliasStr,
@@ -200,14 +200,14 @@ func showStaticProfiles() error {
 	// Show detailed information
 	fmt.Println("Profile Details:")
 	fmt.Println()
-	
+
 	for _, profile := range profiles {
 		fmt.Printf("%s (%s)\n", output.Bold(profile.Name), profile.Description)
 		if len(profile.Aliases) > 0 {
 			fmt.Printf("  Aliases: %v\n", profile.Aliases)
 		}
 		fmt.Printf("  Max Duration: %s\n", profile.MaxDuration)
-		fmt.Printf("  Resource Impact: CPU=%s, Memory=%s, Network=%s\n", 
+		fmt.Printf("  Resource Impact: CPU=%s, Memory=%s, Network=%s\n",
 			profile.Impact.CPU, profile.Impact.Memory, profile.Impact.Network)
 		fmt.Println("  Use Cases:")
 		for _, useCase := range profile.UseCases {

@@ -191,7 +191,7 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 
 	// For MVP, we'll simply record the promotion in the experiment metadata
 	// In the future, this could update an actual pipeline template in a registry
-	
+
 	// Update experiment metadata to track promotion
 	if exp.Metadata == nil {
 		exp.Metadata = make(map[string]interface{})
@@ -202,10 +202,10 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 		"template_url": exp.Config.CandidateTemplate.URL,
 		"variables":    exp.Config.CandidateTemplate.Variables,
 	}
-	
+
 	// Update experiment status
 	exp.Status.KPIs["promotion_status"] = 1.0 // 1.0 indicates promoted
-	
+
 	// Save the updated experiment
 	if err := c.store.UpdateExperiment(ctx, exp); err != nil {
 		return fmt.Errorf("failed to update experiment with promotion status: %w", err)
@@ -221,7 +221,7 @@ func (c *ExperimentController) PromoteExperiment(ctx context.Context, experiment
 			"promoted_template": exp.Config.CandidateTemplate.URL,
 		},
 	}
-	
+
 	if err := c.store.CreateExperimentEvent(ctx, event); err != nil {
 		log.Error().Err(err).Msg("Failed to create promotion event")
 	}
@@ -252,7 +252,7 @@ func (c *ExperimentController) CheckExperimentStatus(ctx context.Context, experi
 	// In a real implementation, we would check the actual pipeline status
 	baselineRunning := 0
 	candidateRunning := 0
-	
+
 	// TODO: When GetActivePipelines is implemented, count actual running pipelines
 	// For now, assume they're running based on experiment phase
 	if exp.Phase == "running" || exp.Phase == "deploying" {

@@ -85,7 +85,7 @@ func runPipelineList(cmd *cobra.Command, args []string) error {
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		fmt.Fprintln(w, "NAME\tTYPE\tDESCRIPTION\tPARAMETERS")
-		
+
 		for _, p := range pipelines {
 			params := "none"
 			if len(p.Parameters) > 0 {
@@ -95,7 +95,7 @@ func runPipelineList(cmd *cobra.Command, args []string) error {
 				}
 				params = fmt.Sprintf("%v", paramList)
 			}
-			
+
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				p.Name,
 				p.Type,

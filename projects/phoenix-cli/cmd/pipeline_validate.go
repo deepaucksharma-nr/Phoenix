@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
 )
 
 // pipelineValidateCmd represents the pipeline validate command
@@ -117,7 +117,7 @@ Examples:
 			validateCmd := exec.Command(otelcolPath, "validate", "--config", configFile)
 			var stderr bytes.Buffer
 			validateCmd.Stderr = &stderr
-			
+
 			if err := validateCmd.Run(); err != nil {
 				errors = append(errors, fmt.Sprintf("OTel collector validation failed: %s", stderr.String()))
 			} else {
@@ -146,7 +146,7 @@ Examples:
 		if len(errors) == 0 {
 			fmt.Println()
 			output.Success("Pipeline configuration is valid!")
-			
+
 			// Show summary
 			fmt.Println("\nConfiguration Summary:")
 			if receivers, ok := config["receivers"].(map[string]interface{}); ok {

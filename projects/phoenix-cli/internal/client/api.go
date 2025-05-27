@@ -398,20 +398,20 @@ func (c *APIClient) ListPipelineDeploymentVersions(deploymentID string) ([]inter
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to list deployment versions: %s", resp.Status)
 	}
-	
+
 	var result struct {
 		DeploymentID string        `json:"deployment_id"`
 		Versions     []interface{} `json:"versions"`
 	}
-	
+
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
-	
+
 	return result.Versions, nil
 }
 
@@ -430,25 +430,25 @@ func (c *APIClient) RollbackExperiment(id string, instant bool, reason string) (
 	if instant {
 		endpoint += "/instant"
 	}
-	
+
 	params := url.Values{}
 	if reason != "" {
 		params.Add("reason", reason)
 	}
-	
+
 	if len(params) > 0 {
 		endpoint += "?" + params.Encode()
 	}
-	
+
 	resp, err := c.doRequest("POST", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result map[string]interface{}
 	if err := c.parseResponse(resp, &result); err != nil {
 		return nil, err
 	}
-	
+
 	return result, nil
 }

@@ -2,8 +2,8 @@ package store
 
 import (
 	"context"
-	"github.com/phoenix/platform/pkg/database"
 	"errors"
+	"github.com/phoenix/platform/pkg/database"
 	"time"
 
 	"github.com/google/uuid"

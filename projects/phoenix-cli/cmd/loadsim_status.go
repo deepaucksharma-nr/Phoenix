@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var loadSimWatch bool
@@ -56,7 +56,7 @@ Examples:
 
 		// Show specific load simulation
 		name := args[0]
-		
+
 		// If the user provided an experiment ID, convert it to loadsim name
 		if len(name) == 12 && name[:4] == "exp-" {
 			name = fmt.Sprintf("loadsim-%s", name[4:])
@@ -89,7 +89,7 @@ func listLoadSimulations(ctx context.Context, loadSimClient *client.LoadSimulati
 		if sim.StartTime != nil {
 			started = sim.StartTime.Format("2006-01-02 15:04:05")
 		}
-		
+
 		data = append(data, []string{
 			sim.Name,
 			sim.ExperimentID,
@@ -111,7 +111,7 @@ func showLoadSimulation(ctx context.Context, loadSimClient *client.LoadSimulatio
 	}
 
 	output.Success(fmt.Sprintf("Load Simulation: %s", sim.Name))
-	
+
 	data := [][]string{
 		{"Experiment ID", sim.ExperimentID},
 		{"Profile", sim.Profile},
@@ -171,7 +171,7 @@ func watchLoadSimulation(ctx context.Context, loadSimClient *client.LoadSimulati
 
 func init() {
 	loadsimCmd.AddCommand(loadsimStatusCmd)
-	
-	loadsimStatusCmd.Flags().BoolVarP(&loadSimWatch, "watch", "w", false, 
+
+	loadsimStatusCmd.Flags().BoolVarP(&loadSimWatch, "watch", "w", false,
 		"Watch status updates continuously")
 }

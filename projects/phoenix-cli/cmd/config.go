@@ -83,12 +83,12 @@ func init() {
 
 func runConfigGet(cmd *cobra.Command, args []string) error {
 	key := args[0]
-	
+
 	value := viper.Get(key)
 	if value == nil {
 		return fmt.Errorf("configuration key '%s' not found", key)
 	}
-	
+
 	switch outputFormat {
 	case "json":
 		fmt.Printf("{\"%s\": \"%v\"}\n", key, value)
@@ -97,16 +97,16 @@ func runConfigGet(cmd *cobra.Command, args []string) error {
 	default:
 		fmt.Printf("%v\n", value)
 	}
-	
+
 	return nil
 }
 
 func runConfigSet(cmd *cobra.Command, args []string) error {
 	key := args[0]
 	value := args[1]
-	
+
 	cfg := config.New()
-	
+
 	// Handle special keys
 	switch key {
 	case "api.endpoint":
@@ -125,14 +125,14 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("failed to save configuration: %w", err)
 		}
 	}
-	
+
 	fmt.Printf("Configuration updated: %s = %s\n", key, value)
 	return nil
 }
 
 func runConfigList(cmd *cobra.Command, args []string) error {
 	settings := viper.AllSettings()
-	
+
 	switch outputFormat {
 	case "json":
 		data, _ := json.MarshalIndent(settings, "", "  ")
@@ -146,7 +146,7 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 		fmt.Println("=====================")
 		printSettings("", settings)
 	}
-	
+
 	return nil
 }
 
@@ -156,7 +156,7 @@ func printSettings(prefix string, settings map[string]interface{}) {
 		if prefix != "" {
 			fullKey = prefix + "." + key
 		}
-		
+
 		switch v := value.(type) {
 		case map[string]interface{}:
 			printSettings(fullKey, v)
@@ -175,28 +175,28 @@ func printSettings(prefix string, settings map[string]interface{}) {
 
 func runConfigReset(cmd *cobra.Command, args []string) error {
 	fmt.Print("Are you sure you want to reset all configuration to defaults? [y/N]: ")
-	
+
 	var response string
 	fmt.Scanln(&response)
 	if strings.ToLower(response) != "y" {
 		fmt.Println("Reset cancelled.")
 		return nil
 	}
-	
+
 	// Clear all settings
 	for _, key := range viper.AllKeys() {
 		viper.Set(key, nil)
 	}
-	
+
 	// Set defaults
 	viper.Set("api.endpoint", "http://localhost:8080")
 	viper.Set("output.format", "table")
-	
+
 	// Write config
 	if err := viper.WriteConfig(); err != nil {
 		return fmt.Errorf("failed to reset configuration: %w", err)
 	}
-	
+
 	fmt.Println("Configuration reset to defaults.")
 	return nil
 }

@@ -40,7 +40,7 @@ var uiStatusCmd = &cobra.Command{
 		// Get config
 		cfg := config.New()
 		apiURL := cfg.GetAPIEndpoint()
-		
+
 		// Check API
 		apiStatus := checkEndpoint(apiURL + "/health")
 		fmt.Printf("Phoenix API:       %s\n", formatStatus(apiStatus))

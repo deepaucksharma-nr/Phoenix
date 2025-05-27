@@ -14,8 +14,14 @@ Get Phoenix up and running in under 5 minutes.
 ```bash
 # Clone and start Phoenix
 git clone https://github.com/phoenix/platform.git
-cd phoenix
-./scripts/run-phoenix.sh
+cd platform
+
+# Run the single-VM setup
+./deployments/single-vm/scripts/setup-single-vm.sh
+
+# Start all services
+cd deployments/single-vm
+docker-compose up -d
 ```
 
 ## 📍 Access Points
@@ -43,51 +49,65 @@ After startup (~30 seconds):
 If you prefer manual control:
 
 ```bash
+# Navigate to deployment directory
+cd deployments/single-vm
+
 # Start infrastructure
-docker-compose up -d postgres
+docker-compose up -d postgres prometheus grafana
+
+# Wait for database to be ready
+./scripts/wait-for-postgres.sh
 
 # Start Phoenix API (includes WebSocket server)
 docker-compose up -d phoenix-api
 
-# Start agents (they'll poll for tasks)
-docker-compose up -d phoenix-agent
-
 # Start dashboard
 docker-compose up -d phoenix-dashboard
+
+# Install agents on target hosts
+./scripts/install-agent.sh
 ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-Create a `.env` file:
+The setup script creates `.env` in `deployments/single-vm/`:
 
 ```bash
 # Phoenix API
 PHOENIX_API_URL=http://localhost:8080
-DATABASE_URL=postgresql://phoenix:phoenix@localhost:5432/phoenix
+DATABASE_URL=postgresql://phoenix:phoenix@postgres:5432/phoenix
+
+# Security (update these!)
+JWT_SECRET=change-me-in-production
+POSTGRES_PASSWORD=change-me-in-production
 
 # Agent Authentication
 AGENT_HOST_ID=$(hostname)
 
 # Optional
-ENABLE_AUTH=false
+ENABLE_AUTH=true
 LOG_LEVEL=info
 TASK_POLL_INTERVAL=30s
 ```
 
-### Agent Configuration
+### Agent Installation
 
-Agents use task polling with X-Agent-Host-ID authentication:
+Agents run as systemd services on host machines:
 
 ```bash
 # On each target host
-docker run -d \
-  --name phoenix-agent \
-  -e PHOENIX_API_URL=http://phoenix-api:8080 \
-  -e AGENT_HOST_ID=$(hostname) \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  phoenix/agent:latest
+curl -sSL http://your-phoenix-api:8080/install-agent.sh | sudo bash
+
+# Or manually:
+sudo ./deployments/single-vm/scripts/install-agent.sh \
+  --api-url http://your-phoenix-api:8080 \
+  --host-id $(hostname)
+
+# Check agent status
+sudo systemctl status phoenix-agent
+sudo journalctl -u phoenix-agent -f
 ```
 
 ## 📊 Verify Installation

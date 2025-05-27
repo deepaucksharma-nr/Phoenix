@@ -86,13 +86,13 @@ func runListDeployments(cmd *cobra.Command, args []string) error {
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		fmt.Fprintln(w, "ID\tNAME\tPIPELINE\tNAMESPACE\tSTATUS\tINSTANCES\tCREATED")
-		
+
 		for _, d := range deployments {
 			instances := "N/A"
 			if d.Instances != nil {
 				instances = fmt.Sprintf("%d/%d", d.Instances.Ready, d.Instances.Desired)
 			}
-			
+
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 				d.ID[:8], // Short ID
 				truncate(d.DeploymentName, 20),

@@ -3,10 +3,10 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -56,7 +56,7 @@ Examples:
 		fmt.Printf("Pipeline: %s\n", deployment.Pipeline)
 		fmt.Printf("Namespace: %s\n", deployment.Namespace)
 		fmt.Printf("Status: %s\n", deployment.Status)
-		
+
 		if len(deployment.TargetNodes) > 0 {
 			fmt.Printf("\nThis will affect %d target nodes:\n", len(deployment.TargetNodes))
 			for node := range deployment.TargetNodes {
@@ -79,13 +79,13 @@ Examples:
 
 		// Delete the deployment
 		output.Info("Deleting pipeline deployment...")
-		
+
 		if err := apiClient.DeletePipelineDeployment(deploymentID); err != nil {
 			return fmt.Errorf("failed to delete deployment: %w", err)
 		}
 
 		output.Success("Pipeline deployment deleted successfully")
-		
+
 		// Show summary
 		fmt.Println("\nDeleted resources:")
 		fmt.Printf("  - Deployment: %s\n", deployment.Name)
@@ -101,6 +101,6 @@ Examples:
 func init() {
 	pipelineCmd.AddCommand(pipelineDeleteCmd)
 
-	pipelineDeleteCmd.Flags().BoolVarP(&deleteForce, "force", "f", false, 
+	pipelineDeleteCmd.Flags().BoolVarP(&deleteForce, "force", "f", false,
 		"Force deletion without confirmation")
 }

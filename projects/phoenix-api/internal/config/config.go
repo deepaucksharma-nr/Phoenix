@@ -32,18 +32,18 @@ type CostRates struct {
 }
 
 type Timeouts struct {
-	AgentPollTimeout     time.Duration
-	TaskAssignTimeout    time.Duration
-	HeartbeatInterval    time.Duration
+	AgentPollTimeout  time.Duration
+	TaskAssignTimeout time.Duration
+	HeartbeatInterval time.Duration
 }
 
 func Load() *Config {
 	// Require critical secrets in production
 	env := getEnv("ENVIRONMENT", "development")
-	
+
 	// Database URL construction from components for security
 	dbURL := constructDatabaseURL()
-	
+
 	// JWT secret must be provided in production
 	jwtSecret := getEnv("JWT_SECRET", "")
 	if jwtSecret == "" && env == "production" {
@@ -53,7 +53,7 @@ func Load() *Config {
 		// Only for development - generate a random secret
 		jwtSecret = fmt.Sprintf("dev-secret-%d", time.Now().Unix())
 	}
-	
+
 	return &Config{
 		Port:           getEnv("PORT", "8080"),
 		DatabaseURL:    dbURL,
@@ -86,17 +86,17 @@ func constructDatabaseURL() string {
 	dbUser := getEnv("DATABASE_USER", "phoenix")
 	dbPassword := getEnv("DATABASE_PASSWORD", "")
 	dbSSLMode := getEnv("DATABASE_SSL_MODE", "disable")
-	
+
 	// In production, password must be provided
 	if getEnv("ENVIRONMENT", "development") == "production" && dbPassword == "" {
 		panic("DATABASE_PASSWORD must be set in production environment")
 	}
-	
+
 	// Default password only for local development
 	if dbPassword == "" {
 		dbPassword = "phoenix"
 	}
-	
+
 	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode)
 }

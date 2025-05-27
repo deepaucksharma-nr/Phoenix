@@ -22,6 +22,11 @@ var (
 	topK              int
 	checkOverlap      bool
 	force             bool
+	useNRDOT          bool
+	nrLicenseKey      string
+	nrEndpoint        string
+	maxCardinality    int
+	reductionPercent  int
 )
 
 // createExperimentCmd represents the create experiment command
@@ -49,7 +54,17 @@ Examples:
     --baseline process-baseline-v1 \
     --candidate process-adaptive-v1 \
     --target-selector "tier=frontend" \
-    --check-overlap`,
+    --check-overlap
+    
+  # Create experiment with NRDOT collector
+  phoenix experiment create --name "nrdot-test" \
+    --baseline baseline \
+    --candidate nrdot-cardinality \
+    --target-selector "app=api" \
+    --use-nrdot \
+    --nr-license-key "$NEW_RELIC_LICENSE_KEY" \
+    --max-cardinality 10000 \
+    --reduction-percent 70`,
 	RunE: runCreateExperiment,
 }
 
@@ -61,7 +76,7 @@ func init() {
 	createExperimentCmd.Flags().StringVar(&baselinePipeline, "baseline", "", "Baseline pipeline template (required)")
 	createExperimentCmd.Flags().StringVar(&candidatePipeline, "candidate", "", "Candidate pipeline template (required)")
 	createExperimentCmd.Flags().StringToStringVar(&targetSelector, "target-selector", nil, "Target node selector labels (required)")
-	
+
 	createExperimentCmd.MarkFlagRequired("name")
 	createExperimentCmd.MarkFlagRequired("baseline")
 	createExperimentCmd.MarkFlagRequired("candidate")
@@ -74,6 +89,13 @@ func init() {
 	createExperimentCmd.Flags().IntVar(&topK, "top-k", 10, "Number of top processes to keep (for topk pipeline)")
 	createExperimentCmd.Flags().BoolVar(&checkOverlap, "check-overlap", false, "Check for overlapping experiments")
 	createExperimentCmd.Flags().BoolVarP(&force, "force", "f", false, "Force creation even with warnings")
+
+	// NRDOT flags
+	createExperimentCmd.Flags().BoolVar(&useNRDOT, "use-nrdot", false, "Use NRDOT collector instead of standard OTel")
+	createExperimentCmd.Flags().StringVar(&nrLicenseKey, "nr-license-key", "", "New Relic license key (required with --use-nrdot)")
+	createExperimentCmd.Flags().StringVar(&nrEndpoint, "nr-endpoint", "otlp.nr-data.net:4317", "New Relic OTLP endpoint")
+	createExperimentCmd.Flags().IntVar(&maxCardinality, "max-cardinality", 10000, "Maximum cardinality for NRDOT")
+	createExperimentCmd.Flags().IntVar(&reductionPercent, "reduction-percent", 70, "Target reduction percentage for NRDOT")
 }
 
 func runCreateExperiment(cmd *cobra.Command, args []string) error {
@@ -106,6 +128,29 @@ func runCreateExperiment(cmd *cobra.Command, args []string) error {
 		req.Parameters["top_k"] = topK
 	}
 
+	// Add NRDOT parameters if enabled
+	if useNRDOT {
+		if nrLicenseKey == "" {
+			return fmt.Errorf("--nr-license-key is required when using --use-nrdot")
+		}
+		req.Parameters["collector_type"] = "nrdot"
+		req.Parameters["nr_license_key"] = nrLicenseKey
+		req.Parameters["nr_otlp_endpoint"] = nrEndpoint
+		req.Parameters["max_cardinality"] = maxCardinality
+		req.Parameters["reduction_percentage"] = reductionPercent
+		req.Parameters["pushgateway_url"] = cfg.GetPushgatewayURL()
+
+		// If using NRDOT templates, ensure they're selected
+		if baselinePipeline == "baseline" && !strings.Contains(baselinePipeline, "nrdot") {
+			baselinePipeline = "nrdot-baseline"
+		}
+		if candidatePipeline == "cardinality" || candidatePipeline == "nrdot-cardinality" {
+			candidatePipeline = "nrdot-cardinality"
+		}
+		req.BaselinePipeline = baselinePipeline
+		req.CandidatePipeline = candidatePipeline
+	}
+
 	// Check for overlaps if requested
 	if checkOverlap {
 		fmt.Println("Checking for experiment overlaps...")
@@ -116,7 +161,7 @@ func runCreateExperiment(cmd *cobra.Command, args []string) error {
 
 		if overlap.HasOverlap {
 			output.PrintOverlapWarning(overlap)
-			
+
 			if overlap.Severity == "blocking" {
 				return fmt.Errorf("cannot create experiment due to blocking overlap")
 			}
@@ -144,7 +189,7 @@ func runCreateExperiment(cmd *cobra.Command, args []string) error {
 
 	// Display result
 	output.PrintExperiment(experiment, outputFormat)
-	
+
 	fmt.Println("\n✓ Experiment created successfully!")
 	fmt.Printf("\nTo start the experiment, run:\n  phoenix experiment start %s\n", experiment.ID)
 	fmt.Printf("\nTo monitor status, run:\n  phoenix experiment status %s --follow\n", experiment.ID)

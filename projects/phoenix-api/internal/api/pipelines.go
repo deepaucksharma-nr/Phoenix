@@ -125,17 +125,17 @@ func (s *Server) handleGetPipeline(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/pipelines/{id}/config - Get pipeline configuration by name
 func (s *Server) handleGetPipelineConfigByName(w http.ResponseWriter, r *http.Request) {
 	pipelineID := chi.URLParam(r, "id")
-	
+
 	// Try to load the pipeline template directly from catalog
 	catalogPath := os.Getenv("PHOENIX_PIPELINE_CATALOG_PATH")
 	if catalogPath == "" {
 		catalogPath = "/app/configs/pipelines/catalog"
 	}
-	
+
 	// Look for the pipeline template file
 	var templatePath string
 	categories := []string{"process", "infra", "app"}
-	
+
 	for _, category := range categories {
 		path := filepath.Join(catalogPath, category, pipelineID+".yaml")
 		if _, err := os.Stat(path); err == nil {
@@ -143,12 +143,12 @@ func (s *Server) handleGetPipelineConfigByName(w http.ResponseWriter, r *http.Re
 			break
 		}
 	}
-	
+
 	if templatePath == "" {
 		respondError(w, http.StatusNotFound, "Pipeline template not found")
 		return
 	}
-	
+
 	// Read the template file
 	content, err := os.ReadFile(templatePath)
 	if err != nil {
@@ -156,7 +156,7 @@ func (s *Server) handleGetPipelineConfigByName(w http.ResponseWriter, r *http.Re
 		respondError(w, http.StatusInternalServerError, "Failed to read pipeline template")
 		return
 	}
-	
+
 	// Return the YAML content directly
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
@@ -277,7 +277,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 					// Custom processor
 					if af, ok := p["adaptive_filter"].(map[string]interface{}); ok {
 						adaptiveFilter := make(map[string]interface{})
-						
+
 						if enabled, ok := af["enabled"].(bool); ok {
 							adaptiveFilter["enabled"] = enabled
 						}
@@ -287,7 +287,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 						if rules, ok := af["rules"].([]interface{}); ok {
 							adaptiveFilter["rules"] = rules
 						}
-						
+
 						pc.Config = map[string]interface{}{
 							"adaptive_filter": adaptiveFilter,
 						}
@@ -297,7 +297,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 					// TopK processor
 					if topk, ok := p["topk"].(map[string]interface{}); ok {
 						topkConfig := make(map[string]interface{})
-						
+
 						if k, ok := topk["k"].(float64); ok {
 							topkConfig["k"] = int(k)
 						}
@@ -307,7 +307,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 						if dimensions, ok := topk["dimensions"].([]interface{}); ok {
 							topkConfig["dimensions"] = dimensions
 						}
-						
+
 						pc.Config = map[string]interface{}{
 							"topk": topkConfig,
 						}
@@ -378,7 +378,7 @@ func (s *Server) handleValidatePipeline(w http.ResponseWriter, r *http.Request) 
 	}
 
 	respondJSON(w, http.StatusOK, map[string]interface{}{
-		"valid": true,
+		"valid":   true,
 		"message": "Pipeline configuration is valid",
 	})
 }
@@ -447,7 +447,7 @@ func (s *Server) loadPipelineTemplates(catalogPath string) ([]PipelineTemplate, 
 
 	for _, category := range categories {
 		categoryPath := filepath.Join(catalogPath, category)
-		
+
 		// Check if category directory exists
 		if info, err := os.Stat(categoryPath); err != nil || !info.IsDir() {
 			continue

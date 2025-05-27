@@ -144,47 +144,47 @@ func TestPrintTable(t *testing.T) {
 func TestFormatDuration(t *testing.T) {
 	t.Skip("FormatDuration not implemented yet")
 	return
-	
+
 	// TODO: Implement FormatDuration function and enable this test
 	/*
-	tests := []struct {
-		name     string
-		duration time.Duration
-		expected string
-	}{
-		{
-			name:     "seconds only",
-			duration: 45 * time.Second,
-			expected: "45s",
-		},
-		{
-			name:     "minutes and seconds",
-			duration: 3*time.Minute + 30*time.Second,
-			expected: "3m30s",
-		},
-		{
-			name:     "hours, minutes and seconds",
-			duration: 2*time.Hour + 15*time.Minute + 45*time.Second,
-			expected: "2h15m45s",
-		},
-		{
-			name:     "days",
-			duration: 25*time.Hour + 30*time.Minute,
-			expected: "1d1h30m0s",
-		},
-		{
-			name:     "zero duration",
-			duration: 0,
-			expected: "0s",
-		},
-	}
+		tests := []struct {
+			name     string
+			duration time.Duration
+			expected string
+		}{
+			{
+				name:     "seconds only",
+				duration: 45 * time.Second,
+				expected: "45s",
+			},
+			{
+				name:     "minutes and seconds",
+				duration: 3*time.Minute + 30*time.Second,
+				expected: "3m30s",
+			},
+			{
+				name:     "hours, minutes and seconds",
+				duration: 2*time.Hour + 15*time.Minute + 45*time.Second,
+				expected: "2h15m45s",
+			},
+			{
+				name:     "days",
+				duration: 25*time.Hour + 30*time.Minute,
+				expected: "1d1h30m0s",
+			},
+			{
+				name:     "zero duration",
+				duration: 0,
+				expected: "0s",
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := FormatDuration(tt.duration)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := FormatDuration(tt.duration)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
 	*/
 }
 
@@ -242,47 +242,47 @@ func TestFormatBytes(t *testing.T) {
 func TestFormatPercentage(t *testing.T) {
 	t.Skip("FormatPercentage not implemented yet")
 	return
-	
+
 	// TODO: Implement FormatPercentage function and enable this test
 	/*
-	tests := []struct {
-		name     string
-		value    float64
-		expected string
-	}{
-		{
-			name:     "whole number",
-			value:    50.0,
-			expected: "50.00%",
-		},
-		{
-			name:     "decimal",
-			value:    33.333,
-			expected: "33.33%",
-		},
-		{
-			name:     "zero",
-			value:    0.0,
-			expected: "0.00%",
-		},
-		{
-			name:     "negative",
-			value:    -15.5,
-			expected: "-15.50%",
-		},
-		{
-			name:     "large number",
-			value:    150.75,
-			expected: "150.75%",
-		},
-	}
+		tests := []struct {
+			name     string
+			value    float64
+			expected string
+		}{
+			{
+				name:     "whole number",
+				value:    50.0,
+				expected: "50.00%",
+			},
+			{
+				name:     "decimal",
+				value:    33.333,
+				expected: "33.33%",
+			},
+			{
+				name:     "zero",
+				value:    0.0,
+				expected: "0.00%",
+			},
+			{
+				name:     "negative",
+				value:    -15.5,
+				expected: "-15.50%",
+			},
+			{
+				name:     "large number",
+				value:    150.75,
+				expected: "150.75%",
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := FormatPercentage(tt.value)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				result := FormatPercentage(tt.value)
+				assert.Equal(t, tt.expected, result)
+			})
+		}
 	*/
 }
 
@@ -336,56 +336,56 @@ func TestTruncateString(t *testing.T) {
 func TestPrintProgress(t *testing.T) {
 	t.Skip("PrintProgress not implemented yet")
 	return
-	
+
 	// TODO: Implement PrintProgress function and enable this test
 	/*
-	tests := []struct {
-		name     string
-		current  int
-		total    int
-		width    int
-		expected string
-	}{
-		{
-			name:     "0 percent",
-			current:  0,
-			total:    100,
-			width:    20,
-			expected: "[                    ] 0%",
-		},
-		{
-			name:     "50 percent",
-			current:  50,
-			total:    100,
-			width:    20,
-			expected: "[██████████          ] 50%",
-		},
-		{
-			name:     "100 percent",
-			current:  100,
-			total:    100,
-			width:    20,
-			expected: "[████████████████████] 100%",
-		},
-		{
-			name:     "33 percent",
-			current:  1,
-			total:    3,
-			width:    10,
-			expected: "[███       ] 33%",
-		},
-	}
+		tests := []struct {
+			name     string
+			current  int
+			total    int
+			width    int
+			expected string
+		}{
+			{
+				name:     "0 percent",
+				current:  0,
+				total:    100,
+				width:    20,
+				expected: "[                    ] 0%",
+			},
+			{
+				name:     "50 percent",
+				current:  50,
+				total:    100,
+				width:    20,
+				expected: "[██████████          ] 50%",
+			},
+			{
+				name:     "100 percent",
+				current:  100,
+				total:    100,
+				width:    20,
+				expected: "[████████████████████] 100%",
+			},
+			{
+				name:     "33 percent",
+				current:  1,
+				total:    3,
+				width:    10,
+				expected: "[███       ] 33%",
+			},
+		}
 
-	/*
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			PrintProgress(&buf, tt.current, tt.total, tt.width)
-			result := strings.TrimSpace(buf.String())
-			// Remove ANSI escape sequences for comparison
-			result = strings.ReplaceAll(result, "\r", "")
-			assert.Equal(t, tt.expected, result)
-		})
-	}
+		/*
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var buf bytes.Buffer
+				PrintProgress(&buf, tt.current, tt.total, tt.width)
+				result := strings.TrimSpace(buf.String())
+				// Remove ANSI escape sequences for comparison
+				result = strings.ReplaceAll(result, "\r", "")
+				assert.Equal(t, tt.expected, result)
+			})
+		}
 	*/
 }

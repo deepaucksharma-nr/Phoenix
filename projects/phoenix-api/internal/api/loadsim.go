@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-	
+
 	"github.com/go-chi/chi/v5"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
@@ -37,19 +37,19 @@ func (s *Server) handleStartLoadSimulation(w http.ResponseWriter, r *http.Reques
 		Duration     string   `json:"duration"`
 		ProcessCount int      `json:"process_count"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
-	
+
 	// Parse duration
 	duration, err := time.ParseDuration(req.Duration)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid duration format")
 		return
 	}
-	
+
 	// Get experiment if specified
 	var targetHosts []string
 	if req.ExperimentID != "" {
@@ -65,7 +65,7 @@ func (s *Server) handleStartLoadSimulation(w http.ResponseWriter, r *http.Reques
 		respondError(w, http.StatusBadRequest, "Either experiment_id or target_hosts must be specified")
 		return
 	}
-	
+
 	// Default values
 	if req.Profile == "" {
 		req.Profile = "realistic"
@@ -73,7 +73,7 @@ func (s *Server) handleStartLoadSimulation(w http.ResponseWriter, r *http.Reques
 	if req.ProcessCount == 0 {
 		req.ProcessCount = 10
 	}
-	
+
 	// Create load simulation tasks for each host
 	simID := generateID("sim")
 	for _, host := range targetHosts {
@@ -90,14 +90,14 @@ func (s *Server) handleStartLoadSimulation(w http.ResponseWriter, r *http.Reques
 				"process_count": req.ProcessCount,
 			},
 		}
-		
+
 		if err := s.taskQueue.Enqueue(r.Context(), task); err != nil {
 			log.Error().Err(err).Str("host", host).Msg("Failed to enqueue load simulation task")
 			respondError(w, http.StatusInternalServerError, "Failed to start load simulation")
 			return
 		}
 	}
-	
+
 	// Create response
 	now := time.Now()
 	sim := &LoadSimulation{
@@ -114,21 +114,21 @@ func (s *Server) handleStartLoadSimulation(w http.ResponseWriter, r *http.Reques
 			"requested_by": r.Header.Get("X-User-ID"),
 		},
 	}
-	
+
 	// Broadcast start event
 	data, _ := json.Marshal(sim)
 	s.hub.Broadcast <- &websocket.Message{
 		Type: "loadsim_started",
 		Data: data,
 	}
-	
+
 	respondJSON(w, http.StatusCreated, sim)
 }
 
 // GET /api/v1/loadsimulations - List load simulations
 func (s *Server) handleListLoadSimulations(w http.ResponseWriter, r *http.Request) {
 	experimentID := r.URL.Query().Get("experiment_id")
-	
+
 	// Get tasks of type loadsim
 	filters := map[string]interface{}{
 		"type": "loadsim",
@@ -136,14 +136,14 @@ func (s *Server) handleListLoadSimulations(w http.ResponseWriter, r *http.Reques
 	if experimentID != "" {
 		filters["experiment_id"] = experimentID
 	}
-	
+
 	tasks, err := s.store.ListTasks(r.Context(), filters)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to list load simulation tasks")
 		respondError(w, http.StatusInternalServerError, "Failed to list load simulations")
 		return
 	}
-	
+
 	// Group tasks by simulation ID
 	simMap := make(map[string]*LoadSimulation)
 	for _, task := range tasks {
@@ -151,7 +151,7 @@ func (s *Server) handleListLoadSimulations(w http.ResponseWriter, r *http.Reques
 		if simID == "" {
 			continue
 		}
-		
+
 		if sim, exists := simMap[simID]; exists {
 			// Update simulation based on task status
 			if task.Status == "running" && sim.StartedAt == nil {
@@ -173,31 +173,31 @@ func (s *Server) handleListLoadSimulations(w http.ResponseWriter, r *http.Reques
 				CreatedAt:    task.CreatedAt,
 				UpdatedAt:    task.UpdatedAt,
 			}
-			
+
 			if task.Status == "running" {
 				sim.StartedAt = task.StartedAt
 			}
 			if task.Status == "completed" || task.Status == "failed" {
 				sim.CompletedAt = task.CompletedAt
 			}
-			
+
 			simMap[simID] = sim
 		}
 	}
-	
+
 	// Convert map to slice
 	simulations := make([]*LoadSimulation, 0, len(simMap))
 	for _, sim := range simMap {
 		simulations = append(simulations, sim)
 	}
-	
+
 	respondJSON(w, http.StatusOK, simulations)
 }
 
 // GET /api/v1/loadsimulations/{id} - Get load simulation status
 func (s *Server) handleGetLoadSimulation(w http.ResponseWriter, r *http.Request) {
 	simID := chi.URLParam(r, "id")
-	
+
 	// Get all tasks for this simulation
 	tasks, err := s.store.ListTasks(r.Context(), map[string]interface{}{
 		"type": "loadsim",
@@ -207,17 +207,17 @@ func (s *Server) handleGetLoadSimulation(w http.ResponseWriter, r *http.Request)
 		respondError(w, http.StatusInternalServerError, "Failed to get load simulation")
 		return
 	}
-	
+
 	// Find tasks for this simulation
 	var sim *LoadSimulation
 	var targetHosts []string
-	
+
 	for _, task := range tasks {
 		taskSimID, _ := task.Config["simulation_id"].(string)
 		if taskSimID != simID {
 			continue
 		}
-		
+
 		if sim == nil {
 			sim = &LoadSimulation{
 				ID:           simID,
@@ -230,9 +230,9 @@ func (s *Server) handleGetLoadSimulation(w http.ResponseWriter, r *http.Request)
 				UpdatedAt:    task.UpdatedAt,
 			}
 		}
-		
+
 		targetHosts = append(targetHosts, task.HostID)
-		
+
 		// Update status based on task states
 		if task.Status == "running" && sim.StartedAt == nil {
 			sim.StartedAt = task.StartedAt
@@ -241,12 +241,12 @@ func (s *Server) handleGetLoadSimulation(w http.ResponseWriter, r *http.Request)
 			sim.CompletedAt = task.CompletedAt
 		}
 	}
-	
+
 	if sim == nil {
 		respondError(w, http.StatusNotFound, "Load simulation not found")
 		return
 	}
-	
+
 	sim.TargetHosts = targetHosts
 	respondJSON(w, http.StatusOK, sim)
 }
@@ -254,7 +254,7 @@ func (s *Server) handleGetLoadSimulation(w http.ResponseWriter, r *http.Request)
 // DELETE /api/v1/loadsimulations/{id} - Stop a load simulation
 func (s *Server) handleStopLoadSimulation(w http.ResponseWriter, r *http.Request) {
 	simID := chi.URLParam(r, "id")
-	
+
 	// Get all tasks for this simulation
 	tasks, err := s.store.ListTasks(r.Context(), map[string]interface{}{
 		"type": "loadsim",
@@ -264,7 +264,7 @@ func (s *Server) handleStopLoadSimulation(w http.ResponseWriter, r *http.Request
 		respondError(w, http.StatusInternalServerError, "Failed to stop load simulation")
 		return
 	}
-	
+
 	// Create stop tasks for each host
 	stopped := false
 	for _, task := range tasks {
@@ -272,12 +272,12 @@ func (s *Server) handleStopLoadSimulation(w http.ResponseWriter, r *http.Request
 		if taskSimID != simID {
 			continue
 		}
-		
+
 		// Only stop if running
 		if task.Status != "running" && task.Status != "pending" {
 			continue
 		}
-		
+
 		stopTask := &models.Task{
 			HostID:       task.HostID,
 			ExperimentID: task.ExperimentID,
@@ -288,19 +288,19 @@ func (s *Server) handleStopLoadSimulation(w http.ResponseWriter, r *http.Request
 				"simulation_id": simID,
 			},
 		}
-		
+
 		if err := s.taskQueue.Enqueue(r.Context(), stopTask); err != nil {
 			log.Error().Err(err).Str("host", task.HostID).Msg("Failed to enqueue stop task")
 		} else {
 			stopped = true
 		}
 	}
-	
+
 	if !stopped {
 		respondError(w, http.StatusNotFound, "Load simulation not found or not running")
 		return
 	}
-	
+
 	// Broadcast stop event
 	data, _ := json.Marshal(map[string]string{
 		"simulation_id": simID,
@@ -310,7 +310,7 @@ func (s *Server) handleStopLoadSimulation(w http.ResponseWriter, r *http.Request
 		Type: "loadsim_stopped",
 		Data: data,
 	}
-	
+
 	w.WriteHeader(http.StatusAccepted)
 }
 

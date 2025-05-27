@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -86,6 +86,6 @@ func writeToFile(filename string, content string) error {
 func init() {
 	pipelineCmd.AddCommand(pipelineGetConfigCmd)
 
-	pipelineGetConfigCmd.Flags().StringVarP(&getConfigOutput, "output", "o", "", 
+	pipelineGetConfigCmd.Flags().StringVarP(&getConfigOutput, "output", "o", "",
 		"Output file to save the configuration")
 }

@@ -56,7 +56,7 @@ func (m *LoadSimManager) Start(profile, durationStr string) error {
 	env := os.Environ()
 	env = append(env, fmt.Sprintf("LOAD_PROFILE=%s", profile))
 	env = append(env, fmt.Sprintf("LOAD_DURATION=%s", durationStr))
-	
+
 	m.activeJob = exec.CommandContext(ctx, "bash", "-c", script)
 	m.activeJob.Env = env
 
@@ -115,14 +115,14 @@ func (m *LoadSimManager) Stop() error {
 	// Send SIGTERM first for graceful shutdown
 	if m.activeJob.Process != nil {
 		m.activeJob.Process.Signal(os.Interrupt)
-		
+
 		// Give it 2 seconds to terminate gracefully
 		done := make(chan struct{})
 		go func() {
 			m.activeJob.Wait()
 			close(done)
 		}()
-		
+
 		select {
 		case <-done:
 			// Process terminated gracefully
@@ -167,22 +167,22 @@ func (m *LoadSimManager) GetMetrics() map[string]interface{} {
 // Shutdown gracefully shuts down the load simulation manager
 func (m *LoadSimManager) Shutdown(ctx context.Context) error {
 	log.Info().Msg("Shutting down load simulation manager")
-	
+
 	// Stop any active load simulation
 	if err := m.Stop(); err != nil {
 		log.Error().Err(err).Msg("Error stopping load simulation during shutdown")
 	}
-	
+
 	// Close cleanup channel
 	close(m.cleanupChan)
-	
+
 	// Wait for all goroutines to finish or context to expire
 	done := make(chan struct{})
 	go func() {
 		m.cleanupWg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		log.Info().Msg("Load simulation manager shutdown complete")
@@ -195,22 +195,22 @@ func (m *LoadSimManager) Shutdown(ctx context.Context) error {
 
 func (m *LoadSimManager) monitorJob(profile string, duration time.Duration) {
 	defer m.cleanupWg.Done()
-	
+
 	// Create a timer for maximum duration
 	timer := time.NewTimer(duration + 30*time.Second) // Extra 30s buffer
 	defer timer.Stop()
-	
+
 	pid := 0
 	if m.activeJob.Process != nil {
 		pid = m.activeJob.Process.Pid
 	}
-	
+
 	// Monitor the job
 	jobDone := make(chan error, 1)
 	go func() {
 		jobDone <- m.activeJob.Wait()
 	}()
-	
+
 	var err error
 	select {
 	case err = <-jobDone:
@@ -222,7 +222,7 @@ func (m *LoadSimManager) monitorJob(profile string, duration time.Duration) {
 			Int("pid", pid).
 			Dur("duration", duration).
 			Msg("Load simulation exceeded maximum duration, forcing termination")
-		
+
 		if m.activeJob.Process != nil {
 			m.activeJob.Process.Kill()
 		}
@@ -273,7 +273,7 @@ func (m *LoadSimManager) cleanupChildProcesses(parentPID int) {
 	if parentPID == 0 {
 		return
 	}
-	
+
 	// Use pkill to clean up any child processes
 	cmd := exec.Command("pkill", "-P", fmt.Sprintf("%d", parentPID))
 	if err := cmd.Run(); err != nil {
@@ -287,12 +287,12 @@ func (m *LoadSimManager) cleanupChildProcesses(parentPID int) {
 
 // ProfileInfo contains metadata about a load profile
 type ProfileInfo struct {
-	Name         string
-	Description  string
-	MaxDuration  time.Duration
+	Name          string
+	Description   string
+	MaxDuration   time.Duration
 	ResourceUsage struct {
-		CPU    string // low, medium, high, variable
-		Memory string // minimal, low, medium, high
+		CPU     string // low, medium, high, variable
+		Memory  string // minimal, low, medium, high
 		Network string // minimal, low, medium, high, variable
 	}
 }
@@ -305,12 +305,12 @@ func (m *LoadSimManager) GetAvailableProfiles() []ProfileInfo {
 			Description: "Simulates high cardinality metrics explosion",
 			MaxDuration: 30 * time.Minute,
 			ResourceUsage: struct {
-				CPU    string
-				Memory string
+				CPU     string
+				Memory  string
 				Network string
 			}{
-				CPU:    "low",
-				Memory: "high",
+				CPU:     "low",
+				Memory:  "high",
 				Network: "medium",
 			},
 		},
@@ -319,12 +319,12 @@ func (m *LoadSimManager) GetAvailableProfiles() []ProfileInfo {
 			Description: "Simulates normal production workload",
 			MaxDuration: time.Hour,
 			ResourceUsage: struct {
-				CPU    string
-				Memory string
+				CPU     string
+				Memory  string
 				Network string
 			}{
-				CPU:    "medium",
-				Memory: "low",
+				CPU:     "medium",
+				Memory:  "low",
 				Network: "low",
 			},
 		},
@@ -333,12 +333,12 @@ func (m *LoadSimManager) GetAvailableProfiles() []ProfileInfo {
 			Description: "Simulates traffic spikes and recovery",
 			MaxDuration: 10 * time.Minute,
 			ResourceUsage: struct {
-				CPU    string
-				Memory string
+				CPU     string
+				Memory  string
 				Network string
 			}{
-				CPU:    "variable",
-				Memory: "low",
+				CPU:     "variable",
+				Memory:  "low",
 				Network: "variable",
 			},
 		},
@@ -347,12 +347,12 @@ func (m *LoadSimManager) GetAvailableProfiles() []ProfileInfo {
 			Description: "Maintains constant load for stability testing",
 			MaxDuration: 24 * time.Hour,
 			ResourceUsage: struct {
-				CPU    string
-				Memory string
+				CPU     string
+				Memory  string
 				Network string
 			}{
-				CPU:    "low",
-				Memory: "minimal",
+				CPU:     "low",
+				Memory:  "minimal",
 				Network: "low",
 			},
 		},
@@ -366,7 +366,7 @@ func (m *LoadSimManager) ValidateProfile(profile string, duration time.Duration)
 	if script == "" {
 		return fmt.Errorf("unknown profile: %s", profile)
 	}
-	
+
 	// Get profile info
 	var maxDuration time.Duration
 	for _, info := range m.GetAvailableProfiles() {
@@ -375,16 +375,16 @@ func (m *LoadSimManager) ValidateProfile(profile string, duration time.Duration)
 			break
 		}
 	}
-	
+
 	// Validate duration
 	if duration < time.Second {
 		return fmt.Errorf("duration must be at least 1 second")
 	}
-	
+
 	if maxDuration > 0 && duration > maxDuration {
 		return fmt.Errorf("duration %v exceeds maximum %v for profile %s", duration, maxDuration, profile)
 	}
-	
+
 	return nil
 }
 
@@ -395,7 +395,7 @@ func (m *LoadSimManager) isAlias(alias, profile string) bool {
 		"realistic":        {"normal"},
 		"steady":           {"process-churn"},
 	}
-	
+
 	if profileAliases, ok := aliases[profile]; ok {
 		for _, a := range profileAliases {
 			if a == alias {
@@ -403,7 +403,7 @@ func (m *LoadSimManager) isAlias(alias, profile string) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 

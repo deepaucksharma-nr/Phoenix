@@ -31,14 +31,14 @@ func PrintExperiment(exp *client.Experiment, format string) {
 		fmt.Printf("Candidate:   %s\n", exp.CandidatePipeline)
 		fmt.Printf("Target:      %s\n", formatTargetNodes(exp.TargetNodes))
 		fmt.Printf("Created:     %s\n", exp.CreatedAt.Format(time.RFC3339))
-		
+
 		if exp.StartedAt != nil {
 			fmt.Printf("Started:     %s\n", exp.StartedAt.Format(time.RFC3339))
 		}
 		if exp.CompletedAt != nil {
 			fmt.Printf("Completed:   %s\n", exp.CompletedAt.Format(time.RFC3339))
 		}
-		
+
 		if exp.Results != nil {
 			fmt.Printf("\nResults:\n")
 			fmt.Printf("  Cardinality Reduction: %.1f%%\n", exp.Results.CardinalityReduction)
@@ -61,7 +61,7 @@ func PrintExperimentList(experiments []client.Experiment, format string) {
 		// Table format
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
 		fmt.Fprintln(w, "ID\tNAME\tSTATUS\tBASELINE\tCANDIDATE\tCREATED")
-		
+
 		for _, exp := range experiments {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
 				exp.ID[:8], // Short ID
@@ -79,16 +79,16 @@ func PrintExperimentList(experiments []client.Experiment, format string) {
 // PrintOverlapWarning prints an overlap warning
 func PrintOverlapWarning(overlap *client.OverlapResult) {
 	severity := strings.ToUpper(overlap.Severity)
-	
+
 	fmt.Printf("\n⚠️  %s: %s\n", severity, overlap.Message)
-	
+
 	if len(overlap.ConflictingExpIDs) > 0 {
 		fmt.Printf("\nConflicting experiments:\n")
 		for _, id := range overlap.ConflictingExpIDs {
 			fmt.Printf("  - %s\n", id)
 		}
 	}
-	
+
 	if len(overlap.AffectedNodes) > 0 {
 		fmt.Printf("\nAffected nodes (%d):\n", len(overlap.AffectedNodes))
 		// Show first 5 nodes
@@ -100,7 +100,7 @@ func PrintOverlapWarning(overlap *client.OverlapResult) {
 			fmt.Printf("  - %s\n", node)
 		}
 	}
-	
+
 	if len(overlap.Suggestions) > 0 {
 		fmt.Printf("\nSuggestions:\n")
 		for _, suggestion := range overlap.Suggestions {
@@ -137,15 +137,15 @@ func Info(message string) {
 // Table prints data in a table format
 func Table(headers []string, data [][]string) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	
+
 	// Print headers
 	fmt.Fprintln(w, strings.Join(headers, "\t"))
-	
+
 	// Print data rows
 	for _, row := range data {
 		fmt.Fprintln(w, strings.Join(row, "\t"))
 	}
-	
+
 	w.Flush()
 }
 
@@ -181,7 +181,7 @@ func formatTargetNodes(nodes map[string]string) string {
 	if len(nodes) == 0 {
 		return "none"
 	}
-	
+
 	var parts []string
 	for k, v := range nodes {
 		parts = append(parts, fmt.Sprintf("%s=%s", k, v))
@@ -209,13 +209,13 @@ func Error(message string) {
 // Confirm prompts the user for confirmation and returns true if they confirm
 func Confirm(prompt string) (bool, error) {
 	fmt.Printf("%s [y/N]: ", prompt)
-	
+
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil && err.Error() != "unexpected newline" {
 		return false, err
 	}
-	
+
 	response = strings.ToLower(strings.TrimSpace(response))
 	return response == "y" || response == "yes", nil
 }
@@ -226,12 +226,12 @@ func PrintJSON(writer interface{}, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if w, ok := writer.(interface{ Write([]byte) (int, error) }); ok {
 		_, err = w.Write(jsonData)
 		return err
 	}
-	
+
 	fmt.Print(string(jsonData))
 	return nil
 }
@@ -242,12 +242,12 @@ func PrintYAML(writer interface{}, data interface{}) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if w, ok := writer.(interface{ Write([]byte) (int, error) }); ok {
 		_, err = w.Write(yamlData)
 		return err
 	}
-	
+
 	fmt.Print(string(yamlData))
 	return nil
 }
@@ -258,13 +258,13 @@ func FormatBytes(bytes int64) string {
 	if bytes < unit {
 		return fmt.Sprintf("%d B", bytes)
 	}
-	
+
 	div, exp := int64(unit), 0
 	for n := bytes / unit; n >= unit; n /= unit {
 		div *= unit
 		exp++
 	}
-	
+
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 

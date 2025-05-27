@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 // pipelineShowCmd represents the pipeline show command
@@ -29,7 +29,7 @@ Examples:
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pipelineName := args[0]
-		
+
 		// Try multiple possible locations
 		possiblePaths := []string{
 			filepath.Join(".", "configs", "pipelines", "catalog", "process", pipelineName+".yaml"),
@@ -66,7 +66,7 @@ Examples:
 		// Display the pipeline configuration
 		output.Success(fmt.Sprintf("Pipeline: %s", pipelineName))
 		fmt.Printf("Path: %s\n\n", foundPath)
-		
+
 		// Print the YAML content
 		fmt.Println(string(content))
 
@@ -78,7 +78,7 @@ Examples:
 func fetchPipelineFromAPI(pipelineName string) ([]byte, error) {
 	// TODO: Implement when API endpoint is available
 	url := fmt.Sprintf("http://localhost:8080/api/v1/pipelines/%s/config", pipelineName)
-	
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err

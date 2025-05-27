@@ -17,55 +17,55 @@ import (
 )
 
 type Server struct {
-	store              store.Store
-	hub                *phoenixws.Hub
-	config             *config.Config
-	taskQueue          *tasks.Queue
-	expController      *controller.ExperimentController
-	metricsCollector   *services.MetricsCollector
-	analysisService    *services.AnalysisService
-	templateRenderer   *services.PipelineTemplateRenderer
-	costService        *services.CostService
-	jwtService         *services.JWTService
-	wsUpgrader         websocket.Upgrader
+	store            store.Store
+	hub              *phoenixws.Hub
+	config           *config.Config
+	taskQueue        *tasks.Queue
+	expController    *controller.ExperimentController
+	metricsCollector *services.MetricsCollector
+	analysisService  *services.AnalysisService
+	templateRenderer *services.PipelineTemplateRenderer
+	costService      *services.CostService
+	jwtService       *services.JWTService
+	wsUpgrader       websocket.Upgrader
 }
 
 func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*Server, error) {
 	taskQueue := tasks.NewQueue(store)
 	expController := controller.NewExperimentController(store, taskQueue)
-	
+
 	// Initialize metrics collector
 	metricsCollector, err := services.NewMetricsCollector(store, config.PrometheusURL)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// TODO: Wire metrics collector to state machine for auto-start
 	// For now, metrics collection can be started manually via API
-	
+
 	// Initialize analysis service
 	analysisService, err := services.NewAnalysisService(store, config.PrometheusURL)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Initialize template renderer
 	templateRenderer := services.NewPipelineTemplateRenderer()
-	
+
 	// Load built-in templates
 	for name, tmpl := range templateRenderer.GetBuiltinTemplates() {
 		if err := templateRenderer.LoadTemplate(name, tmpl); err != nil {
 			log.Error().Err(err).Str("template", name).Msg("Failed to load built-in template")
 		}
 	}
-	
+
 	// Initialize cost service
 	costService := services.NewCostService(store, config.CostRates)
-	
+
 	// Initialize JWT service
 	jwtSecret := []byte(config.JWTSecret)
 	jwtService := services.NewJWTService(jwtSecret, "phoenix-platform", store)
-	
+
 	// Initialize WebSocket upgrader
 	wsUpgrader := websocket.Upgrader{
 		CheckOrigin: func(r *http.Request) bool {
@@ -104,7 +104,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Post("/logout", s.handleLogout)
 			r.Post("/register", s.handleRegister) // Optional, for development
 		})
-		
+
 		// Experiment endpoints (from controller service)
 		r.Route("/experiments", func(r chi.Router) {
 			r.Post("/", s.handleCreateExperiment)
@@ -135,7 +135,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Get("/templates", s.handleGetPipelineTemplates)
 			r.Post("/preview", s.handlePreviewPipelineImpact)
 			r.Post("/quick-deploy", s.handleQuickDeploy)
-			
+
 			// Pipeline deployment endpoints (nested under /pipelines)
 			r.Route("/deployments", func(r chi.Router) {
 				r.Post("/", s.handleCreateDeployment)
@@ -149,7 +149,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 				r.Get("/{id}/versions", s.handleListDeploymentVersions)
 			})
 		})
-		
+
 		// Load simulation endpoints
 		r.Route("/loadsimulations", func(r chi.Router) {
 			r.Post("/", s.handleStartLoadSimulation)
@@ -160,46 +160,46 @@ func (s *Server) SetupRoutes(r chi.Router) {
 
 		// WebSocket endpoint
 		r.HandleFunc("/ws", s.handleWebSocket)
-		
+
 		// UI-focused endpoints
 		r.Route("/metrics", func(r chi.Router) {
 			r.Get("/cost-flow", s.handleGetMetricCostFlow)
 			r.Get("/cardinality", s.handleGetCardinalityBreakdown)
 		})
-		
+
 		r.Route("/fleet", func(r chi.Router) {
 			r.Get("/status", s.handleGetFleetStatus)
 			r.Get("/map", s.handleGetAgentMap)
 		})
-		
+
 		r.Route("/tasks", func(r chi.Router) {
 			r.Get("/active", s.handleGetActiveTasks)
 			r.Get("/queue", s.handleGetTaskQueue)
 		})
-		
+
 		r.Get("/cost-analytics", s.handleGetCostAnalytics)
 		r.Get("/cost-flow", s.handleGetMetricCostFlow) // Add top-level cost-flow route
 
 		// Agent endpoints (new for lean architecture)
 		r.Route("/agent", func(r chi.Router) {
 			r.Use(s.agentAuthMiddleware)
-			
+
 			// Task polling (long-poll with 30s timeout)
 			r.Get("/tasks", s.handleAgentGetTasks)
-			
+
 			// Task status updates
 			r.Post("/tasks/{taskId}/status", s.handleTaskStatusUpdate)
-			
+
 			// Agent heartbeat
 			r.Post("/heartbeat", s.handleAgentHeartbeat)
-			
+
 			// Metrics push (batch)
 			r.Post("/metrics", s.handleAgentMetrics)
-			
+
 			// Log streaming
 			r.Post("/logs", s.handleAgentLogs)
 		})
-		
+
 		// WebSocket endpoint
 		r.Get("/ws", s.handleWebSocket)
 	})
@@ -214,14 +214,13 @@ func (s *Server) agentAuthMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "Missing X-Agent-Host-ID header", http.StatusUnauthorized)
 			return
 		}
-		
+
 		// Add host ID to context
 		ctx := r.Context()
 		ctx = context.WithValue(ctx, "hostID", hostID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
-
 
 // Compatibility wrappers for existing code
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
@@ -244,22 +243,22 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 	}
-	
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to upgrade WebSocket connection")
 		return
 	}
-	
+
 	// Create new client and register with hub
 	client := phoenixws.NewClient(conn, s.hub)
-	
+
 	// Register client with hub
 	s.hub.Register <- client
-	
+
 	// Start client goroutines
 	go client.WritePump()
 	go client.ReadPump()
-	
+
 	log.Info().Str("remote_addr", r.RemoteAddr).Msg("WebSocket client connected")
 }

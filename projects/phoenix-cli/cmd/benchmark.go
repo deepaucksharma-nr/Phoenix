@@ -69,15 +69,15 @@ func (lt *LatencyTracker) Add(latency time.Duration) {
 func (lt *LatencyTracker) GetStats() (min, max, avg, p95, p99 time.Duration) {
 	lt.mu.Lock()
 	defer lt.mu.Unlock()
-	
+
 	if len(lt.latencies) == 0 {
 		return 0, 0, 0, 0, 0
 	}
-	
+
 	// Sort latencies for percentile calculation
 	sorted := make([]time.Duration, len(lt.latencies))
 	copy(sorted, lt.latencies)
-	
+
 	// Simple sort
 	for i := 0; i < len(sorted); i++ {
 		for j := i + 1; j < len(sorted); j++ {
@@ -86,31 +86,31 @@ func (lt *LatencyTracker) GetStats() (min, max, avg, p95, p99 time.Duration) {
 			}
 		}
 	}
-	
+
 	min = sorted[0]
 	max = sorted[len(sorted)-1]
-	
+
 	// Calculate average
 	var total time.Duration
 	for _, lat := range sorted {
 		total += lat
 	}
 	avg = total / time.Duration(len(sorted))
-	
+
 	// Calculate percentiles
 	p95Index := int(float64(len(sorted)) * 0.95)
 	p99Index := int(float64(len(sorted)) * 0.99)
-	
+
 	if p95Index >= len(sorted) {
 		p95Index = len(sorted) - 1
 	}
 	if p99Index >= len(sorted) {
 		p99Index = len(sorted) - 1
 	}
-	
+
 	p95 = sorted[p95Index]
 	p99 = sorted[p99Index]
-	
+
 	return min, max, avg, p95, p99
 }
 
@@ -243,10 +243,10 @@ func runConcurrentRequests(apiClient *client.APIClient, endpoint, method string,
 
 			for j := 0; j < requests; j++ {
 				requestStart := time.Now()
-				
+
 				// Make the API request
 				err := makeRequest(apiClient, endpoint, method)
-				
+
 				latency := time.Since(requestStart)
 				tracker.Add(latency)
 
@@ -308,7 +308,7 @@ func runExperimentOperations(apiClient *client.APIClient, totalExperiments, conc
 
 			for j := 0; j < experiments; j++ {
 				requestStart := time.Now()
-				
+
 				// Create experiment
 				req := client.CreateExperimentRequest{
 					Name:              fmt.Sprintf("benchmark-exp-%d-%d", worker, j),
@@ -373,10 +373,10 @@ func runLoadPattern(apiClient *client.APIClient, duration time.Duration, targetR
 	tracker := &LatencyTracker{}
 
 	startTime := time.Now()
-	
+
 	// Calculate interval between requests
 	interval := time.Second / time.Duration(targetRPS)
-	
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -393,11 +393,11 @@ func runLoadPattern(apiClient *client.APIClient, duration time.Duration, targetR
 		case <-ticker.C:
 			go func() {
 				requestStart := time.Now()
-				
+
 				// Rotate through endpoints
 				endpoint := endpointList[totalRequests%len(endpointList)]
 				err := makeRequest(apiClient, endpoint, "GET")
-				
+
 				latency := time.Since(requestStart)
 				tracker.Add(latency)
 
@@ -460,7 +460,7 @@ func cleanupExperiments(apiClient *client.APIClient, experimentIDs []string) {
 
 func printBenchmarkResult(cmd *cobra.Command, result *BenchmarkResult) error {
 	outputFormat := viper.GetString("output")
-	
+
 	switch outputFormat {
 	case "json":
 		return output.PrintJSON(cmd.OutOrStdout(), result)
@@ -492,11 +492,11 @@ func getAPIClient() (*client.APIClient, error) {
 	if token == "" {
 		return nil, fmt.Errorf("not authenticated. Please run: phoenix auth login")
 	}
-	
+
 	apiEndpoint := viper.GetString("api.endpoint")
 	if apiEndpoint == "" {
 		apiEndpoint = "http://localhost:8080" // default
 	}
-	
+
 	return client.NewAPIClient(apiEndpoint, token), nil
 }

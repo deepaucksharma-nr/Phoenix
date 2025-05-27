@@ -41,7 +41,7 @@ func init() {
 
 	promoteExperimentCmd.Flags().StringVarP(&promoteVariant, "variant", "v", "", "Variant to promote (baseline or candidate)")
 	promoteExperimentCmd.Flags().BoolVarP(&promoteForce, "force", "f", false, "Force promotion without confirmation")
-	
+
 	promoteExperimentCmd.MarkFlagRequired("variant")
 }
 
@@ -81,7 +81,7 @@ func runExperimentPromote(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Promotion Details:\n")
 	fmt.Printf("  Experiment:    %s (%s)\n", experiment.Name, experiment.ID[:8])
 	fmt.Printf("  Variant:       %s\n", promoteVariant)
-	
+
 	pipelineName := experiment.BaselinePipeline
 	if promoteVariant == "candidate" {
 		pipelineName = experiment.CandidatePipeline
@@ -94,7 +94,7 @@ func runExperimentPromote(cmd *cobra.Command, args []string) error {
 		fmt.Printf("\nExperiment Results:\n")
 		fmt.Printf("  Cardinality Reduction: %.1f%%\n", experiment.Results.CardinalityReduction)
 		fmt.Printf("  Cost Reduction:        %.1f%%\n", experiment.Results.CostReduction)
-		
+
 		if experiment.Results.Recommendation != "" {
 			fmt.Printf("  Recommendation:        %s\n", experiment.Results.Recommendation)
 		}

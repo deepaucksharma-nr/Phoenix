@@ -174,16 +174,16 @@ type KPIResult struct {
 
 // Metric represents a generic metric
 type Metric struct {
-	ID           string                 `json:"id" db:"id"`
-	Name         string                 `json:"name" db:"name"`
-	Type         string                 `json:"type" db:"type"`
-	Value        float64                `json:"value" db:"value"`
-	Unit         string                 `json:"unit" db:"unit"`
-	Labels       map[string]string      `json:"labels" db:"labels"`
-	Timestamp    time.Time              `json:"timestamp" db:"timestamp"`
-	Source       string                 `json:"source" db:"source"`
-	Metadata     map[string]interface{} `json:"metadata" db:"metadata"`
-	CreatedAt    time.Time              `json:"created_at" db:"created_at"`
+	ID        string                 `json:"id" db:"id"`
+	Name      string                 `json:"name" db:"name"`
+	Type      string                 `json:"type" db:"type"`
+	Value     float64                `json:"value" db:"value"`
+	Unit      string                 `json:"unit" db:"unit"`
+	Labels    map[string]string      `json:"labels" db:"labels"`
+	Timestamp time.Time              `json:"timestamp" db:"timestamp"`
+	Source    string                 `json:"source" db:"source"`
+	Metadata  map[string]interface{} `json:"metadata" db:"metadata"`
+	CreatedAt time.Time              `json:"created_at" db:"created_at"`
 }
 
 // Experiment phase constants
@@ -198,13 +198,13 @@ const (
 
 // User represents a system user
 type User struct {
-	ID           string    `json:"id" db:"id"`
-	Username     string    `json:"username" db:"username"`
-	Email        string    `json:"email" db:"email"`
-	PasswordHash string    `json:"-" db:"password_hash"`
-	Role         string    `json:"role" db:"role"`
-	IsActive     bool      `json:"is_active" db:"is_active"`
+	ID           string     `json:"id" db:"id"`
+	Username     string     `json:"username" db:"username"`
+	Email        string     `json:"email" db:"email"`
+	PasswordHash string     `json:"-" db:"password_hash"`
+	Role         string     `json:"role" db:"role"`
+	IsActive     bool       `json:"is_active" db:"is_active"`
 	LastLogin    *time.Time `json:"last_login,omitempty" db:"last_login"`
-	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at" db:"updated_at"`
+	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
 }

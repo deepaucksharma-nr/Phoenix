@@ -174,7 +174,7 @@ func (pm *PluginManager) CreatePluginCommands() []*cobra.Command {
 func (pm *PluginManager) InstallPlugin(source string) error {
 	// For now, support installing from local directory
 	// Future: support downloading from URLs, archives, etc.
-	
+
 	if !filepath.IsAbs(source) {
 		abs, err := filepath.Abs(source)
 		if err != nil {
@@ -333,8 +333,8 @@ func ValidatePluginName(name string) error {
 
 	// Plugin names should be valid command names (alphanumeric + dashes)
 	for _, char := range name {
-		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || 
-			 (char >= '0' && char <= '9') || char == '-' || char == '_') {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') || char == '-' || char == '_') {
 			return fmt.Errorf("plugin name contains invalid character: %c", char)
 		}
 	}

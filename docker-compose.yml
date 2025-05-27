@@ -40,6 +40,10 @@ services:
       - CONFIG_DIR=/etc/phoenix-agent
       - PUSHGATEWAY_URL=http://pushgateway:9091
       - OTEL_ENDPOINT=http://localhost:4318
+      # NRDOT Configuration (uncomment to use NRDOT instead of OTel)
+      # - USE_NRDOT=true
+      # - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY}
+      # - NEW_RELIC_OTLP_ENDPOINT=otlp.nr-data.net:4317
     depends_on:
       - phoenix-api
     networks:

@@ -19,7 +19,7 @@ This includes:
 
 func init() {
 	rootCmd.AddCommand(pipelineCmd)
-	
+
 	// Add subcommands
 	pipelineCmd.AddCommand(pipelineListCmd)
 	pipelineCmd.AddCommand(pipelineDeployCmd)

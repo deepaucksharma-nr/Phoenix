@@ -54,7 +54,7 @@ func (c *Client) ReadPump() {
 		_, messageBytes, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.hub.logger.Error("WebSocket read error", 
+				c.hub.logger.Error("WebSocket read error",
 					zap.String("clientID", c.ID),
 					zap.Error(err))
 			}
@@ -95,7 +95,7 @@ func (c *Client) ReadPump() {
 			c.sendHeartbeatResponse()
 
 		default:
-			c.hub.logger.Warn("Unknown message type", 
+			c.hub.logger.Warn("Unknown message type",
 				zap.String("clientID", c.ID),
 				zap.String("type", string(msg.Type)))
 		}
@@ -149,8 +149,8 @@ func (c *Client) WritePump() {
 // sendError sends an error message to the client
 func (c *Client) sendError(message string) {
 	errMsg := &Message{
-		Type: MessageTypeError,
-		Data: json.RawMessage(`{"error": "` + message + `"}`),
+		Type:      MessageTypeError,
+		Data:      json.RawMessage(`{"error": "` + message + `"}`),
 		Timestamp: time.Now(),
 	}
 
@@ -171,9 +171,9 @@ func (c *Client) sendSubscriptionConfirmation(topic string, subscribed bool) {
 	}
 
 	msg := &Message{
-		Type:  MessageTypeNotification,
-		Topic: topic,
-		Data:  json.RawMessage(`{"` + action + `": true, "topic": "` + topic + `"}`),
+		Type:      MessageTypeNotification,
+		Topic:     topic,
+		Data:      json.RawMessage(`{"` + action + `": true, "topic": "` + topic + `"}`),
 		Timestamp: time.Now(),
 	}
 

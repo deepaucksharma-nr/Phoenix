@@ -85,19 +85,38 @@ User → Dashboard → API → PostgreSQL → Task Queue
 ### Development
 - Docker Compose for all services
 - Hot reload for rapid development
-- Single-command startup
+- Single-command startup: `make dev-up`
+- Integrated monitoring stack
 
-### Production
-- Docker Compose deployment on single VM
-- Process-based scaling for API
-- Systemd-managed agents
-- Managed PostgreSQL recommended
+### Production (Single-VM)
+- Docker Compose orchestration
+- All services containerized except agents
+- Agents deployed via systemd on host machines
+- Auto-scaling scripts for resource management
+- Built-in backup and restore capabilities
+
+### Key Deployment Features
+- **No Kubernetes Required**: Simplified operations with Docker Compose
+- **Resource Efficient**: Runs on single VM (4 vCPU, 16GB RAM minimum)
+- **High Availability**: External PostgreSQL + multiple API replicas
+- **Monitoring**: Integrated Prometheus + Grafana stack
+- **TLS Support**: Let's Encrypt or self-signed certificates
 
 ## Security Model
 
 - **Authentication**: JWT tokens for users, X-Agent-Host-ID for agents
 - **Authorization**: Role-based access control (RBAC)
 - **Agent Security**: Outbound-only connections, task polling design
+- **Network Isolation**: Docker networks with explicit service exposure
+- **Secrets Management**: Environment files with proper permissions
+- **TLS Everywhere**: HTTPS for API, encrypted database connections
+
+## Migration Path
+
+For users migrating from previous Kubernetes deployments:
+- See [MIGRATION_FROM_KUBERNETES.md](MIGRATION_FROM_KUBERNETES.md)
+- Data migration scripts provided
+- Zero-downtime migration possible
 - **Data Protection**: TLS encryption, PostgreSQL row-level security
 
 ## Performance Characteristics

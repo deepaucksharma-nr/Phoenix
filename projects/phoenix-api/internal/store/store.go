@@ -47,10 +47,10 @@ type Store interface {
 	// Event operations
 	CreateExperimentEvent(ctx context.Context, event *internalModels.ExperimentEvent) error
 	ListExperimentEvents(ctx context.Context, experimentID string) ([]*internalModels.ExperimentEvent, error)
-	
+
 	// Metrics operations
 	GetExperimentMetrics(ctx context.Context, experimentID string) (map[string]interface{}, error)
-	
+
 	// UI-specific operations
 	GetMetricCostFlow(ctx context.Context) (map[string]interface{}, error)
 	GetCardinalityBreakdown(ctx context.Context, namespace, service string) (map[string]interface{}, error)
@@ -60,19 +60,19 @@ type Store interface {
 	GetCostAnalytics(ctx context.Context, period string) (map[string]interface{}, error)
 	GetTaskQueueStatus(ctx context.Context) (map[string]interface{}, error)
 	GetPipelineTemplates(ctx context.Context) ([]*PipelineTemplate, error)
-	
+
 	// User operations
 	CreateUser(ctx context.Context, user *internalModels.User) error
 	GetUser(ctx context.Context, userID string) (*internalModels.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*internalModels.User, error)
 	UpdateUserLastLogin(ctx context.Context, userID string) error
-	
+
 	// Deployment versioning operations
 	RecordDeploymentVersion(ctx context.Context, deploymentID, pipelineConfig string, parameters map[string]interface{}, deployedBy string, notes string) (int, error)
 	GetDeploymentVersion(ctx context.Context, deploymentID string, version int) (*DeploymentVersion, error)
 	ListDeploymentVersions(ctx context.Context, deploymentID string) ([]*DeploymentVersion, error)
 	GetDeploymentHistory(ctx context.Context, deploymentID string, version int) (*models.PipelineDeployment, error)
-	
+
 	// Token blacklist operations
 	BlacklistToken(ctx context.Context, jti, userID string, expiresAt time.Time, reason string) error
 	IsTokenBlacklisted(ctx context.Context, jti string) (bool, error)

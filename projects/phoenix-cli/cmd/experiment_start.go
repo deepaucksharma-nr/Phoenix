@@ -71,12 +71,12 @@ func runExperimentStart(cmd *cobra.Command, args []string) error {
 	// Wait for pipelines to be deployed via agents
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	
+
 	// Poll for pipeline deployment status
 	fmt.Println("Waiting for pipeline deployments...")
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():

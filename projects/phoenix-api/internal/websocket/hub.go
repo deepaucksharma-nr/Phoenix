@@ -13,14 +13,14 @@ import (
 type MessageType string
 
 const (
-	MessageTypeExperimentUpdate  MessageType = "experiment_update"
-	MessageTypeMetricUpdate      MessageType = "metric_update"
-	MessageTypeStatusChange      MessageType = "status_change"
-	MessageTypeNotification      MessageType = "notification"
-	MessageTypeHeartbeat         MessageType = "heartbeat"
-	MessageTypeSubscribe         MessageType = "subscribe"
-	MessageTypeUnsubscribe       MessageType = "unsubscribe"
-	MessageTypeError             MessageType = "error"
+	MessageTypeExperimentUpdate MessageType = "experiment_update"
+	MessageTypeMetricUpdate     MessageType = "metric_update"
+	MessageTypeStatusChange     MessageType = "status_change"
+	MessageTypeNotification     MessageType = "notification"
+	MessageTypeHeartbeat        MessageType = "heartbeat"
+	MessageTypeSubscribe        MessageType = "subscribe"
+	MessageTypeUnsubscribe      MessageType = "unsubscribe"
+	MessageTypeError            MessageType = "error"
 )
 
 // Message represents a WebSocket message
@@ -46,15 +46,15 @@ type Client struct {
 type Hub struct {
 	clients      map[string]*Client
 	clientsMutex sync.RWMutex
-	
-	Broadcast    chan *Message
-	Register     chan *Client
-	Unregister   chan *Client
-	
-	topics       map[string]map[string]*Client // topic -> clientID -> client
-	topicsMutex  sync.RWMutex
-	
-	logger       *zap.Logger
+
+	Broadcast  chan *Message
+	Register   chan *Client
+	Unregister chan *Client
+
+	topics      map[string]map[string]*Client // topic -> clientID -> client
+	topicsMutex sync.RWMutex
+
+	logger *zap.Logger
 }
 
 // NewHub creates a new WebSocket hub
@@ -99,7 +99,7 @@ func (h *Hub) registerClient(client *Client) {
 	h.clientsMutex.Unlock()
 
 	h.logger.Info("WebSocket client registered", zap.String("clientID", client.ID))
-	
+
 	// Send welcome message
 	welcomeMsg := &Message{
 		Type:      MessageTypeNotification,
@@ -193,7 +193,7 @@ func (h *Hub) Subscribe(clientID, topic string) {
 	h.topics[topic][clientID] = client
 	h.topicsMutex.Unlock()
 
-	h.logger.Info("Client subscribed to topic", 
+	h.logger.Info("Client subscribed to topic",
 		zap.String("clientID", clientID),
 		zap.String("topic", topic))
 }
@@ -221,7 +221,7 @@ func (h *Hub) Unsubscribe(clientID, topic string) {
 	}
 	h.topicsMutex.Unlock()
 
-	h.logger.Info("Client unsubscribed from topic", 
+	h.logger.Info("Client unsubscribed from topic",
 		zap.String("clientID", clientID),
 		zap.String("topic", topic))
 }
@@ -276,7 +276,7 @@ func (h *Hub) sendHeartbeats() {
 // cleanupInactiveClients removes clients that haven't been active
 func (h *Hub) cleanupInactiveClients() {
 	threshold := time.Now().Add(-5 * time.Minute)
-	
+
 	h.clientsMutex.RLock()
 	var inactiveClients []*Client
 	for _, client := range h.clients {

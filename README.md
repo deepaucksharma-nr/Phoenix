@@ -11,13 +11,20 @@ Phoenix is an observability cost optimization platform that reduces metrics card
 ```bash
 # Clone the repository
 git clone https://github.com/phoenix/platform.git
-cd phoenix
+cd platform
+
+# Run the setup script for single-VM deployment
+./deployments/single-vm/scripts/setup-single-vm.sh
 
 # Start Phoenix with Docker Compose
+cd deployments/single-vm
 docker-compose up -d
 
 # Access the dashboard
 open http://localhost:3000
+
+# Install agents on target hosts
+curl -sSL http://localhost:8080/install-agent.sh | sudo bash
 ```
 
 See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
@@ -29,6 +36,7 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
 - **Agent-Based Architecture** - Distributed agents with task polling and heartbeat monitoring
 - **A/B Testing Framework** - Safe rollout with baseline vs candidate pipeline comparison
 - **Pipeline Templates** - Pre-built optimization strategies (Adaptive Filter, TopK, Hybrid)
+- **NRDOT Support** - Native integration with New Relic's optimized OpenTelemetry distribution
 - **Enterprise Ready** - PostgreSQL storage, TLS support, comprehensive monitoring
 
 ## 🏗️ Architecture Overview
@@ -44,9 +52,9 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
          │ Task Queue (PostgreSQL)
          │ Long-polling (30s timeout)
     ┌────▼────┐
-    │ Phoenix │────► OpenTelemetry ────► Observability
-    │ Agents  │      Collector          │ Backends
-    └─────────┘      (Modified)         └─────────────
+    │ Phoenix │────► OTel/NRDOT ────► Observability
+    │ Agents  │      Collector       │ Backends
+    └─────────┘                      └─────────────
 ```
 
 ### Core Components
@@ -87,10 +95,13 @@ Phoenix uses a modular monorepo structure with agent-based architecture:
 - [Contributing](CONTRIBUTING.md) - Contribution guidelines
 
 ### Operations
-- [Deployment Options](docs/operations/deployment/) - Docker Compose, Single VM
+- [Single-VM Deployment](deployments/single-vm/README.md) - Production-ready single VM setup
+- [Docker Compose Guide](docs/operations/docker-compose.md) - Container orchestration
 - [Configuration Reference](docs/operations/configuration.md) - All config options
 - [Production Guide](docs/operations/OPERATIONS_GUIDE_COMPLETE.md) - Production deployment
+- [NRDOT Integration](docs/operations/nrdot-integration.md) - New Relic collector setup
 - [Scaling & Performance](docs/operations/scaling.md) - Scaling strategies
+- [Migration from Kubernetes](MIGRATION_FROM_KUBERNETES.md) - Migration guide
 
 ### Tutorials
 - [Reduce Cardinality by 70%](docs/tutorials/reduce-cardinality.md)

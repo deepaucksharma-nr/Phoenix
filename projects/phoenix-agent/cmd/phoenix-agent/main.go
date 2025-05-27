@@ -39,7 +39,7 @@ func main() {
 		level = zerolog.InfoLevel
 	}
 	zerolog.SetGlobalLevel(level)
-	
+
 	if getEnv("LOG_FORMAT", "json") == "console" {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
@@ -92,12 +92,12 @@ func main() {
 			}
 		}
 	}()
-	
+
 	// Start metrics collection worker
 	go func() {
 		metricsTicker := time.NewTicker(30 * time.Second) // Collect metrics every 30 seconds
 		defer metricsTicker.Stop()
-		
+
 		for {
 			select {
 			case <-metricsTicker.C:
@@ -193,12 +193,12 @@ func getHostID() string {
 func collectAndSendMetrics(ctx context.Context, client *poller.Client, supervisor *supervisor.Supervisor) {
 	// Collect metrics from all supervised processes
 	metrics := supervisor.GetMetrics()
-	
+
 	if len(metrics) == 0 {
 		log.Debug().Msg("No metrics to report")
 		return
 	}
-	
+
 	// Add agent-level metadata to each metric
 	status := supervisor.GetStatus()
 	for i := range metrics {
@@ -207,13 +207,13 @@ func collectAndSendMetrics(ctx context.Context, client *poller.Client, superviso
 		metrics[i]["memory_percent"] = status.ResourceUsage.MemoryPercent
 		metrics[i]["memory_bytes"] = status.ResourceUsage.MemoryBytes
 	}
-	
+
 	// Send metrics to API
 	if err := client.SendMetrics(ctx, metrics); err != nil {
 		log.Error().Err(err).Msg("Failed to send metrics")
 		return
 	}
-	
+
 	log.Debug().Int("count", len(metrics)).Msg("Metrics sent successfully")
 }
 

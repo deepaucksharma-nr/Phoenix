@@ -72,27 +72,27 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 	collectorBinary := "otelcol-contrib"
 	if m.config.UseNRDOT || variant == "nrdot" {
 		collectorBinary = "nrdot"
-		
+
 		// Validate New Relic configuration
 		if m.config.NRLicenseKey == "" {
 			return fmt.Errorf("NEW_RELIC_LICENSE_KEY is required when using NRDOT collector")
 		}
 	}
-	
+
 	// Prepare command with appropriate binary
 	cmdArgs := []string{"--config", configPath}
-	
+
 	// Add collector-specific arguments
 	if collectorBinary == "otelcol-contrib" {
 		cmdArgs = append(cmdArgs, "--set", "service.telemetry.metrics.address=:0")
 	} else if collectorBinary == "nrdot" {
 		// NRDOT-specific flags
-		cmdArgs = append(cmdArgs, 
+		cmdArgs = append(cmdArgs,
 			"--feature-gates", "exporter.newrelic.cardinality_reduction",
 			"--max-memory", "512MiB",
 		)
 	}
-	
+
 	cmd := exec.Command(collectorBinary, cmdArgs...)
 
 	// Set environment variables
@@ -101,7 +101,7 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 		fmt.Sprintf("VARIANT=%s", variant),
 		fmt.Sprintf("HOST_ID=%s", m.config.HostID),
 	)
-	
+
 	// Add New Relic specific environment variables if using NRDOT
 	if collectorBinary == "nrdot" {
 		env = append(env,
@@ -109,7 +109,7 @@ func (m *CollectorManager) Start(id, variant, configURL string, vars map[string]
 			fmt.Sprintf("NEW_RELIC_OTLP_ENDPOINT=%s", m.config.NROTLPEndpoint),
 		)
 	}
-	
+
 	cmd.Env = env
 
 	// Set up logging
@@ -247,7 +247,7 @@ func (m *CollectorManager) downloadConfig(url string) (string, error) {
 		}
 		return string(data), nil
 	}
-	
+
 	// Handle HTTP/HTTPS URLs
 	resp, err := http.Get(url)
 	if err != nil {

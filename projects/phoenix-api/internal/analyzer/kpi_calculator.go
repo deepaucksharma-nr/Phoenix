@@ -23,7 +23,7 @@ func NewKPICalculator(promURL string) (*KPICalculator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Prometheus client: %w", err)
 	}
-	
+
 	return &KPICalculator{
 		promClient: v1.NewAPI(client),
 	}, nil
@@ -33,13 +33,13 @@ func NewKPICalculator(promURL string) (*KPICalculator, error) {
 func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID string, duration time.Duration) (*models.KPIResult, error) {
 	endTime := time.Now()
 	startTime := endTime.Add(-duration)
-	
+
 	result := &models.KPIResult{
 		ExperimentID: expID,
 		CalculatedAt: time.Now(),
 		Errors:       []string{},
 	}
-	
+
 	// Calculate cardinality reduction
 	cardinalityReduction, err := k.calculateCardinalityReduction(ctx, expID, endTime)
 	if err != nil {
@@ -47,7 +47,7 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 	} else {
 		result.CardinalityReduction = cardinalityReduction
 	}
-	
+
 	// Calculate CPU usage
 	cpuBaseline, cpuCandidate, err := k.calculateResourceUsage(ctx, expID, "cpu", startTime, endTime)
 	if err != nil {
@@ -59,7 +59,7 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 			result.CPUUsage.Reduction = ((cpuBaseline - cpuCandidate) / cpuBaseline) * 100
 		}
 	}
-	
+
 	// Calculate memory usage
 	memBaseline, memCandidate, err := k.calculateResourceUsage(ctx, expID, "memory", startTime, endTime)
 	if err != nil {
@@ -71,7 +71,7 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 			result.MemoryUsage.Reduction = ((memBaseline - memCandidate) / memBaseline) * 100
 		}
 	}
-	
+
 	// Calculate ingest rate
 	ingestBaseline, ingestCandidate, err := k.calculateIngestRate(ctx, expID, startTime, endTime)
 	if err != nil {
@@ -83,16 +83,16 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 			result.IngestRate.Reduction = ((ingestBaseline - ingestCandidate) / ingestBaseline) * 100
 		}
 	}
-	
+
 	// Calculate cost reduction based on actual metrics ingestion rates
 	if result.IngestRate.Baseline > 0 && result.IngestRate.Candidate > 0 {
 		// Calculate monthly costs for baseline and candidate
 		baselineMonthlyCost := k.CalculateEstimatedCost(ctx, result.IngestRate.Baseline)
 		candidateMonthlyCost := k.CalculateEstimatedCost(ctx, result.IngestRate.Candidate)
-		
+
 		// Calculate cost reduction percentage
 		result.CostReduction = k.CalculateROI(baselineMonthlyCost, candidateMonthlyCost)
-		
+
 		log.Info().
 			Str("experiment_id", expID).
 			Float64("baseline_cost", baselineMonthlyCost).
@@ -105,7 +105,7 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 			(result.CPUUsage.Reduction * 0.2) +
 			(result.MemoryUsage.Reduction * 0.1)
 	}
-	
+
 	// Calculate data accuracy (simplified - check if key metrics are still present)
 	accuracy, err := k.calculateDataAccuracy(ctx, expID, endTime)
 	if err != nil {
@@ -113,7 +113,7 @@ func (k *KPICalculator) CalculateExperimentKPIs(ctx context.Context, expID strin
 	} else {
 		result.DataAccuracy = accuracy
 	}
-	
+
 	return result, nil
 }
 
@@ -125,7 +125,7 @@ func (k *KPICalculator) calculateCardinalityReduction(ctx context.Context, expID
 			pipeline="metrics/full_fidelity"
 		}
 	`, expID)
-	
+
 	baselineCardinality, err := k.queryScalar(ctx, baselineQuery, timestamp)
 	if err != nil {
 		// Fallback to counting unique series
@@ -137,7 +137,7 @@ func (k *KPICalculator) calculateCardinalityReduction(ctx context.Context, expID
 			return 0, fmt.Errorf("baseline cardinality query failed: %w", err)
 		}
 	}
-	
+
 	// Count unique series for candidate
 	candidateQuery := fmt.Sprintf(`
 		phoenix_observer_kpi_store_phoenix_pipeline_output_cardinality_estimate{
@@ -145,7 +145,7 @@ func (k *KPICalculator) calculateCardinalityReduction(ctx context.Context, expID
 			pipeline="metrics/optimised"
 		}
 	`, expID)
-	
+
 	candidateCardinality, err := k.queryScalar(ctx, candidateQuery, timestamp)
 	if err != nil {
 		// Fallback to counting unique series
@@ -157,26 +157,26 @@ func (k *KPICalculator) calculateCardinalityReduction(ctx context.Context, expID
 			return 0, fmt.Errorf("candidate cardinality query failed: %w", err)
 		}
 	}
-	
+
 	if baselineCardinality == 0 {
 		return 0, nil
 	}
-	
+
 	reduction := ((baselineCardinality - candidateCardinality) / baselineCardinality) * 100
-	
+
 	log.Info().
 		Str("experiment_id", expID).
 		Float64("baseline", baselineCardinality).
 		Float64("candidate", candidateCardinality).
 		Float64("reduction", reduction).
 		Msg("Calculated cardinality reduction")
-	
+
 	return reduction, nil
 }
 
 func (k *KPICalculator) calculateResourceUsage(ctx context.Context, expID string, resource string, start, end time.Time) (baseline, candidate float64, err error) {
 	var query string
-	
+
 	switch resource {
 	case "cpu":
 		// Use Phoenix-specific CPU metrics
@@ -195,7 +195,7 @@ func (k *KPICalculator) calculateResourceUsage(ctx context.Context, expID string
 	default:
 		return 0, 0, fmt.Errorf("unknown resource type: %s", resource)
 	}
-	
+
 	// Query baseline
 	baselineQuery := fmt.Sprintf(query, expID, "baseline")
 	baseline, err = k.queryRangeAvg(ctx, baselineQuery, start, end)
@@ -211,7 +211,7 @@ func (k *KPICalculator) calculateResourceUsage(ctx context.Context, expID string
 			return 0, 0, fmt.Errorf("baseline %s query failed: %w", resource, err)
 		}
 	}
-	
+
 	// Query candidate
 	candidateQuery := fmt.Sprintf(query, expID, "candidate")
 	candidate, err = k.queryRangeAvg(ctx, candidateQuery, start, end)
@@ -227,7 +227,7 @@ func (k *KPICalculator) calculateResourceUsage(ctx context.Context, expID string
 			return 0, 0, fmt.Errorf("candidate %s query failed: %w", resource, err)
 		}
 	}
-	
+
 	return baseline, candidate, nil
 }
 
@@ -237,7 +237,7 @@ func (k *KPICalculator) calculateIngestRate(ctx context.Context, expID string, s
 		experiment_id="%s",
 		variant="%s"
 	}[5m]))`
-	
+
 	// Query baseline
 	baselineQuery := fmt.Sprintf(query, expID, "baseline")
 	baseline, err = k.queryRangeAvg(ctx, baselineQuery, start, end)
@@ -254,7 +254,7 @@ func (k *KPICalculator) calculateIngestRate(ctx context.Context, expID string, s
 			}
 		}
 	}
-	
+
 	// Query candidate
 	candidateQuery := fmt.Sprintf(query, expID, "candidate")
 	candidate, err = k.queryRangeAvg(ctx, candidateQuery, start, end)
@@ -271,7 +271,7 @@ func (k *KPICalculator) calculateIngestRate(ctx context.Context, expID string, s
 			}
 		}
 	}
-	
+
 	return baseline, candidate, nil
 }
 
@@ -296,28 +296,28 @@ func (k *KPICalculator) calculateDataAccuracy(ctx context.Context, expID string,
 		"agent_memory_used_bytes",
 		"agent_uptime_seconds",
 	}
-	
+
 	baselinePresent := 0
 	candidatePresent := 0
-	
+
 	for _, metric := range keyMetrics {
 		// Check baseline
 		baselineQuery := fmt.Sprintf(`count(%s{experiment_id="%s",variant="baseline"})`, metric, expID)
 		if val, err := k.queryScalar(ctx, baselineQuery, timestamp); err == nil && val > 0 {
 			baselinePresent++
 		}
-		
+
 		// Check candidate
 		candidateQuery := fmt.Sprintf(`count(%s{experiment_id="%s",variant="candidate"})`, metric, expID)
 		if val, err := k.queryScalar(ctx, candidateQuery, timestamp); err == nil && val > 0 {
 			candidatePresent++
 		}
 	}
-	
+
 	if baselinePresent == 0 {
 		return 100, nil // If no baseline metrics, assume 100% accuracy
 	}
-	
+
 	accuracy := (float64(candidatePresent) / float64(baselinePresent)) * 100
 	return accuracy, nil
 }
@@ -327,11 +327,11 @@ func (k *KPICalculator) queryScalar(ctx context.Context, query string, timestamp
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if len(warnings) > 0 {
 		log.Warn().Strs("warnings", warnings).Str("query", query).Msg("Prometheus query warnings")
 	}
-	
+
 	switch v := result.(type) {
 	case model.Vector:
 		if len(v) > 0 {
@@ -340,7 +340,7 @@ func (k *KPICalculator) queryScalar(ctx context.Context, query string, timestamp
 	case *model.Scalar:
 		return float64(v.Value), nil
 	}
-	
+
 	return 0, nil
 }
 
@@ -350,16 +350,16 @@ func (k *KPICalculator) queryRangeAvg(ctx context.Context, query string, start, 
 		End:   end,
 		Step:  30 * time.Second,
 	}
-	
+
 	result, warnings, err := k.promClient.QueryRange(ctx, query, r)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if len(warnings) > 0 {
 		log.Warn().Strs("warnings", warnings).Str("query", query).Msg("Prometheus query warnings")
 	}
-	
+
 	switch v := result.(type) {
 	case model.Matrix:
 		if len(v) > 0 && len(v[0].Values) > 0 {
@@ -370,7 +370,7 @@ func (k *KPICalculator) queryRangeAvg(ctx context.Context, query string, start, 
 			return sum / float64(len(v[0].Values)), nil
 		}
 	}
-	
+
 	return 0, nil
 }
 
@@ -380,30 +380,30 @@ func (k *KPICalculator) CalculateEstimatedCost(ctx context.Context, metricsPerSe
 	// - $0.10 per million datapoints ingested
 	// - Additional storage costs: $0.05 per million datapoints stored
 	// - Processing overhead: 20% of base cost
-	
+
 	const (
-		costPerMillionDatapoints = 0.10  // USD
-		storageMultiplier = 0.05         // USD per million stored
-		processingOverhead = 0.20        // 20% overhead
-		secondsPerMonth = 30 * 24 * 3600 // ~2.6M seconds
+		costPerMillionDatapoints = 0.10           // USD
+		storageMultiplier        = 0.05           // USD per million stored
+		processingOverhead       = 0.20           // 20% overhead
+		secondsPerMonth          = 30 * 24 * 3600 // ~2.6M seconds
 	)
-	
+
 	// Calculate monthly datapoints
 	monthlyDatapoints := metricsPerSecond * secondsPerMonth
 	millionDatapoints := monthlyDatapoints / 1_000_000
-	
+
 	// Base ingestion cost
 	baseCost := millionDatapoints * costPerMillionDatapoints
-	
+
 	// Storage cost (assuming 30-day retention)
 	storageCost := millionDatapoints * storageMultiplier
-	
+
 	// Processing overhead
 	overhead := (baseCost + storageCost) * processingOverhead
-	
+
 	// Total monthly cost
 	totalCost := baseCost + storageCost + overhead
-	
+
 	return totalCost
 }
 
@@ -412,10 +412,10 @@ func (k *KPICalculator) CalculateROI(baselineCost, optimizedCost float64) float6
 	if baselineCost == 0 {
 		return 0
 	}
-	
+
 	savings := baselineCost - optimizedCost
 	roi := (savings / baselineCost) * 100
-	
+
 	return roi
 }
 
@@ -424,34 +424,34 @@ func (k *KPICalculator) GetAdditionalMetrics(ctx context.Context, expID string, 
 	metrics := make(map[string]float64)
 	endTime := time.Now()
 	startTime := endTime.Add(-duration)
-	
+
 	// P99 latency for pipeline processing
 	p99Query := fmt.Sprintf(`histogram_quantile(0.99, 
 		sum(rate(otelcol_processor_batch_batch_send_size_bucket{experiment_id="%s"}[5m])) by (le, variant)
 	)`, expID)
-	
+
 	if val, err := k.queryRangeAvg(ctx, p99Query, startTime, endTime); err == nil {
 		metrics["p99_latency_ms"] = val * 1000 // Convert to milliseconds
 	}
-	
+
 	// Error rate
 	errorQuery := fmt.Sprintf(`sum(rate(otelcol_processor_refused_metric_points{experiment_id="%s"}[5m])) / 
 		(sum(rate(otelcol_receiver_accepted_metric_points{experiment_id="%s"}[5m])) + 0.1)`, expID, expID)
-	
+
 	if val, err := k.queryRangeAvg(ctx, errorQuery, startTime, endTime); err == nil {
 		metrics["error_rate"] = val * 100 // Convert to percentage
 	}
-	
+
 	// Pipeline efficiency
 	efficiencyQuery := fmt.Sprintf(`
 		(sum(rate(otelcol_processor_accepted_metric_points{experiment_id="%s"}[5m])) /
 		 (sum(rate(otelcol_processor_accepted_metric_points{experiment_id="%s"}[5m])) + 
 		  sum(rate(otelcol_processor_refused_metric_points{experiment_id="%s"}[5m])) + 0.1)
 		) * 100`, expID, expID, expID)
-	
+
 	if val, err := k.queryRangeAvg(ctx, efficiencyQuery, startTime, endTime); err == nil {
 		metrics["pipeline_efficiency"] = val
 	}
-	
+
 	return metrics
 }

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -80,7 +80,7 @@ Examples:
 
 		// Output the result
 		output.Success("Load simulation started successfully")
-		
+
 		data := [][]string{
 			{"Name", loadSim.Name},
 			{"Experiment ID", loadSim.ExperimentID},
@@ -89,9 +89,9 @@ Examples:
 			{"Process Count", fmt.Sprintf("%d", loadSim.ProcessCount)},
 			{"Status", string(loadSim.Status)},
 		}
-		
+
 		output.Table([]string{"Field", "Value"}, data)
-		
+
 		fmt.Fprintf(os.Stdout, "\nMonitor status with: phoenix loadsim status %s\n", loadSim.Name)
 
 		return nil
@@ -101,13 +101,13 @@ Examples:
 func init() {
 	loadsimCmd.AddCommand(loadsimStartCmd)
 
-	loadsimStartCmd.Flags().StringVarP(&loadSimProfile, "profile", "p", "realistic", 
+	loadsimStartCmd.Flags().StringVarP(&loadSimProfile, "profile", "p", "realistic",
 		"Load simulation profile (realistic, high-cardinality, process-churn, custom)")
-	loadsimStartCmd.Flags().StringVarP(&loadSimDuration, "duration", "d", "30m", 
+	loadsimStartCmd.Flags().StringVarP(&loadSimDuration, "duration", "d", "30m",
 		"Duration of the load simulation (e.g., 30m, 1h)")
-	loadsimStartCmd.Flags().Int32Var(&loadSimProcessCount, "process-count", 100, 
+	loadsimStartCmd.Flags().Int32Var(&loadSimProcessCount, "process-count", 100,
 		"Number of processes to simulate")
-	loadsimStartCmd.Flags().StringToStringVar(&loadSimNodeSelector, "node-selector", nil, 
+	loadsimStartCmd.Flags().StringToStringVar(&loadSimNodeSelector, "node-selector", nil,
 		"Node selector for load simulation pods (key=value pairs)")
 }
 

@@ -144,7 +144,7 @@ func (s *Server) handleStartExperiment(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to start experiment")
 		return
 	}
-	
+
 	// Broadcast experiment started event
 	startData, _ := json.Marshal(map[string]interface{}{
 		"experiment_id": expID,
@@ -169,7 +169,7 @@ func (s *Server) handleStopExperiment(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "Failed to stop experiment")
 		return
 	}
-	
+
 	// Broadcast experiment stopped event
 	stopData, _ := json.Marshal(map[string]interface{}{
 		"experiment_id": expID,
@@ -186,14 +186,14 @@ func (s *Server) handleStopExperiment(w http.ResponseWriter, r *http.Request) {
 // GET /api/v1/experiments/{id}/metrics - Get experiment metrics
 func (s *Server) handleGetExperimentMetrics(w http.ResponseWriter, r *http.Request) {
 	expID := chi.URLParam(r, "id")
-	
+
 	// Get experiment to check if it exists
 	_, err := s.store.GetExperiment(r.Context(), expID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Experiment not found")
 		return
 	}
-	
+
 	// Get metrics from store
 	metrics, err := s.store.GetExperimentMetrics(r.Context(), expID)
 	if err != nil {
@@ -201,31 +201,31 @@ func (s *Server) handleGetExperimentMetrics(w http.ResponseWriter, r *http.Reque
 		respondError(w, http.StatusInternalServerError, "Failed to get metrics")
 		return
 	}
-	
+
 	respondJSON(w, http.StatusOK, metrics)
 }
 
 // GET /api/v1/experiments/{id}/metrics - Get experiment metrics (old implementation)
 func (s *Server) handleGetExperimentMetrics_old(w http.ResponseWriter, r *http.Request) {
 	expID := chi.URLParam(r, "id")
-	
+
 	// Get experiment to check if it exists
 	exp, err := s.store.GetExperiment(r.Context(), expID)
 	if err != nil {
 		respondError(w, http.StatusNotFound, "Experiment not found")
 		return
 	}
-	
+
 	// Build metrics response structure that matches CLI expectations
 	metrics := map[string]interface{}{
 		"experiment_id": expID,
 		"timestamp":     time.Now(),
 		"summary": map[string]interface{}{
-			"total_metrics":          0,
-			"metrics_per_second":     0,
-			"cardinality_reduction":  0,
-			"cpu_usage":              0,
-			"memory_usage":           0,
+			"total_metrics":         0,
+			"metrics_per_second":    0,
+			"cardinality_reduction": 0,
+			"cpu_usage":             0,
+			"memory_usage":          0,
 		},
 		"baseline": map[string]interface{}{
 			"cardinality":     []interface{}{},
@@ -240,7 +240,7 @@ func (s *Server) handleGetExperimentMetrics_old(w http.ResponseWriter, r *http.R
 			"network_traffic": []interface{}{},
 		},
 	}
-	
+
 	// If experiment has KPIs in status, add them to summary
 	if exp.Status.KPIs != nil && len(exp.Status.KPIs) > 0 {
 		if summary, ok := metrics["summary"].(map[string]interface{}); ok {
@@ -262,10 +262,10 @@ func (s *Server) handleGetExperimentMetrics_old(w http.ResponseWriter, r *http.R
 			}
 		}
 	}
-	
+
 	// TODO: In the future, integrate with MetricsCollector service to get time-series data
 	// For now, return empty time series arrays which the CLI can handle
-	
+
 	respondJSON(w, http.StatusOK, metrics)
 }
 
@@ -281,4 +281,3 @@ func (s *Server) handlePromoteExperiment(w http.ResponseWriter, r *http.Request)
 
 	w.WriteHeader(http.StatusAccepted)
 }
-

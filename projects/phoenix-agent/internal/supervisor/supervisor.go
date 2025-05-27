@@ -339,21 +339,21 @@ func (s *Supervisor) StopAll() {
 // Shutdown gracefully shuts down the supervisor and all managed processes
 func (s *Supervisor) Shutdown(ctx context.Context) error {
 	log.Info().Msg("Shutting down supervisor")
-	
+
 	// Create error channel to collect shutdown errors
 	errChan := make(chan error, 2)
-	
+
 	// Shutdown collectors
 	go func() {
 		s.collectorManager.StopAll()
 		errChan <- nil
 	}()
-	
+
 	// Shutdown load simulation manager
 	go func() {
 		errChan <- s.loadSimManager.Shutdown(ctx)
 	}()
-	
+
 	// Wait for both shutdowns or timeout
 	var shutdownErr error
 	for i := 0; i < 2; i++ {
@@ -366,11 +366,11 @@ func (s *Supervisor) Shutdown(ctx context.Context) error {
 			return fmt.Errorf("shutdown timed out: %w", ctx.Err())
 		}
 	}
-	
+
 	if shutdownErr != nil {
 		return fmt.Errorf("shutdown error: %w", shutdownErr)
 	}
-	
+
 	log.Info().Msg("Supervisor shutdown complete")
 	return nil
 }

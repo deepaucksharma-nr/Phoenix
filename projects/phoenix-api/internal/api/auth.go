@@ -7,7 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
-	
+
 	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/services"
 )

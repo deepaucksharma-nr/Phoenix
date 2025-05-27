@@ -12,25 +12,25 @@ import (
 
 // Migration represents a migration file
 type Migration struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Version     string    `json:"version"`
-	Source      string    `json:"source"`
-	Target      string    `json:"target"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Version     string     `json:"version"`
+	Source      string     `json:"source"`
+	Target      string     `json:"target"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
 	AppliedAt   *time.Time `json:"applied_at,omitempty"`
-	FilePath    string    `json:"file_path"`
+	FilePath    string     `json:"file_path"`
 }
 
 // MigrationStatus represents the possible states of a migration
 type MigrationStatus string
 
 const (
-	StatusPending  MigrationStatus = "pending"
-	StatusApplied  MigrationStatus = "applied"
-	StatusFailed   MigrationStatus = "failed"
+	StatusPending    MigrationStatus = "pending"
+	StatusApplied    MigrationStatus = "applied"
+	StatusFailed     MigrationStatus = "failed"
 	StatusRolledBack MigrationStatus = "rolled_back"
 )
 
@@ -51,29 +51,29 @@ func NewManager(migrationsDir, statusFile string) *Manager {
 // ListMigrations returns all available migrations
 func (m *Manager) ListMigrations() ([]Migration, error) {
 	var migrations []Migration
-	
+
 	err := filepath.WalkDir(m.migrationsDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".json") {
 			return nil
 		}
-		
+
 		migration, err := m.loadMigration(path)
 		if err != nil {
 			return fmt.Errorf("failed to load migration %s: %w", path, err)
 		}
-		
+
 		migrations = append(migrations, migration)
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return migrations, nil
 }
 
@@ -83,13 +83,13 @@ func (m *Manager) GetMigration(id string) (*Migration, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, migration := range migrations {
 		if migration.ID == id {
 			return &migration, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("migration %s not found", id)
 }
 
@@ -99,24 +99,24 @@ func (m *Manager) ApplyMigration(id string, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if migration.Status == string(StatusApplied) {
 		return fmt.Errorf("migration %s is already applied", id)
 	}
-	
+
 	if dryRun {
 		fmt.Printf("DRY RUN: Would apply migration %s (%s)\n", migration.ID, migration.Name)
 		return nil
 	}
-	
+
 	// In a real implementation, this would apply the actual migration
 	fmt.Printf("Applying migration %s (%s)...\n", migration.ID, migration.Name)
-	
+
 	// Update status
 	now := time.Now()
 	migration.Status = string(StatusApplied)
 	migration.AppliedAt = &now
-	
+
 	return m.updateMigrationStatus(*migration)
 }
 
@@ -126,23 +126,23 @@ func (m *Manager) RollbackMigration(id string, dryRun bool) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if migration.Status != string(StatusApplied) {
 		return fmt.Errorf("migration %s is not applied, cannot rollback", id)
 	}
-	
+
 	if dryRun {
 		fmt.Printf("DRY RUN: Would rollback migration %s (%s)\n", migration.ID, migration.Name)
 		return nil
 	}
-	
+
 	// In a real implementation, this would rollback the actual migration
 	fmt.Printf("Rolling back migration %s (%s)...\n", migration.ID, migration.Name)
-	
+
 	// Update status
 	migration.Status = string(StatusRolledBack)
 	migration.AppliedAt = nil
-	
+
 	return m.updateMigrationStatus(*migration)
 }
 
@@ -151,34 +151,34 @@ func (m *Manager) GetStatus() (map[string]string, error) {
 	if _, err := os.Stat(m.statusFile); os.IsNotExist(err) {
 		return make(map[string]string), nil
 	}
-	
+
 	data, err := os.ReadFile(m.statusFile)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var status map[string]string
 	if err := json.Unmarshal(data, &status); err != nil {
 		return nil, err
 	}
-	
+
 	return status, nil
 }
 
 func (m *Manager) loadMigration(filePath string) (Migration, error) {
 	var migration Migration
-	
+
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return migration, err
 	}
-	
+
 	if err := json.Unmarshal(data, &migration); err != nil {
 		return migration, err
 	}
-	
+
 	migration.FilePath = filePath
-	
+
 	// Load status from status file
 	status, err := m.GetStatus()
 	if err == nil {
@@ -188,7 +188,7 @@ func (m *Manager) loadMigration(filePath string) (Migration, error) {
 			migration.Status = string(StatusPending)
 		}
 	}
-	
+
 	return migration, nil
 }
 
@@ -197,19 +197,19 @@ func (m *Manager) updateMigrationStatus(migration Migration) error {
 	if err != nil {
 		return err
 	}
-	
+
 	status[migration.ID] = migration.Status
-	
+
 	data, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(m.statusFile), 0755); err != nil {
 		return err
 	}
-	
+
 	return os.WriteFile(m.statusFile, data, 0644)
 }
 
@@ -217,7 +217,7 @@ func (m *Manager) updateMigrationStatus(migration Migration) error {
 func (m *Manager) CreateMigration(name, description, source, target string) (*Migration, error) {
 	// Generate migration ID based on timestamp
 	id := fmt.Sprintf("m_%d", time.Now().Unix())
-	
+
 	migration := Migration{
 		ID:          id,
 		Name:        name,
@@ -228,25 +228,25 @@ func (m *Manager) CreateMigration(name, description, source, target string) (*Mi
 		Status:      string(StatusPending),
 		CreatedAt:   time.Now(),
 	}
-	
+
 	// Ensure migrations directory exists
 	if err := os.MkdirAll(m.migrationsDir, 0755); err != nil {
 		return nil, err
 	}
-	
+
 	// Write migration file
 	filePath := filepath.Join(m.migrationsDir, fmt.Sprintf("%s.json", id))
 	migration.FilePath = filePath
-	
+
 	data, err := json.MarshalIndent(migration, "", "  ")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := os.WriteFile(filePath, data, 0644); err != nil {
 		return nil, err
 	}
-	
+
 	return &migration, nil
 }
 
@@ -254,7 +254,7 @@ func (m *Manager) CreateMigration(name, description, source, target string) (*Mi
 func (m *Manager) CheckMigrationNeeded() (bool, string, error) {
 	// Simple implementation - in real scenario this would check config version
 	currentVersion := "1.0.0"
-	latestVersion := "1.0.0" 
+	latestVersion := "1.0.0"
 	return currentVersion != latestVersion, currentVersion, nil
 }
 

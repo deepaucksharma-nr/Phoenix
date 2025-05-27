@@ -88,7 +88,7 @@ func main() {
 
 	// Create composite store
 	compositeStore := store.NewCompositeStore(postgresStore, pipelineStore)
-	
+
 	// Initialize API server
 	apiServer, err := api.NewServer(compositeStore, hub, cfg)
 	if err != nil {
@@ -102,7 +102,7 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ticker.C:

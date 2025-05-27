@@ -12,10 +12,10 @@ import (
 )
 
 var (
-	cfgFile     string
-	apiEndpoint string
+	cfgFile      string
+	apiEndpoint  string
 	outputFormat string
-	verbose     bool
+	verbose      bool
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -81,7 +81,7 @@ func initConfig() {
 		}
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv()          // read in environment variables that match
 	viper.SetEnvPrefix("PHOENIX") // will be uppercased automatically
 
 	// Set defaults

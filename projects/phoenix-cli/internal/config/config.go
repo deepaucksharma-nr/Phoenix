@@ -49,12 +49,12 @@ func New() *Config {
 		Token:       v.GetString("auth.token"),
 		APIEndpoint: v.GetString("api.endpoint"),
 	}
-	
+
 	// Set default if empty
 	if config.APIEndpoint == "" {
 		config.APIEndpoint = "http://localhost:8080"
 	}
-	
+
 	return config
 }
 
@@ -108,6 +108,22 @@ func (c *Config) GetOutputFormat() string {
 func (c *Config) SetOutputFormat(format string) error {
 	c.viper.Set("output.format", format)
 	return c.save()
+}
+
+// GetPushgatewayURL returns the pushgateway URL
+func (c *Config) GetPushgatewayURL() string {
+	url := c.viper.GetString("api.pushgateway_url")
+	if url == "" {
+		// Default to API host with pushgateway port
+		apiEndpoint := c.GetAPIEndpoint()
+		// Replace the port with 9091 for pushgateway
+		if apiEndpoint == "http://localhost:8080" {
+			return "http://localhost:9091"
+		}
+		// For other endpoints, append :9091
+		return apiEndpoint + ":9091"
+	}
+	return url
 }
 
 // save writes the configuration to disk

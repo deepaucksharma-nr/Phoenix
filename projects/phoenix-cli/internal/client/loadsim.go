@@ -19,15 +19,15 @@ func NewLoadSimulationClient(apiClient *APIClient) *LoadSimulationClient {
 
 // LoadSimulation represents a load simulation
 type LoadSimulation struct {
-	Name         string                           `json:"name"`
-	ExperimentID string                           `json:"experiment_id"`
-	Profile      string                           `json:"profile"`
-	Duration     string                           `json:"duration"`
-	ProcessCount int32                            `json:"process_count"`
-	Status       string                           `json:"status"`
-	StartTime    *time.Time                       `json:"start_time,omitempty"`
-	EndTime      *time.Time                       `json:"end_time,omitempty"`
-	Message      string                           `json:"message,omitempty"`
+	Name         string     `json:"name"`
+	ExperimentID string     `json:"experiment_id"`
+	Profile      string     `json:"profile"`
+	Duration     string     `json:"duration"`
+	ProcessCount int32      `json:"process_count"`
+	Status       string     `json:"status"`
+	StartTime    *time.Time `json:"start_time,omitempty"`
+	EndTime      *time.Time `json:"end_time,omitempty"`
+	Message      string     `json:"message,omitempty"`
 }
 
 // CreateLoadSimulationRequest represents a request to create a load simulation
@@ -119,10 +119,10 @@ func (c *LoadSimulationClient) GetProfiles(ctx context.Context) ([]LoadProfile, 
 
 // LoadProfile represents a load simulation profile
 type LoadProfile struct {
-	Name         string `json:"name"`
-	Description  string `json:"description"`
-	ProcessCount int32  `json:"default_process_count"`
+	Name         string  `json:"name"`
+	Description  string  `json:"description"`
+	ProcessCount int32   `json:"default_process_count"`
 	ChurnRate    float64 `json:"churn_rate"`
-	CPUPattern   string `json:"cpu_pattern"`
-	MemPattern   string `json:"mem_pattern"`
+	CPUPattern   string  `json:"cpu_pattern"`
+	MemPattern   string  `json:"mem_pattern"`
 }

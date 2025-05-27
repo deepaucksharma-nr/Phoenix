@@ -56,7 +56,7 @@ This command shows the version history of a deployment, including:
 
 		for _, v := range versions {
 			version := v.(map[string]interface{})
-			
+
 			versionNum := fmt.Sprintf("%v", version["version"])
 			deployedAt := ""
 			if ts, ok := version["deployed_at"].(string); ok {
@@ -68,7 +68,7 @@ This command shows the version history of a deployment, including:
 			}
 			deployedBy := fmt.Sprintf("%v", version["deployed_by"])
 			notes := fmt.Sprintf("%v", version["notes"])
-			
+
 			// Truncate notes if too long
 			if len(notes) > 47 {
 				notes = notes[:47] + "..."

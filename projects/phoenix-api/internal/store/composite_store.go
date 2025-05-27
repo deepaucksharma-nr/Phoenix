@@ -1,22 +1,25 @@
 package store
+
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
-	
+
 	"github.com/lib/pq"
 	commonModels "github.com/phoenix/platform/pkg/common/models"
-	"github.com/phoenix/platform/pkg/models"
 	commonstore "github.com/phoenix/platform/pkg/common/store"
+	"github.com/phoenix/platform/pkg/models"
 	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
 	"github.com/rs/zerolog/log"
 )
+
 // CompositeStore implements the full Store interface by combining different stores
 type CompositeStore struct {
 	postgresStore *commonstore.PostgresStore
 	pipelineStore *PostgresPipelineDeploymentStore
 }
+
 // NewCompositeStore creates a new composite store
 func NewCompositeStore(postgresStore *commonstore.PostgresStore, pipelineStore *PostgresPipelineDeploymentStore) Store {
 	return &CompositeStore{
@@ -24,6 +27,7 @@ func NewCompositeStore(postgresStore *commonstore.PostgresStore, pipelineStore *
 		pipelineStore: pipelineStore,
 	}
 }
+
 // Experiment operations (delegated to internal models store)
 func (s *CompositeStore) CreateExperiment(ctx context.Context, experiment *internalModels.Experiment) error {
 	// Convert internal model to common model
@@ -135,6 +139,7 @@ func (s *CompositeStore) UpdateExperimentPhase(ctx context.Context, experimentID
 func (s *CompositeStore) DeleteExperiment(ctx context.Context, experimentID string) error {
 	return s.postgresStore.DeleteExperiment(ctx, experimentID)
 }
+
 // Pipeline deployment operations (delegated to pipeline store)
 func (s *CompositeStore) CreateDeployment(ctx context.Context, deployment *commonModels.PipelineDeployment) error {
 	return s.pipelineStore.CreateDeployment(ctx, deployment)
@@ -154,6 +159,7 @@ func (s *CompositeStore) DeleteDeployment(ctx context.Context, deploymentID stri
 func (s *CompositeStore) UpdateDeploymentMetrics(ctx context.Context, deploymentID string, metrics *commonModels.DeploymentMetrics) error {
 	return s.pipelineStore.UpdateDeploymentMetrics(ctx, deploymentID, metrics)
 }
+
 // Task and Agent operations are implemented in all_methods.go
 // Event operations
 func (s *CompositeStore) CreateExperimentEvent(ctx context.Context, event *internalModels.ExperimentEvent) error {
@@ -209,6 +215,7 @@ func (s *CompositeStore) ListExperimentEvents(ctx context.Context, experimentID 
 	}
 	return events, nil
 }
+
 // UI-specific operations (TODO: Implement)
 func (s *CompositeStore) GetMetricCostFlow(ctx context.Context) (map[string]interface{}, error) {
 	// Query from the metric_cost_flow_view
@@ -265,7 +272,7 @@ func (s *CompositeStore) GetMetricCostFlow(ctx context.Context) (map[string]inte
 			flow.ByNamespace[namespace] += costPerMinute
 		}
 	}
-	
+
 	// Convert to map[string]interface{} for consistency with interface
 	return map[string]interface{}{
 		"total_cost_per_minute": flow.TotalCostPerMinute,
@@ -348,16 +355,16 @@ func (s *CompositeStore) GetCardinalityBreakdown(ctx context.Context, namespace,
 			break
 		}
 	}
-	
+
 	// Convert to map[string]interface{} for consistency with interface
 	return map[string]interface{}{
-		"total_cardinality":  breakdown.TotalCardinality,
-		"by_metric":          breakdown.ByMetric,
-		"by_label":           breakdown.ByLabel,
-		"top_contributors":   breakdown.TopContributors,
-		"timestamp":          breakdown.Timestamp,
-		"namespace":          namespace,
-		"service":            service,
+		"total_cardinality": breakdown.TotalCardinality,
+		"by_metric":         breakdown.ByMetric,
+		"by_label":          breakdown.ByLabel,
+		"top_contributors":  breakdown.TopContributors,
+		"timestamp":         breakdown.Timestamp,
+		"namespace":         namespace,
+		"service":           service,
 	}, nil
 }
 func (s *CompositeStore) GetPipelineTemplates(ctx context.Context) ([]*PipelineTemplate, error) {
@@ -379,19 +386,19 @@ func (s *CompositeStore) GetPipelineTemplates(ctx context.Context) ([]*PipelineT
 		WHERE is_active = true
 		ORDER BY name
 	`
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query pipeline templates: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var templates []*PipelineTemplate
 	for rows.Next() {
 		var template PipelineTemplate
 		var tags, features []string
 		var metadataJSON []byte
-		
+
 		err := rows.Scan(
 			&template.ID,
 			&template.Name,
@@ -410,33 +417,33 @@ func (s *CompositeStore) GetPipelineTemplates(ctx context.Context) ([]*PipelineT
 			log.Error().Err(err).Msg("Failed to scan pipeline template")
 			continue
 		}
-		
+
 		// Parse metadata JSON
 		if err := json.Unmarshal(metadataJSON, &template.Variables); err != nil {
 			template.Variables = make(map[string]string)
 		}
-		
+
 		templates = append(templates, &template)
 	}
-	
+
 	return templates, nil
 }
 func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (map[string]interface{}, error) {
 	// Parse period
 	var interval string
 	switch period {
-		case "1h":
-			interval = "1 hour"
-		case "24h":
-			interval = "24 hours"
-		case "7d":
-			interval = "7 days"
-		case "30d":
-			interval = "30 days"
-		default:
-			interval = "24 hours"
+	case "1h":
+		interval = "1 hour"
+	case "24h":
+		interval = "24 hours"
+	case "7d":
+		interval = "7 days"
+	case "30d":
+		interval = "30 days"
+	default:
+		interval = "24 hours"
 	}
-	
+
 	// Query cost tracking data
 	query := `
 		WITH cost_data AS (
@@ -466,11 +473,11 @@ func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (m
 			period_end
 		FROM aggregated
 	`
-	
+
 	var totalMetrics int64
 	var totalCost float64
 	var periodStart, periodEnd *time.Time
-	
+
 	row := s.pipelineStore.db.DB().QueryRowContext(ctx, fmt.Sprintf(query, interval))
 	if err := row.Scan(&totalMetrics, &totalCost, &periodStart, &periodEnd); err != nil {
 		log.Error().Err(err).Str("period", period).Msg("Failed to get cost analytics")
@@ -488,7 +495,7 @@ func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (m
 			"projected_savings":      0.0,
 		}, nil
 	}
-	
+
 	// Calculate savings based on baseline vs optimized metrics
 	baselineCost := totalCost * 3.33 // Assume baseline is 3.33x more expensive (70% reduction)
 	totalSavings := baselineCost - totalCost
@@ -496,7 +503,7 @@ func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (m
 	if baselineCost > 0 {
 		savingsPercent = (totalSavings / baselineCost) * 100
 	}
-	
+
 	// Get cost trend
 	trendQuery := `
 		SELECT 
@@ -509,30 +516,30 @@ func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (m
 		ORDER BY start_time
 		LIMIT 24
 	`
-	
+
 	rows, err := s.pipelineStore.db.DB().QueryContext(ctx, fmt.Sprintf(trendQuery, interval))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get cost trend")
 	}
 	defer rows.Close()
-	
+
 	var costTrend []map[string]interface{}
 	for rows.Next() {
 		var timestamp time.Time
 		var cost float64
 		var breakdown []byte
-		
+
 		if err := rows.Scan(&timestamp, &cost, &breakdown); err != nil {
 			continue
 		}
-		
+
 		costTrend = append(costTrend, map[string]interface{}{
 			"timestamp": timestamp,
 			"cost":      cost,
 			"savings":   (cost * 3.33) - cost, // Calculate savings for each point
 		})
 	}
-	
+
 	// Project monthly costs
 	var projectedMonthlyCost, projectedSavings float64
 	if periodEnd != nil && periodStart != nil {
@@ -540,20 +547,21 @@ func (s *CompositeStore) GetCostAnalytics(ctx context.Context, period string) (m
 		projectedMonthlyCost = hourlyRate * 24 * 30
 		projectedSavings = (projectedMonthlyCost * 3.33) - projectedMonthlyCost
 	}
-	
+
 	return map[string]interface{}{
 		"period":                 period,
 		"total_cost":             totalCost,
 		"total_savings":          totalSavings,
 		"savings_percent":        savingsPercent,
 		"cost_trend":             costTrend,
-		"savings_by_pipeline":    map[string]float64{}, // TODO: Calculate from experiment data
-		"savings_by_service":     map[string]float64{}, // TODO: Calculate from labels
+		"savings_by_pipeline":    map[string]float64{},       // TODO: Calculate from experiment data
+		"savings_by_service":     map[string]float64{},       // TODO: Calculate from labels
 		"top_cost_drivers":       []map[string]interface{}{}, // TODO: Calculate from metrics
 		"projected_monthly_cost": projectedMonthlyCost,
 		"projected_savings":      projectedSavings,
 	}, nil
 }
+
 // GetExperimentMetrics retrieves metrics for an experiment
 func (s *CompositeStore) GetExperimentMetrics(ctx context.Context, experimentID string) (map[string]interface{}, error) {
 	// Query metrics from metric_cache table
@@ -604,10 +612,10 @@ func (s *CompositeStore) GetExperimentMetrics(ctx context.Context, experimentID 
 		LEFT JOIN resource_usage ru ON 1=1
 		GROUP BY cd.baseline_cardinality, cd.candidate_cardinality, ru.avg_cpu, ru.avg_memory_mb
 	`
-	
+
 	var baselineCardinality, candidateCardinality, uniqueMetrics, totalDataPoints int64
 	var avgCPU, avgMemoryMB float64
-	
+
 	row := s.pipelineStore.db.DB().QueryRowContext(ctx, query, experimentID)
 	err := row.Scan(
 		&baselineCardinality,
@@ -617,7 +625,7 @@ func (s *CompositeStore) GetExperimentMetrics(ctx context.Context, experimentID 
 		&uniqueMetrics,
 		&totalDataPoints,
 	)
-	
+
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to get experiment metrics")
 		// Return empty metrics if error
@@ -625,48 +633,48 @@ func (s *CompositeStore) GetExperimentMetrics(ctx context.Context, experimentID 
 			"experiment_id": experimentID,
 			"timestamp":     time.Now(),
 			"summary": map[string]interface{}{
-				"total_metrics":          0,
-				"metrics_per_second":     0,
-				"cardinality_reduction":  0,
-				"cpu_usage":              0,
-				"memory_usage":           0,
+				"total_metrics":         0,
+				"metrics_per_second":    0,
+				"cardinality_reduction": 0,
+				"cpu_usage":             0,
+				"memory_usage":          0,
 			},
 			"baseline": map[string]interface{}{
-				"cardinality":       0,
+				"cardinality":        0,
 				"metrics_per_second": 0,
 			},
 			"candidate": map[string]interface{}{
-				"cardinality":       0,
+				"cardinality":        0,
 				"metrics_per_second": 0,
 			},
 		}, nil
 	}
-	
+
 	// Calculate reduction percentage
 	var cardinalityReduction float64
 	if baselineCardinality > 0 {
 		cardinalityReduction = float64(baselineCardinality-candidateCardinality) / float64(baselineCardinality) * 100
 	}
-	
+
 	// Calculate metrics per second (assuming 5 minute window)
 	metricsPerSecond := float64(totalDataPoints) / 300.0
-	
+
 	return map[string]interface{}{
 		"experiment_id": experimentID,
 		"timestamp":     time.Now(),
 		"summary": map[string]interface{}{
-			"total_metrics":          uniqueMetrics,
-			"metrics_per_second":     metricsPerSecond,
-			"cardinality_reduction":  cardinalityReduction,
-			"cpu_usage":              avgCPU,
-			"memory_usage":           avgMemoryMB,
+			"total_metrics":         uniqueMetrics,
+			"metrics_per_second":    metricsPerSecond,
+			"cardinality_reduction": cardinalityReduction,
+			"cpu_usage":             avgCPU,
+			"memory_usage":          avgMemoryMB,
 		},
 		"baseline": map[string]interface{}{
-			"cardinality":       baselineCardinality,
+			"cardinality":        baselineCardinality,
 			"metrics_per_second": metricsPerSecond * 0.6, // Estimate baseline portion
 		},
 		"candidate": map[string]interface{}{
-			"cardinality":       candidateCardinality,
+			"cardinality":        candidateCardinality,
 			"metrics_per_second": metricsPerSecond * 0.4, // Estimate candidate portion
 		},
 	}, nil
@@ -715,31 +723,31 @@ func (s *CompositeStore) GetTaskQueueStatus(ctx context.Context) (map[string]int
 			COALESCE(avg_wait_time, 0) as avg_wait_time
 		FROM queue_stats
 	`
-	
+
 	var pending, assigned, running, completed, failed, total int64
 	var avgExecutionTime, avgWaitTime float64
-	
+
 	row := s.pipelineStore.db.DB().QueryRowContext(ctx, query)
 	err := row.Scan(&pending, &assigned, &running, &completed, &failed, &total, &avgExecutionTime, &avgWaitTime)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get task queue status")
 		// Return zeros if no data
 		return map[string]interface{}{
-			"pending":           0,
-			"assigned":          0,
-			"running":           0,
-			"completed":         0,
-			"failed":            0,
-			"total":             0,
-			"avg_execution_time": 0,
-			"avg_wait_time":     0,
+			"pending":             0,
+			"assigned":            0,
+			"running":             0,
+			"completed":           0,
+			"failed":              0,
+			"total":               0,
+			"avg_execution_time":  0,
+			"avg_wait_time":       0,
 			"throughput_per_hour": 0,
 		}, nil
 	}
-	
+
 	// Calculate throughput (completed tasks per hour in last 24h)
 	throughputPerHour := float64(completed) / 24.0
-	
+
 	return map[string]interface{}{
 		"pending":             pending,
 		"assigned":            assigned,
@@ -758,10 +766,12 @@ func (s *CompositeStore) GetTaskQueueStatus(ctx context.Context) (map[string]int
 func (s *CompositeStore) RecordDeploymentVersion(ctx context.Context, deploymentID, pipelineConfig string, parameters map[string]interface{}, deployedBy string, notes string) (int, error) {
 	return s.pipelineStore.RecordDeploymentVersion(ctx, deploymentID, pipelineConfig, parameters, deployedBy, notes)
 }
+
 // GetDeploymentVersion retrieves a specific version of a deployment
 func (s *CompositeStore) GetDeploymentVersion(ctx context.Context, deploymentID string, version int) (*DeploymentVersion, error) {
 	return s.pipelineStore.GetDeploymentVersion(ctx, deploymentID, version)
 }
+
 // ListDeploymentVersions retrieves the version history for a deployment
 func (s *CompositeStore) ListDeploymentVersions(ctx context.Context, deploymentID string) ([]*DeploymentVersion, error) {
 	return s.pipelineStore.ListDeploymentVersions(ctx, deploymentID)
@@ -774,12 +784,12 @@ func (s *CompositeStore) BlacklistToken(ctx context.Context, jti, userID string,
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (token_jti) DO NOTHING
 	`
-	
+
 	_, err := s.pipelineStore.db.DB().ExecContext(ctx, query, jti, userID, expiresAt, reason)
 	if err != nil {
 		return fmt.Errorf("failed to blacklist token: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -792,13 +802,13 @@ func (s *CompositeStore) IsTokenBlacklisted(ctx context.Context, jti string) (bo
 			AND expires_at > NOW()
 		)
 	`
-	
+
 	var exists bool
 	err := s.pipelineStore.db.DB().QueryRowContext(ctx, query, jti).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check token blacklist: %w", err)
 	}
-	
+
 	return exists, nil
 }
 
@@ -808,16 +818,16 @@ func (s *CompositeStore) CleanupExpiredTokens(ctx context.Context) error {
 		DELETE FROM token_blacklist 
 		WHERE expires_at < NOW()
 	`
-	
+
 	result, err := s.pipelineStore.db.DB().ExecContext(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to cleanup expired tokens: %w", err)
 	}
-	
+
 	rowsAffected, _ := result.RowsAffected()
 	if rowsAffected > 0 {
 		log.Info().Int64("count", rowsAffected).Msg("Cleaned up expired blacklisted tokens")
 	}
-	
+
 	return nil
 }

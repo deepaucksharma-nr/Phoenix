@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/client"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/config"
 	"github.com/phoenix/platform/projects/phoenix-cli/internal/output"
+	"github.com/spf13/cobra"
 )
 
 // loadsimStopCmd represents the loadsim stop command
@@ -61,14 +61,14 @@ Examples:
 		}
 
 		output.Success("Load simulation stop initiated")
-		
+
 		data := [][]string{
 			{"Name", loadSim.Name},
 			{"Experiment ID", loadSim.ExperimentID},
 			{"Profile", loadSim.Profile},
 			{"Previous Status", string(loadSim.Status)},
 		}
-		
+
 		output.Table([]string{"Field", "Value"}, data)
 
 		return nil

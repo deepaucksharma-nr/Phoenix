@@ -9,8 +9,8 @@ This guide helps you set up a development environment for the Phoenix Platform.
 - **Node.js** 18+ ([install](https://nodejs.org/))
 - **Docker** 20.10+ ([install](https://docs.docker.com/get-docker/))
 - **Docker Compose** 2.0+ (included with Docker Desktop)
-- **PostgreSQL** 15+ (primary database)
 - **Make** (usually pre-installed)
+- **PostgreSQL** client tools (optional, for debugging)
 
 ### Recommended Tools
 - **golangci-lint** - Go linter
@@ -23,12 +23,17 @@ This guide helps you set up a development environment for the Phoenix Platform.
 ```bash
 # Clone repository
 git clone https://github.com/phoenix/platform.git
-cd phoenix
+cd platform
 
 # Install all dependencies and tools
 make setup
 
+# Start infrastructure (PostgreSQL, Prometheus, etc.)
+cd deployments/single-vm
+docker-compose up -d postgres prometheus grafana
+
 # Start development environment
+cd ../..
 make dev-up
 
 # Verify installation

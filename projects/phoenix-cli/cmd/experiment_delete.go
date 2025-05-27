@@ -72,7 +72,7 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 	if expDeleteAll {
 		// Get status filter
 		statusFilter, _ := cmd.Flags().GetString("status")
-		
+
 		// List experiments with filter
 		experiments, err := apiClient.ListExperiments(client.ListExperimentsRequest{})
 		if err != nil {
@@ -105,7 +105,7 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 
 			// Check if experiment can be deleted
 			if experiment.Phase == "running" || experiment.Phase == "initializing" {
-				output.PrintWarning(fmt.Sprintf("Cannot delete %s experiment '%s' (%s). Stop it first.", 
+				output.PrintWarning(fmt.Sprintf("Cannot delete %s experiment '%s' (%s). Stop it first.",
 					experiment.Phase, experiment.Name, experiment.ID))
 				continue
 			}

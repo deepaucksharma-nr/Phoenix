@@ -93,7 +93,7 @@ func followExperimentStatus(apiClient *client.APIClient, experimentID string) er
 	for range ticker.C {
 		// Clear screen (simple approach - just add newlines)
 		fmt.Printf("\n")
-		
+
 		if err := displayExperimentStatus(apiClient, experimentID); err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func displayExperimentStatus(apiClient *client.APIClient, experimentID string) e
 	// Display summary
 	fmt.Printf("Experiment: %s (%s)\n", experiment.Name, experiment.ID[:8])
 	fmt.Printf("Status:     %s\n", output.ColorizeStatus(experiment.Phase))
-	
+
 	if experiment.StartedAt != nil {
 		duration := time.Since(*experiment.StartedAt)
 		fmt.Printf("Duration:   %s\n", formatDuration(duration))
@@ -130,7 +130,7 @@ func displayExperimentStatus(apiClient *client.APIClient, experimentID string) e
 		fmt.Printf("  Baseline Cardinality:   %d\n", experiment.Results.BaselineMetrics.Cardinality)
 		fmt.Printf("  Candidate Cardinality:  %d\n", experiment.Results.CandidateMetrics.Cardinality)
 		fmt.Printf("  Reduction:              %.1f%%\n", experiment.Results.CardinalityReduction)
-		
+
 		if experiment.Results.BaselineMetrics.ErrorRate > 0 || experiment.Results.CandidateMetrics.ErrorRate > 0 {
 			fmt.Printf("\n  Error Rates:\n")
 			fmt.Printf("    Baseline:  %.2f%%\n", experiment.Results.BaselineMetrics.ErrorRate*100)

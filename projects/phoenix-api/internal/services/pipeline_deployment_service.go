@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	"github.com/google/uuid"
 	"github.com/phoenix/platform/pkg/common/models"
 	"github.com/phoenix/platform/projects/phoenix-api/internal/store"

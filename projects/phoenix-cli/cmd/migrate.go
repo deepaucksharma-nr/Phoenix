@@ -157,12 +157,12 @@ func runMigrateStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	outputFormat := viper.GetString("output")
-	
+
 	status := map[string]interface{}{
-		"current_version":    currentVersion,
-		"latest_version":     "1.0.0", // This should come from the migration manager
-		"migration_needed":   needed,
-		"config_file":        viper.ConfigFileUsed(),
+		"current_version":  currentVersion,
+		"latest_version":   "1.0.0", // This should come from the migration manager
+		"migration_needed": needed,
+		"config_file":      viper.ConfigFileUsed(),
 	}
 
 	switch outputFormat {
@@ -176,11 +176,11 @@ func runMigrateStatus(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Latest Version:  1.0.0\n")
 		fmt.Printf("  Migration Needed: %v\n", needed)
 		fmt.Printf("  Config File: %s\n", viper.ConfigFileUsed())
-		
+
 		if needed {
 			fmt.Printf("\nTo migrate: phoenix migrate up\n")
 		}
-		
+
 		return nil
 	}
 }
@@ -214,7 +214,7 @@ func runMigrateBackupList(cmd *cobra.Command, args []string) error {
 	}
 
 	outputFormat := viper.GetString("output")
-	
+
 	switch outputFormat {
 	case "json":
 		return output.PrintJSON(cmd.OutOrStdout(), map[string]interface{}{
@@ -227,7 +227,7 @@ func runMigrateBackupList(cmd *cobra.Command, args []string) error {
 	default:
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 8, 2, ' ', 0)
 		fmt.Fprintln(w, "FILENAME\tVERSION\tTIMESTAMP\tSIZE")
-		
+
 		for _, backup := range backups {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",
 				backup.Filename,
@@ -236,7 +236,7 @@ func runMigrateBackupList(cmd *cobra.Command, args []string) error {
 				output.FormatBytes(backup.Size),
 			)
 		}
-		
+
 		return w.Flush()
 	}
 }
@@ -248,7 +248,7 @@ func runMigrateValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("Validating configuration...")
-	
+
 	if err := mm.ValidateConfig(); err != nil {
 		fmt.Printf("❌ Validation failed: %v\n", err)
 		return err
