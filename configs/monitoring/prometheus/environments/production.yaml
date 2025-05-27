@@ -1,0 +1,39 @@
+# Production environment values for Prometheus
+Environment: production
+ClusterName: phoenix-prod
+ScrapeInterval: 30s
+EvaluationInterval: 30s
+
+# Targets
+PrometheusTarget: localhost:9090
+PhoenixAPITargets:
+  - phoenix-api.phoenix-system:8081
+PushgatewayTargets:
+  - pushgateway.phoenix-system:9091
+
+# Features
+AlertmanagerEnabled: true
+AlertmanagerTargets:
+  - alertmanager.monitoring:9093
+DirectAgentScraping: true
+AgentNamespaces:
+  - phoenix-system
+  - default
+
+# Rule files location
+RuleFilesPath: /etc/prometheus/rules
+
+# External labels
+ExternalLabels:
+  region: us-east-1
+  team: platform
+  tier: production
+
+# Custom scrape configs for production
+CustomScrapeConfigs:
+  - JobName: grafana
+    StaticConfigs: true
+    Targets:
+      - grafana.monitoring:3000
+    MetricsPath: /metrics
+    ScrapeInterval: 30s

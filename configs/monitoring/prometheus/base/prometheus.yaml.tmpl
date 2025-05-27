@@ -1,0 +1,112 @@
+# Phoenix Platform Prometheus Configuration Template
+# Environment: {{ .Environment }}
+# Generated at: {{ .GeneratedAt }}
+
+global:
+  scrape_interval: {{ .ScrapeInterval | default "15s" }}
+  evaluation_interval: {{ .EvaluationInterval | default "15s" }}
+  external_labels:
+    cluster: '{{ .ClusterName | default "phoenix" }}'
+    environment: '{{ .Environment }}'
+    architecture: 'lean'
+{{- if .ExternalLabels }}
+  {{- range $key, $value := .ExternalLabels }}
+    {{ $key }}: '{{ $value }}'
+  {{- end }}
+{{- end }}
+
+# Alertmanager configuration
+{{- if .AlertmanagerEnabled }}
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          {{- range .AlertmanagerTargets }}
+          - '{{ . }}'
+          {{- end }}
+{{- end }}
+
+# Rule files
+rule_files:
+{{- if .RuleFilesPath }}
+  - '{{ .RuleFilesPath }}/*.yml'
+{{- else }}
+  - '/etc/prometheus/rules/*.yml'
+{{- end }}
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['{{ .PrometheusTarget | default "localhost:9090" }}']
+    metrics_path: /metrics
+    scrape_interval: {{ .ScrapeInterval | default "15s" }}
+
+  # Phoenix API metrics
+  - job_name: 'phoenix-api'
+    static_configs:
+      - targets: 
+        {{- range .PhoenixAPITargets }}
+        - '{{ . }}'
+        {{- end }}
+    metrics_path: /metrics
+    scrape_interval: {{ .ScrapeInterval | default "15s" }}
+
+  # Pushgateway for agent metrics
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: 
+        {{- range .PushgatewayTargets }}
+        - '{{ . }}'
+        {{- end }}
+    scrape_interval: {{ .ScrapeInterval | default "15s" }}
+    metric_relabel_configs:
+      # Preserve important labels
+      - source_labels: [experiment_id]
+        target_label: experiment_id
+      - source_labels: [variant]
+        target_label: variant
+      - source_labels: [host]
+        target_label: host
+      - source_labels: [pipeline_id]
+        target_label: pipeline_id
+
+  # Phoenix Agents (if direct scraping is enabled)
+{{- if .DirectAgentScraping }}
+  - job_name: 'phoenix-agents'
+    kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names:
+          {{- range .AgentNamespaces }}
+          - {{ . }}
+          {{- end }}
+    relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        action: keep
+        regex: phoenix-agent
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+{{- end }}
+
+  # Additional custom scrape configs
+{{- range .CustomScrapeConfigs }}
+  - job_name: '{{ .JobName }}'
+    {{- if .StaticConfigs }}
+    static_configs:
+      - targets:
+        {{- range .Targets }}
+        - '{{ . }}'
+        {{- end }}
+    {{- end }}
+    {{- if .MetricsPath }}
+    metrics_path: {{ .MetricsPath }}
+    {{- end }}
+    {{- if .ScrapeInterval }}
+    scrape_interval: {{ .ScrapeInterval }}
+    {{- end }}
+{{- end }}

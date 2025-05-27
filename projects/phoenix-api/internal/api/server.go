@@ -25,6 +25,7 @@ type Server struct {
 	metricsCollector   *services.MetricsCollector
 	analysisService    *services.AnalysisService
 	templateRenderer   *services.PipelineTemplateRenderer
+	costService        *services.CostService
 }
 
 func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*Server, error) {
@@ -53,6 +54,9 @@ func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*S
 		}
 	}
 	
+	// Initialize cost service
+	costService := services.NewCostService(store)
+	
 	return &Server{
 		store:            store,
 		hub:              hub,
@@ -62,6 +66,7 @@ func NewServer(store store.Store, hub *phoenixws.Hub, config *config.Config) (*S
 		metricsCollector: metricsCollector,
 		analysisService:  analysisService,
 		templateRenderer: templateRenderer,
+		costService:      costService,
 	}, nil
 }
 
@@ -85,6 +90,7 @@ func (s *Server) SetupRoutes(r chi.Router) {
 			r.Post("/{id}/kpis", s.handleCalculateKPIs)
 			r.Get("/{id}/kpis", s.handleGetKPIs)
 			r.Post("/{id}/analyze", s.handleAnalyzeExperiment)
+			r.Get("/{id}/cost-analysis", s.handleGetCostAnalysis)
 		})
 
 		// Pipeline endpoints (existing from platform-api)

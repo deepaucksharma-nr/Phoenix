@@ -3,13 +3,14 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/phoenix/platform/pkg/common/websocket"
-	"github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	internalModels "github.com/phoenix/platform/projects/phoenix-api/internal/models"
+	phoenixws "github.com/phoenix/platform/projects/phoenix-api/internal/websocket"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,27 +28,8 @@ func (s *Server) handleGetMetricCostFlow(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	
-	// Convert to WebSocket format
-	flow := websocket.MetricFlowUpdate{
-		Timestamp:     time.Now(),
-		TotalCostRate: costFlow.TotalCostPerMinute,
-		TopMetrics:    make([]websocket.MetricCostBreakdown, 0),
-		ByService:     costFlow.ByService,
-		ByNamespace:   costFlow.ByNamespace,
-	}
-	
-	// Add top metrics
-	for _, metric := range costFlow.TopMetrics {
-		flow.TopMetrics = append(flow.TopMetrics, websocket.MetricCostBreakdown{
-			MetricName:    metric.Name,
-			CostPerMinute: metric.CostPerMinute,
-			Cardinality:   metric.Cardinality,
-			Percentage:    metric.Percentage,
-			Labels:        metric.Labels,
-		})
-	}
-	
-	respondJSON(w, http.StatusOK, flow)
+	// Return the cost flow directly
+	respondJSON(w, http.StatusOK, costFlow)
 }
 
 // handleGetCardinalityBreakdown returns cardinality analysis
@@ -81,48 +63,32 @@ func (s *Server) handleGetFleetStatus(w http.ResponseWriter, r *http.Request) {
 	
 	// Convert to fleet status format
 	type FleetStatus struct {
-		TotalAgents   int                              `json:"total_agents"`
-		HealthyAgents int                              `json:"healthy_agents"`
-		OfflineAgents int                              `json:"offline_agents"`
-		UpdatingAgents int                             `json:"updating_agents"`
-		TotalSavings  float64                          `json:"total_savings"`
-		Agents        []websocket.AgentStatusUpdate    `json:"agents"`
+		TotalAgents    int                            `json:"total_agents"`
+		HealthyAgents  int                            `json:"healthy_agents"`
+		OfflineAgents  int                            `json:"offline_agents"`
+		UpdatingAgents int                            `json:"updating_agents"`
+		TotalSavings   float64                        `json:"total_savings"`
+		Agents         []map[string]interface{}       `json:"agents"`
 	}
 	
 	status := FleetStatus{
 		TotalAgents: len(agents),
-		Agents:      make([]websocket.AgentStatusUpdate, 0),
+		Agents:      make([]map[string]interface{}, 0),
 	}
 	
 	for _, agent := range agents {
-		// Convert active tasks from string IDs to TaskInfo
-		taskInfos := make([]websocket.TaskInfo, 0, len(agent.ActiveTasks))
-		for _, taskID := range agent.ActiveTasks {
-			taskInfos = append(taskInfos, websocket.TaskInfo{
-				ID:     taskID,
-				Type:   "pipeline", // Default type
-				Status: "running",
-				Progress: 50, // Default progress
-				StartedAt: time.Now(),
-			})
+		agentData := map[string]interface{}{
+			"host_id":        agent.HostID,
+			"hostname":       agent.Hostname,
+			"status":         agent.Status,
+			"active_tasks":   agent.ActiveTasks,
+			"cpu_percent":    agent.ResourceUsage.CPUPercent,
+			"memory_mb":      agent.ResourceUsage.MemoryBytes / (1024 * 1024),
+			"last_heartbeat": agent.LastHeartbeat,
+			"agent_version":  agent.AgentVersion,
 		}
 		
-		agentStatus := websocket.AgentStatusUpdate{
-			HostID:        agent.HostID,
-			Status:        agent.Status,
-			ActiveTasks:   taskInfos,
-			Metrics:       websocket.AgentMetrics{
-				CPUPercent:    agent.ResourceUsage.CPUPercent,
-				MemoryMB:      agent.ResourceUsage.MemoryBytes / (1024 * 1024),
-				MetricsPerSec: 0, // TODO: Get from metrics
-				DroppedCount:  0, // TODO: Get from metrics
-			},
-			CostSavings:   0, // TODO: Calculate cost savings
-			LastHeartbeat: agent.LastHeartbeat,
-			Location:      nil, // TODO: Add location support
-		}
-		
-		status.Agents = append(status.Agents, agentStatus)
+		status.Agents = append(status.Agents, agentData)
 		
 		// Count by status
 		switch agent.Status {
@@ -133,9 +99,6 @@ func (s *Server) handleGetFleetStatus(w http.ResponseWriter, r *http.Request) {
 		case "updating":
 			status.UpdatingAgents++
 		}
-		
-		// TODO: Calculate total savings from metrics
-		// status.TotalSavings += agent.CostSavings
 	}
 	
 	respondJSON(w, http.StatusOK, status)
@@ -293,14 +256,84 @@ func (s *Server) handleQuickDeploy(w http.ResponseWriter, r *http.Request) {
 
 // handleInstantRollback performs instant rollback
 func (s *Server) handleInstantRollback(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	experimentID := chi.URLParam(r, "id")
 	
-	// TODO: Implement rollback functionality
-	log.Info().Str("experiment_id", experimentID).Msg("Rollback requested")
+	// Get experiment
+	exp, err := s.store.GetExperiment(ctx, experimentID)
+	if err != nil {
+		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to get experiment")
+		respondError(w, http.StatusNotFound, "Experiment not found")
+		return
+	}
 	
-	respondJSON(w, http.StatusOK, map[string]string{
-		"status": "success",
-		"message": "Rollback initiated",
+	// Check if experiment is in a state that can be rolled back
+	if exp.Phase != "running" && exp.Phase != "completed" {
+		respondError(w, http.StatusBadRequest, "Experiment must be running or completed to rollback")
+		return
+	}
+	
+	// Create rollback tasks for each host
+	rollbackTasks := 0
+	for _, host := range exp.Config.TargetHosts {
+		// Stop candidate pipeline
+		task := &internalModels.Task{
+			HostID:       host,
+			ExperimentID: experimentID,
+			Type:         "collector",
+			Action:       "stop",
+			Priority:     3, // High priority for rollback
+			Config: map[string]interface{}{
+				"id": fmt.Sprintf("%s-candidate", experimentID),
+			},
+		}
+		
+		if err := s.taskQueue.Enqueue(ctx, task); err != nil {
+			log.Error().Err(err).Str("host", host).Msg("Failed to enqueue rollback task")
+			continue
+		}
+		rollbackTasks++
+	}
+	
+	// Update experiment status
+	if err := s.store.UpdateExperimentPhase(ctx, experimentID, "rollback"); err != nil {
+		log.Error().Err(err).Msg("Failed to update experiment phase")
+	}
+	
+	// Create experiment event
+	event := &internalModels.ExperimentEvent{
+		ExperimentID: experimentID,
+		EventType:    "experiment_rollback",
+		Phase:        "rollback",
+		Message:      fmt.Sprintf("Rollback initiated for %d hosts", rollbackTasks),
+		Metadata: map[string]interface{}{
+			"hosts_affected": rollbackTasks,
+			"reason":         r.URL.Query().Get("reason"),
+		},
+	}
+	
+	if err := s.store.CreateExperimentEvent(ctx, event); err != nil {
+		log.Error().Err(err).Msg("Failed to create rollback event")
+	}
+	
+	// Broadcast rollback event
+	data, _ := json.Marshal(map[string]interface{}{
+		"experiment_id": experimentID,
+		"action":        "rollback",
+		"hosts":         rollbackTasks,
+	})
+	s.hub.Broadcast <- &phoenixws.Message{
+		Type:      phoenixws.MessageType("experiment_rollback"),
+		Topic:     "experiments",
+		Data:      data,
+		Timestamp: time.Now(),
+	}
+	
+	respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":         "success",
+		"message":        "Rollback initiated",
+		"experiment_id":  experimentID,
+		"hosts_affected": rollbackTasks,
 	})
 }
 
@@ -322,7 +355,7 @@ func (s *Server) deployPipelineQuick(ctx context.Context, template string, hosts
 	deploymentID := "dep-" + strconv.FormatInt(time.Now().Unix(), 36)
 	
 	for _, host := range hosts {
-		task := &models.Task{
+		task := &internalModels.Task{
 			Type:         "deploy_pipeline",
 			HostID:       host,
 			ExperimentID: "",

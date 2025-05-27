@@ -29,7 +29,7 @@ func (s *Server) handleCalculateKPIs(w http.ResponseWriter, r *http.Request) {
 	kpis, err := s.analysisService.AnalyzeExperiment(r.Context(), experimentID)
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to analyze experiment")
-		http.Error(w, "Failed to analyze experiment", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to analyze experiment")
 		return
 	}
 	
@@ -44,8 +44,7 @@ func (s *Server) handleCalculateKPIs(w http.ResponseWriter, r *http.Request) {
 		Data: data,
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(kpis)
+	respondJSON(w, http.StatusOK, kpis)
 }
 
 // handleGetKPIs returns the latest KPIs for an experiment
@@ -59,12 +58,11 @@ func (s *Server) handleGetKPIs(w http.ResponseWriter, r *http.Request) {
 	kpis, err := s.analysisService.AnalyzeExperiment(r.Context(), experimentID)
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to analyze experiment")
-		http.Error(w, "Failed to analyze experiment", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to analyze experiment")
 		return
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(kpis)
+	respondJSON(w, http.StatusOK, kpis)
 }
 
 // handleAnalyzeExperiment performs comprehensive analysis of an experiment
@@ -75,7 +73,7 @@ func (s *Server) handleAnalyzeExperiment(w http.ResponseWriter, r *http.Request)
 	analysis, err := s.analysisService.AnalyzeExperiment(r.Context(), experimentID)
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to analyze experiment")
-		http.Error(w, "Failed to analyze experiment", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to analyze experiment")
 		return
 	}
 	
@@ -90,8 +88,7 @@ func (s *Server) handleAnalyzeExperiment(w http.ResponseWriter, r *http.Request)
 		Data: data,
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(analysis)
+	respondJSON(w, http.StatusOK, analysis)
 }
 
 // handleGetMetrics returns metrics for an experiment
@@ -119,7 +116,7 @@ func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 		start, err1 := time.Parse(time.RFC3339, startStr)
 		end, err2 := time.Parse(time.RFC3339, endStr)
 		if err1 != nil || err2 != nil {
-			http.Error(w, "Invalid time format. Use RFC3339", http.StatusBadRequest)
+			respondError(w, http.StatusBadRequest, "Invalid time format. Use RFC3339")
 			return
 		}
 		
@@ -131,12 +128,11 @@ func (s *Server) handleGetMetrics(w http.ResponseWriter, r *http.Request) {
 	
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to get metrics")
-		http.Error(w, "Failed to get metrics", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to get metrics")
 		return
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"experiment_id": experimentID,
 		"metrics":       metrics,
 		"count":         len(metrics),
@@ -155,8 +151,7 @@ func (s *Server) handleGetPipelineTemplates(w http.ResponseWriter, r *http.Reque
 		})
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"templates": response,
 	})
 }
@@ -168,7 +163,7 @@ func (s *Server) handleGeneratePipeline(w http.ResponseWriter, r *http.Request) 
 	// Get experiment
 	experiment, err := s.store.GetExperiment(r.Context(), experimentID)
 	if err != nil {
-		http.Error(w, "Experiment not found", http.StatusNotFound)
+		respondError(w, http.StatusNotFound, "Experiment not found")
 		return
 	}
 	
@@ -183,14 +178,14 @@ func (s *Server) handleGeneratePipeline(w http.ResponseWriter, r *http.Request) 
 	pipelineConfig, err := s.templateRenderer.GenerateOptimizedPipeline(r.Context(), experiment, kpis)
 	if err != nil {
 		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to generate pipeline")
-		http.Error(w, "Failed to generate pipeline", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to generate pipeline")
 		return
 	}
 	
 	// Validate the pipeline
 	if err := s.templateRenderer.ValidatePipelineConfig(pipelineConfig); err != nil {
 		log.Error().Err(err).Msg("Generated pipeline is invalid")
-		http.Error(w, "Generated pipeline is invalid", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Generated pipeline is invalid")
 		return
 	}
 	
@@ -198,12 +193,11 @@ func (s *Server) handleGeneratePipeline(w http.ResponseWriter, r *http.Request) 
 	yamlConfig, err := s.templateRenderer.RenderPipelineYAML(pipelineConfig)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to render pipeline YAML")
-		http.Error(w, "Failed to render pipeline", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to render pipeline")
 		return
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"experiment_id": experimentID,
 		"config":        pipelineConfig,
 		"yaml":          yamlConfig,
@@ -218,7 +212,7 @@ func (s *Server) handleRenderPipelineTemplate(w http.ResponseWriter, r *http.Req
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		respondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 	
@@ -234,12 +228,11 @@ func (s *Server) handleRenderPipelineTemplate(w http.ResponseWriter, r *http.Req
 	rendered, err := s.templateRenderer.RenderTemplate(r.Context(), req.Template, data)
 	if err != nil {
 		log.Error().Err(err).Str("template", req.Template).Msg("Failed to render template")
-		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+		respondError(w, http.StatusInternalServerError, "Failed to render template")
 		return
 	}
 	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	respondJSON(w, http.StatusOK, map[string]interface{}{
 		"template": req.Template,
 		"rendered": rendered,
 	})
@@ -258,4 +251,37 @@ func getPipelineTemplateDescription(name string) string {
 		return desc
 	}
 	return "Custom pipeline template"
+}
+
+// handleGetCostAnalysis returns cost analysis for an experiment
+func (s *Server) handleGetCostAnalysis(w http.ResponseWriter, r *http.Request) {
+	experimentID := chi.URLParam(r, "id")
+	
+	// Get experiment to verify it exists
+	exp, err := s.store.GetExperiment(r.Context(), experimentID)
+	if err != nil {
+		respondError(w, http.StatusNotFound, "Experiment not found")
+		return
+	}
+	
+	// Perform cost analysis
+	analysis, err := s.costService.CalculateExperimentCostSavings(r.Context(), experimentID)
+	if err != nil {
+		log.Error().Err(err).Str("experiment_id", experimentID).Msg("Failed to calculate cost savings")
+		respondError(w, http.StatusInternalServerError, "Failed to analyze costs")
+		return
+	}
+	
+	// Return analysis with experiment info
+	response := map[string]interface{}{
+		"experiment": map[string]interface{}{
+			"id":          exp.ID,
+			"name":        exp.Name,
+			"phase":       exp.Phase,
+			"duration":    exp.Config.Duration,
+		},
+		"cost_analysis": analysis,
+	}
+	
+	respondJSON(w, http.StatusOK, response)
 }
