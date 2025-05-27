@@ -64,7 +64,7 @@ graph TD
 
 ## Team Structure
 
-The Phoenix Platform team consists of 9 members with distinct roles and responsibilities, organized around key architectural components:
+The Phoenix Platform team consists of 10 members with distinct roles and responsibilities, organized around key architectural components:
 
 | Name | Role | Focus Area | Components |
 |------|------|------------|------------|
@@ -77,6 +77,7 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
 | Tharun | Engineer | Pipeline Framework | Execution Engine, Configuration System |
 | Tanush | Engineer | Agent Integration | Agent Core, OTel Integration |
 | Ramana | Engineer | Dashboard & Visualization | UI Components, Real-time Updates |
+| Praveen | Engineer | Security & Compliance | Authentication, Encryption, Audit Logging |
 
 ## Component Ownership
 
@@ -93,6 +94,7 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
 | Test Framework | Abhinav | Shivani |
 | CI/CD Pipeline | Abhinav | Srikanth |
 | Kubernetes Deployment | Abhinav | Tanush |
+| Security Framework | Praveen | Srikanth |
 | Documentation | Palash | All |
 
 ## Task Distribution
@@ -328,6 +330,35 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
    - Build cost savings calculator and visualizations
    - Reference: `/projects/dashboard/src/components/experiments/`, `/projects/dashboard/src/pages/Experiments.tsx`
 
+### 10. Praveen (Engineer)
+
+**Focus Areas**: Security and compliance
+
+**Deliverables**:
+1. **Authentication & Authorization Framework**
+   - Implement JWT-based authentication system
+   - Create role-based access control (RBAC) framework
+   - Design secure token management and rotation
+   - Reference: `/pkg/auth/jwt.go`, `/pkg/auth/rbac.go`, `/pkg/auth/token_manager.go`
+
+2. **Encryption & Secure Communication**
+   - Implement TLS communication between components
+   - Create secrets management infrastructure
+   - Design encrypted storage for sensitive data
+   - Reference: `/pkg/security/encryption.go`, `/pkg/security/secrets_manager.go`
+
+3. **Audit Logging & Compliance**
+   - Develop comprehensive audit logging system
+   - Create compliance reporting framework
+   - Implement data retention and privacy controls
+   - Reference: `/pkg/audit/logger.go`, `/pkg/compliance/reports.go`, `/pkg/compliance/data_privacy.go`
+
+4. **Security Testing & Validation**
+   - Create security testing framework
+   - Implement vulnerability scanning integration
+   - Design security benchmark tests
+   - Reference: `/tests/security/`, `/pkg/security/scanner.go`
+
 ## Core Components Implementation
 
 ### Phoenix API (Control Plane)
@@ -382,6 +413,16 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
   - Helm charts
   - Monitoring stack
   - CI/CD pipeline
+
+### Security Framework
+- **Owner**: Praveen
+- **Contributors**: Srikanth
+- **Location**: `/pkg/auth/`, `/pkg/security/`
+- **Key Features**:
+  - Authentication and authorization
+  - Encryption and secure communication
+  - Audit logging system
+  - Compliance reporting
 
 ## Core Algorithms Implementation
 
@@ -439,6 +480,7 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
   - Agent core implementation (Tanush)
   - Pipeline framework implementation (Tharun)
   - Basic UI implementation (Ramana)
+  - Security foundation implementation (Praveen)
   
 - **Week 5-7: Features**
   - Process Metrics Optimizer implementation (Shivani)
@@ -446,6 +488,7 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
   - Metrics Aggregator implementation (Anitha)
   - Dashboard feature implementation (Ramana)
   - Infrastructure automation (Abhinav)
+  - Authentication and authorization implementation (Praveen)
 
 ### Phase 3: Integration & Testing (3 weeks)
 - **Week 8-9: Integration**
@@ -486,6 +529,7 @@ The Phoenix Platform team consists of 9 members with distinct roles and responsi
 | Process Metrics Optimizer | `/docs/algorithms/metrics_optimizer.md` | `/pkg/aggregation/` |
 | Tail Sampling | `/docs/algorithms/tail_sampling.md` | `/pkg/telemetry/sampling/` |
 | Metrics Aggregation | `/docs/algorithms/metrics_aggregation.md` | `/pkg/aggregation/` |
+| Security Framework | `/docs/security/README.md` | `/pkg/auth/`, `/pkg/security/` |
 | Kubernetes | `/deployments/kubernetes/README.md` | `/deployments/kubernetes/` |
 
 ### Testing Standards
