@@ -1,0 +1,17 @@
+{
+  "name": "Local Test Experiment",
+  "description": "Testing Phoenix platform locally",
+  "baseline_pipeline": "baseline-config",
+  "candidate_pipeline": "adaptive-filter-config",
+  "target_nodes": ["local-agent-1"],
+  "config": {
+    "target_hosts": ["local-agent-1"],
+    "duration": "5m",
+    "warmup_duration": "30s",
+    "load_profile": "normal"
+  },
+  "metadata": {
+    "owner": "test-user",
+    "team": "platform"
+  }
+}

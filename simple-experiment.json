@@ -1,0 +1,9 @@
+{
+  "name": "Simple Local Test",
+  "description": "Basic test experiment",
+  "baseline_pipeline": "baseline",
+  "candidate_pipeline": "candidate",
+  "target_nodes": {
+    "local-agent-1": "local-agent-1"
+  }
+}

@@ -74,6 +74,11 @@ help-extended: ## Display extended help message
 clean-all: $(ALL_PROJECTS:%=clean-%) ## Clean all build artifacts
 	@echo -e "$(GREEN)✓ All projects cleaned$(NC)"
 
+clean-binaries: ## Remove all binary build artifacts
+	@echo -e "$(CYAN)Cleaning binary artifacts...$(NC)"
+	@./scripts/clean-build-artifacts.sh
+	@echo -e "$(GREEN)✓ Binary artifacts cleaned$(NC)"
+
 ##@ Development
 
 setup: ## Setup development environment

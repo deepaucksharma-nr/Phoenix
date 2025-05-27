@@ -1,0 +1,52 @@
+#!/bin/bash
+# Pre-commit hook to prevent large files and binaries from being committed
+
+# Maximum file size (in bytes) - 1MB
+MAX_SIZE=1048576
+
+# Check for large files
+large_files=$(git diff --cached --name-only | while read file; do
+    if [ -f "$file" ]; then
+        size=$(wc -c < "$file")
+        if [ $size -gt $MAX_SIZE ]; then
+            echo "$file"
+        fi
+    fi
+done)
+
+if [ -n "$large_files" ]; then
+    echo "Error: Attempting to commit files larger than 1MB:"
+    echo "$large_files" | while read file; do
+        size=$(ls -lh "$file" | awk '{print $5}')
+        echo "  - $file ($size)"
+    done
+    echo
+    echo "Large files should not be committed to the repository."
+    echo "Consider:"
+    echo "  - Adding the file to .gitignore"
+    echo "  - Using Git LFS for large assets"
+    echo "  - Storing binaries in a release system"
+    exit 1
+fi
+
+# Check for binary files
+binary_files=$(git diff --cached --name-only | grep -E '\.(exe|dll|so|dylib|bin)$' || true)
+if [ -n "$binary_files" ]; then
+    echo "Error: Attempting to commit binary files:"
+    echo "$binary_files"
+    echo
+    echo "Binary files should not be committed. Add them to .gitignore."
+    exit 1
+fi
+
+# Check for files in bin/ or build/ directories
+build_files=$(git diff --cached --name-only | grep -E '(^|/)bin/|(^|/)build/' || true)
+if [ -n "$build_files" ]; then
+    echo "Error: Attempting to commit files from bin/ or build/ directories:"
+    echo "$build_files"
+    echo
+    echo "Build artifacts should not be committed. These directories should be in .gitignore."
+    exit 1
+fi
+
+exit 0
